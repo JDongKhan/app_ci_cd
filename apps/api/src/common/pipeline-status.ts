@@ -21,6 +21,15 @@ export function pipelineStatusLabel(status: string): string {
   return PIPELINE_STATUS_LABELS[status] ?? status;
 }
 
+export type BuildStage = "qa" | "uat" | "release";
+
+export function pipelineBuildStage(status: string): BuildStage | null {
+  if (status === "dev_merged" || status === "dev_built") return "qa";
+  if (status === "testing") return "uat";
+  if (status === "release_check") return "release";
+  return null;
+}
+
 export const MERGE_STAGES = ["qa", "uat", "release", "master"] as const;
 export type MergeStage = (typeof MERGE_STAGES)[number];
 

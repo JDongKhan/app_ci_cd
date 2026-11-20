@@ -42,7 +42,7 @@ export class CreateAppDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(2000)
   artifactPattern?: string | null;
 
   @IsOptional()

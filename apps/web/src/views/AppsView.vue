@@ -79,6 +79,15 @@ function platformLabel(platform: AppPlatform): string {
   return PLATFORM_OPTIONS.find((item) => item.value === platform)?.label ?? platform;
 }
 
+function patternSummary(pattern: string | null): string {
+  if (!pattern) return "—";
+  const list = pattern
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return list.length ? list.join("、") : "—";
+}
+
 async function load() {
   loading.value = true;
   try {
@@ -213,7 +222,7 @@ onMounted(load);
           <div class="app-facts">
             <span>产物 <b>{{ app.artifactType }}</b></span>
             <span>脚本 <b>{{ app.buildScript }}</b></span>
-            <span>路径 <b>{{ app.artifactPattern || "—" }}</b></span>
+            <span>路径 <b>{{ patternSummary(app.artifactPattern) }}</b></span>
           </div>
 
           <div class="branch-line">
@@ -301,8 +310,16 @@ onMounted(load);
             <el-input v-model="form.machine" placeholder="builder-01" />
           </el-form-item>
 
-          <el-form-item label="产物路径">
-            <el-input v-model="form.artifactPattern" placeholder="例如 build/app/outputs/**/*.apk" />
+          <el-form-item label="产物扫描目录">
+            <el-input
+              v-model="form.artifactPattern"
+              type="textarea"
+              :rows="3"
+              placeholder="每行一个 glob，例如：&#10;build/**/*.apk&#10;download/**/*.apk"
+            />
+            <span class="field-hint">
+              支持多个匹配规则，每行一个（也可用逗号分隔）；留空时按产物类型使用默认规则。
+            </span>
           </el-form-item>
 
           <el-form-item label="技术栈">

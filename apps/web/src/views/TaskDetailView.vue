@@ -66,6 +66,7 @@ const NEXT_ACTION: Record<string, { label: string; target: string; role: string 
 };
 
 const nextAction = computed(() => (task.value ? NEXT_ACTION[task.value.status] : null));
+const taskStatus = computed(() => task.value?.status ?? "");
 
 const MERGE_PERMISSION: Record<string, string> = {
   qa: "merge_qa",
@@ -114,10 +115,32 @@ function canRoleAct(role: string): boolean {
 }
 
 function canMerge(pipeline: Pipeline, stage: string): boolean {
-  return (
-    MERGE_ALLOWED[stage].includes(pipeline.status) &&
-    auth.hasPermission(MERGE_PERMISSION[stage])
-  );
+  if (!auth.hasPermission(MERGE_PERMISSION[stage])) return false;
+
+  if (stage === "qa") {
+    if (pipeline.status === "none") return true;
+    // 自测不通过后会带上 rework，需要先重新合并 QA；合并完成后才显示打包
+    if (pipeline.status === "dev_merged") return Boolean(pipeline.rework);
+    return false;
+  }
+
+  if (stage === "uat") {
+    return pipeline.status === "dev_passed" && taskStatus.value === "testing";
+  }
+
+  if (stage === "release") {
+    return (
+      pipeline.status === "testing" &&
+      taskStatus.value === "release" &&
+      pipeline.latestBuild?.status === "success"
+    );
+  }
+
+  if (stage === "master") {
+    return pipeline.status === "release_verified" && taskStatus.value === "release";
+  }
+
+  return MERGE_ALLOWED[stage].includes(pipeline.status);
 }
 
 function canResolve(pipeline: Pipeline): boolean {
@@ -140,19 +163,56 @@ const BUILD_LABEL: Record<string, string> = {
   release_check: "打包 Release"
 };
 
-const BUILD_STAGE: Record<string, string> = {
-  dev_merged: "qa",
-  dev_built: "qa",
-  testing: "uat",
-  release_check: "release"
-};
+function buildStageFor(pipeline: Pipeline): string | null {
+  if (pipeline.status === "dev_merged" && !pipeline.rework) return "qa";
+  if (pipeline.status === "dev_built" && pipeline.latestBuild?.status === "failed") {
+    return "qa";
+  }
+  if (pipeline.status === "testing" && taskStatus.value === "testing") return "uat";
+  if (pipeline.status === "release_check") return "release";
+  return null;
+}
 
 function canBuild(pipeline: Pipeline): boolean {
-  const stage = BUILD_STAGE[pipeline.status];
+  const stage = buildStageFor(pipeline);
   if (!stage || !auth.hasPermission("build_run")) return false;
 
   const stageRole = stage === "qa" ? "dev" : "qa";
   return auth.isAdmin || auth.user?.role === stageRole;
+}
+
+function isBuildRunning(pipeline: Pipeline): boolean {
+  return pipeline.latestBuild?.status === "running";
+}
+
+function latestBuildFailed(pipeline: Pipeline): boolean {
+  return pipeline.latestBuild?.status === "failed";
+}
+
+function canVerdict(pipeline: Pipeline): boolean {
+  return (
+    pipeline.status === "dev_built" &&
+    pipeline.latestBuild?.status === "success" &&
+    auth.hasPermission("build_run") &&
+    (auth.isAdmin || auth.user?.role === "dev")
+  );
+}
+
+function canRejectTest(pipeline: Pipeline): boolean {
+  return (
+    pipeline.status === "testing" &&
+    taskStatus.value === "testing" &&
+    auth.hasPermission("test_run")
+  );
+}
+
+function canVerify(pipeline: Pipeline): boolean {
+  return (
+    pipeline.status === "release_check" &&
+    taskStatus.value === "release" &&
+    pipeline.latestBuild?.status === "success" &&
+    auth.hasPermission("verify")
+  );
 }
 
 async function loadBuilds() {
@@ -568,13 +628,17 @@ onBeforeUnmount(() => {
 
                 <div class="pipe-actions">
                   <el-button
-                    v-if="canMerge(pipeline, 'qa')"
+                    v-if="!isBuildRunning(pipeline) && canMerge(pipeline, 'qa')"
                     size="small"
                     type="primary"
                     :loading="actingPipelineId === pipeline.id"
                     @click="doMerge(pipeline, 'qa')"
                   >
-                    {{ pipeline.status === "dev_merged" ? "重新合并 QA" : "合并 QA" }}
+                    {{
+                      pipeline.status === "dev_merged" || pipeline.status === "dev_built"
+                        ? "重新合并 QA"
+                        : "合并 QA"
+                    }}
                   </el-button>
                   <el-button
                     v-if="isConflictStatus(pipeline.status) && canResolve(pipeline)"
@@ -586,7 +650,7 @@ onBeforeUnmount(() => {
                     已解决冲突 · 合并
                   </el-button>
                   <el-button
-                    v-if="canMerge(pipeline, 'uat')"
+                    v-if="!isBuildRunning(pipeline) && canMerge(pipeline, 'uat')"
                     size="small"
                     type="primary"
                     :loading="actingPipelineId === pipeline.id"
@@ -595,7 +659,7 @@ onBeforeUnmount(() => {
                     合并 UAT
                   </el-button>
                   <el-button
-                    v-if="canMerge(pipeline, 'release')"
+                    v-if="!isBuildRunning(pipeline) && canMerge(pipeline, 'release')"
                     size="small"
                     type="primary"
                     :loading="actingPipelineId === pipeline.id"
@@ -604,7 +668,7 @@ onBeforeUnmount(() => {
                     合并 Release
                   </el-button>
                   <el-button
-                    v-if="canMerge(pipeline, 'master')"
+                    v-if="!isBuildRunning(pipeline) && canMerge(pipeline, 'master')"
                     size="small"
                     type="primary"
                     :loading="actingPipelineId === pipeline.id"
@@ -614,20 +678,14 @@ onBeforeUnmount(() => {
                   </el-button>
 
                   <el-button
-                    v-if="canBuild(pipeline)"
+                    v-if="canBuild(pipeline) && !isBuildRunning(pipeline)"
                     size="small"
                     :loading="buildingPipelineId === pipeline.id"
                     @click="build(pipeline)"
                   >
                     {{ BUILD_LABEL[pipeline.status] }}
                   </el-button>
-                  <template
-                    v-if="
-                      pipeline.status === 'dev_built' &&
-                      auth.hasPermission('build_run') &&
-                      (auth.isAdmin || auth.user?.role === 'dev')
-                    "
-                  >
+                  <template v-if="canVerdict(pipeline)">
                     <el-button size="small" type="success" @click="verdict(pipeline, true)">
                       自测通过
                     </el-button>
@@ -637,7 +695,7 @@ onBeforeUnmount(() => {
                   </template>
 
                   <el-button
-                    v-if="pipeline.status === 'testing' && auth.hasPermission('test_run')"
+                    v-if="!isBuildRunning(pipeline) && canRejectTest(pipeline)"
                     size="small"
                     type="danger"
                     plain
@@ -645,7 +703,7 @@ onBeforeUnmount(() => {
                   >
                     测试不通过
                   </el-button>
-                  <template v-if="pipeline.status === 'release_check' && auth.hasPermission('verify')">
+                  <template v-if="!isBuildRunning(pipeline) && canVerify(pipeline)">
                     <el-button size="small" type="success" @click="verify(pipeline, true)">
                       验证通过
                     </el-button>
@@ -654,17 +712,61 @@ onBeforeUnmount(() => {
                     </el-button>
                   </template>
 
+                  <span v-if="isBuildRunning(pipeline)" class="stage-hint">
+                    打包中 {{ pipeline.latestBuild?.progress ?? 0 }}%，请等待完成
+                  </span>
+                  <span
+                    v-else-if="latestBuildFailed(pipeline)"
+                    class="stage-hint build-failed-hint"
+                  >
+                    最近一次打包失败：{{ pipeline.latestBuild?.failReason || "未知原因" }}，
+                    请修复后重新合并 / 重新打包
+                  </span>
+
                   <span v-if="pipeline.status === 'none'" class="stage-hint">
                     任务进入开发中后可合并 QA
                   </span>
+                  <span
+                    v-else-if="pipeline.status === 'dev_merged' && pipeline.rework"
+                    class="stage-hint"
+                  >
+                    自测不通过或测试退回：修复代码后先重新合并 QA
+                  </span>
+                  <span
+                    v-else-if="pipeline.status === 'dev_merged' && !pipeline.rework"
+                    class="stage-hint"
+                  >
+                    已合入 QA，可以打包
+                  </span>
+                  <span
+                    v-else-if="pipeline.status === 'dev_built' && pipeline.latestBuild?.status === 'success'"
+                    class="stage-hint"
+                  >
+                    QA 包已就绪，请完成自测
+                  </span>
                   <span v-else-if="pipeline.status === 'dev_passed'" class="stage-hint">
-                    任务进入测试中后可合并 UAT
+                    {{ taskStatus === "testing" ? "可以合并 UAT" : "先提测，进入测试中后可合并 UAT" }}
                   </span>
-                  <span v-else-if="pipeline.status === 'testing'" class="stage-hint">
-                    打包 UAT 后可合并 Release
+                  <span
+                    v-else-if="pipeline.status === 'testing' && taskStatus === 'testing'"
+                    class="stage-hint"
+                  >
+                    打包 UAT 后进入待发布
                   </span>
-                  <span v-else-if="pipeline.status === 'release_check'" class="stage-hint">
-                    Release 打包后等待验证
+                  <span
+                    v-else-if="pipeline.status === 'testing' && taskStatus === 'release'"
+                    class="stage-hint"
+                  >
+                    UAT 包已就绪，可以合并 Release
+                  </span>
+                  <span
+                    v-else-if="pipeline.status === 'release_check' && pipeline.latestBuild?.status === 'success'"
+                    class="stage-hint"
+                  >
+                    Release 包已就绪，等待验证
+                  </span>
+                  <span v-else-if="pipeline.status === 'release_verified'" class="stage-hint">
+                    验证通过，可合回 master
                   </span>
                   <span v-else-if="pipeline.status === 'done'" class="stage-hint">
                     流水已结束，可从构建记录查看日志
@@ -724,6 +826,13 @@ onBeforeUnmount(() => {
                   <div class="build-sub">
                     {{ row.stageLabel }} · {{ row.pipeline.branch }}
                   </div>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="版本 / Build" width="140">
+                <template #default="{ row }">
+                  <div class="build-version">{{ row.versionName || "—" }}</div>
+                  <div class="build-sub">#{{ row.buildNumber }}</div>
                 </template>
               </el-table-column>
 
@@ -1193,6 +1302,10 @@ onBeforeUnmount(() => {
   font-size: 11px;
 }
 
+.build-failed-hint {
+  color: #b91c1c;
+}
+
 .merge-list {
   margin-top: 12px;
   padding-top: 10px;
@@ -1234,6 +1347,11 @@ onBeforeUnmount(() => {
 }
 
 .build-name {
+  font-weight: 500;
+}
+
+.build-version {
+  font-size: 12px;
   font-weight: 500;
 }
 

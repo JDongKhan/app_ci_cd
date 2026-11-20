@@ -212,6 +212,9 @@ model Build {
   id           String    @id @default(uuid())
   pipelineId   String    @map("pipeline_id")
   stage        String
+  buildNumber  Int       @default(0) @map("build_number")
+  versionName  String?   @map("version_name")
+  versionCode  Int?      @map("version_code")
   mergeSha     String?   @map("merge_sha")
   status       String    @default("running")
   progress     Int       @default(0)

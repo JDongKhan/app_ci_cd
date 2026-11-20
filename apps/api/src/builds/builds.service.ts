@@ -12,7 +12,8 @@ import * as path from "node:path";
 import fg from "fast-glob";
 import { AuthUser } from "../common/auth-user.interface";
 import { GitService } from "../common/git.service";
-import { storageRoot, workspaceRoot } from "../common/storage";
+import { pipelineBuildStage } from "../common/pipeline-status";
+import { projectRoot, storageRoot, workspaceRoot } from "../common/storage";
 import { PrismaService } from "../prisma/prisma.service";
 
 type BuildStage = "qa" | "uat" | "release";
@@ -41,6 +42,9 @@ type BuildWithPipeline = {
   id: string;
   pipelineId: string;
   stage: string;
+  buildNumber: number;
+  versionName: string | null;
+  versionCode: number | null;
   mergeSha: string | null;
   status: string;
   progress: number;
@@ -58,6 +62,11 @@ type BuildWithPipeline = {
     name: string;
     branch: string;
     appId: string;
+    task: {
+      id: string;
+      title: string;
+      requirement: { id: string; code: string; title: string } | null;
+    };
     app: {
       id: string;
       name: string;
@@ -67,6 +76,7 @@ type BuildWithPipeline = {
       defaultBranch: string;
       artifactType: string;
       artifactPattern: string | null;
+      branchesJson: string;
       buildScript: string;
     };
   };
@@ -129,9 +139,13 @@ export class BuildsService implements OnModuleInit {
       throw new NotFoundException("流水不存在");
     }
 
-    const stage = this.stageForStatus(pipeline.status);
+    const stage = pipelineBuildStage(pipeline.status);
     if (!stage) {
       throw new BadRequestException("当前流水状态不能打包");
+    }
+
+    if (stage === "qa" && pipeline.reworkFrom) {
+      throw new BadRequestException("自测/测试退回后请先重新合并 QA 再打包");
     }
 
     const stageRole = stage === "qa" ? "dev" : "qa";
@@ -154,10 +168,16 @@ export class BuildsService implements OnModuleInit {
       orderBy: { mergedAt: "desc" }
     });
 
+    const buildNumber =
+      (await this.prisma.build.count({
+        where: { pipeline: { appId: pipeline.appId } }
+      })) + 1;
+
     const build = await this.prisma.build.create({
       data: {
         pipelineId,
         stage,
+        buildNumber,
         mergeSha: latestMerge?.sha ?? null,
         status: "running",
         progress: 0,
@@ -335,10 +355,47 @@ export class BuildsService implements OnModuleInit {
 
     await this.appendLog(logPath, `工作区 ${cwd}`);
 
+    const targetBranch = this.targetBranch(
+      build.pipeline.app.branchesJson,
+      build.stage
+    );
+    const version = await this.readVersion(cwd);
+    const versionName = version.versionName ?? "0.0.0";
+    const versionCode = version.versionCode ?? build.buildNumber;
+
+    if (versionName !== build.versionName || versionCode !== build.versionCode) {
+      await this.prisma.build.update({
+        where: { id: buildId },
+        data: { versionName, versionCode }
+      });
+    }
+
+    const env = this.buildEnv(
+      build,
+      cwd,
+      targetBranch,
+      versionName,
+      versionCode,
+      await this.triggerName(build.triggeredBy)
+    );
+
+    await this.appendLog(
+      logPath,
+      `构建参数：VERSION_NAME=${versionName} VERSION_CODE=${versionCode} BUILD_NUMBER=${build.buildNumber}`
+    );
+    await this.appendLog(
+      logPath,
+      `分支参数：STAGE=${build.stage} FEATURE_BRANCH=${build.pipeline.branch} TARGET_BRANCH=${targetBranch}`
+    );
+    await this.appendLog(
+      logPath,
+      `需求/任务：${build.pipeline.task.requirement?.code ?? "—"} / ${build.pipeline.task.title}`
+    );
+
     const result = await new Promise<{ code: number; timedOut: boolean }>((resolve) => {
       const child = spawn("bash", ["-lc", script], {
         cwd,
-        env: process.env
+        env
       });
 
       let lineCount = 0;
@@ -401,19 +458,120 @@ export class BuildsService implements OnModuleInit {
     await this.finishBuild(buildId, logPath, true, 0, null);
   }
 
+  private async triggerName(userId: string | null): Promise<string> {
+    if (!userId) return "";
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true }
+    });
+    return user?.name ?? userId;
+  }
+
+  private targetBranch(branchesJson: string, stage: string): string {
+    try {
+      const branches = JSON.parse(branchesJson) as Record<string, string>;
+      return branches[stage] || stage;
+    } catch {
+      return stage;
+    }
+  }
+
+  private async readVersion(
+    cwd: string
+  ): Promise<{ versionName: string | null; versionCode: number | null }> {
+    // Flutter 项目优先读取 pubspec.yaml 的 version: x.y.z+build
+    try {
+      const pubspec = await fs.readFile(path.join(cwd, "pubspec.yaml"), "utf8");
+      const match = pubspec.match(/^version:\s*([^\s#]+)/m);
+      if (match) {
+        const [name, code] = match[1].split("+");
+        return {
+          versionName: name || null,
+          versionCode: code && Number.isFinite(Number(code)) ? Number(code) : null
+        };
+      }
+    } catch {
+      // 忽略，继续尝试 package.json
+    }
+
+    try {
+      const pkg = JSON.parse(
+        await fs.readFile(path.join(cwd, "package.json"), "utf8")
+      ) as { version?: string };
+      if (pkg.version) {
+        return { versionName: pkg.version, versionCode: null };
+      }
+    } catch {
+      // 忽略
+    }
+
+    return { versionName: null, versionCode: null };
+  }
+
+  private buildEnv(
+    build: BuildWithPipeline,
+    cwd: string,
+    targetBranch: string,
+    versionName: string,
+    versionCode: number,
+    triggeredByName: string
+  ): NodeJS.ProcessEnv {
+    const app = build.pipeline.app;
+    const task = build.pipeline.task;
+    const requirement = task.requirement;
+
+    const values: Record<string, string> = {
+      APP_ID: app.id,
+      APP_NAME: app.name,
+      APP_CODE: app.code,
+      PLATFORM: app.platform,
+      PIPELINE_ID: build.pipeline.id,
+      PIPELINE_NAME: build.pipeline.name,
+      TASK_ID: task.id,
+      TASK_TITLE: task.title,
+      REQUIREMENT_CODE: requirement?.code ?? "",
+      REQUIREMENT_TITLE: requirement?.title ?? "",
+      STAGE: build.stage,
+      STAGE_LABEL: STAGE_LABELS[build.stage] ?? build.stage,
+      FEATURE_BRANCH: build.pipeline.branch,
+      TARGET_BRANCH: targetBranch,
+      MERGE_SHA: build.mergeSha ?? "",
+      BUILD_ID: build.id,
+      BUILD_NUMBER: String(build.buildNumber),
+      VERSION_NAME: versionName,
+      VERSION_CODE: String(versionCode),
+      TRIGGERED_BY: triggeredByName,
+      WORKSPACE: cwd,
+      PROJECT_ROOT: projectRoot(),
+      DOWNLOAD_DIR: path.join(projectRoot(), "download")
+    };
+
+    const env: NodeJS.ProcessEnv = { ...process.env };
+
+    for (const [key, value] of Object.entries(values)) {
+      env[key] = value;
+      env[`SHIPFLOW_${key}`] = value;
+    }
+
+    return env;
+  }
+
   private async collectArtifacts(
     build: BuildWithPipeline,
     buildId: string,
     workspace: string
   ): Promise<number> {
     const app = build.pipeline.app;
-    const pattern =
-      app.artifactPattern?.trim() || this.defaultPattern(app.artifactType);
+    const patterns = (app.artifactPattern ?? "")
+      .split(/[\n,]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const activePatterns = patterns.length ? patterns : [this.defaultPattern(app.artifactType)];
     const cwd = path.join(workspace, app.id);
 
     let matches: string[] = [];
     try {
-      matches = await fg(pattern, {
+      matches = await fg(activePatterns, {
         cwd,
         onlyFiles: true,
         dot: false,
@@ -424,7 +582,16 @@ export class BuildsService implements OnModuleInit {
       matches = [];
     }
 
-    const limited = matches.slice(0, 20);
+    // 多个扫描规则可能命中同一产物（如 download 与 copy 后的 build），按文件名去重
+    const seen = new Set<string>();
+    const limited = matches
+      .filter((relative) => {
+        const name = path.basename(relative);
+        if (seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      })
+      .slice(0, 20);
     let saved = 0;
 
     for (const relative of limited) {
@@ -612,17 +779,17 @@ export class BuildsService implements OnModuleInit {
     await fs.appendFile(logPath, line, "utf8");
   }
 
-  private stageForStatus(status: string): BuildStage | null {
-    if (status === "dev_merged" || status === "dev_built") return "qa";
-    if (status === "testing") return "uat";
-    if (status === "release_check") return "release";
-    return null;
-  }
-
   private buildInclude() {
     return {
       pipeline: {
         include: {
+          task: {
+            select: {
+              id: true,
+              title: true,
+              requirement: { select: { id: true, code: true, title: true } }
+            }
+          },
           app: {
             select: {
               id: true,
@@ -633,6 +800,7 @@ export class BuildsService implements OnModuleInit {
               defaultBranch: true,
               artifactType: true,
               artifactPattern: true,
+              branchesJson: true,
               buildScript: true
             }
           }
@@ -648,6 +816,9 @@ export class BuildsService implements OnModuleInit {
       pipelineId: build.pipelineId,
       stage: build.stage,
       stageLabel: STAGE_LABELS[build.stage] ?? build.stage,
+      buildNumber: build.buildNumber,
+      versionName: build.versionName,
+      versionCode: build.versionCode,
       mergeSha: build.mergeSha,
       status: build.status,
       statusLabel: BUILD_STATUS_LABELS[build.status] ?? build.status,

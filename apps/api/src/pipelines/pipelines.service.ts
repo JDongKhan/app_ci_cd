@@ -4,6 +4,7 @@ import {
   CONFLICT_FILES,
   MERGE_PLAN,
   MergeStage,
+  pipelineBuildStage,
   pipelineProgress,
   pipelineStatusLabel
 } from "../common/pipeline-status";
@@ -76,6 +77,20 @@ type PipelineWithRelations = {
   }[];
 };
 
+type PipelineLatestBuild = {
+  id: string;
+  stage: string;
+  status: string;
+  statusLabel: string;
+  progress: number;
+  buildNumber: number;
+  versionName: string | null;
+  versionCode: number | null;
+  mergeSha: string | null;
+  failReason: string | null;
+  createdAt: Date;
+};
+
 @Injectable()
 export class PipelinesService {
   constructor(
@@ -91,7 +106,13 @@ export class PipelinesService {
       orderBy: { createdAt: "asc" }
     });
 
-    return pipelines.map((pipeline) => this.serialize(pipeline));
+    const latest = await this.latestBuildsFor(
+      pipelines.map((pipeline) => ({ id: pipeline.id, status: pipeline.status }))
+    );
+
+    return pipelines.map((pipeline) =>
+      this.serialize(pipeline, latest.get(pipeline.id) ?? null)
+    );
   }
 
   async create(taskId: string, dto: CreatePipelineDto) {
@@ -180,6 +201,24 @@ export class PipelinesService {
       throw new BadRequestException(
         `当前任务状态为「${pipeline.task.status}」，${plan.label}要求任务处于指定的前置状态`
       );
+    }
+
+    if (stage === "release") {
+      const uatBuild = await this.prisma.build.findFirst({
+        where: { pipelineId: id, stage: "uat" },
+        orderBy: { createdAt: "desc" }
+      });
+      const uatMerge = await this.prisma.pipelineMerge.findFirst({
+        where: { pipelineId: id, stage: "uat", invalidatedAt: null },
+        orderBy: { mergedAt: "desc" }
+      });
+
+      if (!uatBuild || uatBuild.status !== "success") {
+        throw new BadRequestException("需要先完成一次成功的 UAT 打包");
+      }
+      if (uatMerge && uatBuild.mergeSha !== uatMerge.sha) {
+        throw new BadRequestException("UAT 包已过期，请重新打包后再合并 Release");
+      }
     }
 
     if (!plan.allowedFrom.includes(pipeline.status)) {
@@ -413,10 +452,32 @@ export class PipelinesService {
       throw new BadRequestException("只有 QA 包就绪的流水才能做自测判定");
     }
 
+    const latestBuild = await this.prisma.build.findFirst({
+      where: { pipelineId: id, stage: "qa" },
+      orderBy: { createdAt: "desc" }
+    });
+    const qaMerge = await this.prisma.pipelineMerge.findFirst({
+      where: { pipelineId: id, stage: "qa", invalidatedAt: null },
+      orderBy: { mergedAt: "desc" }
+    });
+
+    if (!latestBuild || latestBuild.status !== "success") {
+      throw new BadRequestException("需要先完成一次成功的 QA 打包才能自测");
+    }
+    if (qaMerge && latestBuild.mergeSha !== qaMerge.sha) {
+      throw new BadRequestException("QA 包已过期，请重新打包后再自测");
+    }
+
     if (pass) {
       await this.prisma.pipeline.update({
         where: { id },
-        data: { status: "dev_passed" }
+        data: {
+          status: "dev_passed",
+          reworkFrom: null,
+          reworkReason: null,
+          reworkBy: null,
+          reworkAt: null
+        }
       });
       await this.prisma.pipelineEvent.create({
         data: {
@@ -428,10 +489,7 @@ export class PipelinesService {
         }
       });
     } else {
-      const merge = await this.prisma.pipelineMerge.findFirst({
-        where: { pipelineId: id, stage: "qa", invalidatedAt: null },
-        orderBy: { mergedAt: "desc" }
-      });
+      const merge = qaMerge;
 
       if (merge) {
         await this.prisma.pipelineMerge.update({
@@ -543,6 +601,22 @@ export class PipelinesService {
       throw new BadRequestException("只有 Release 验证中的流水才能做发布验证");
     }
 
+    const latestBuild = await this.prisma.build.findFirst({
+      where: { pipelineId: id, stage: "release" },
+      orderBy: { createdAt: "desc" }
+    });
+    const releaseMerge = await this.prisma.pipelineMerge.findFirst({
+      where: { pipelineId: id, stage: "release", invalidatedAt: null },
+      orderBy: { mergedAt: "desc" }
+    });
+
+    if (!latestBuild || latestBuild.status !== "success") {
+      throw new BadRequestException("需要先完成一次成功的 Release 打包才能验证");
+    }
+    if (releaseMerge && latestBuild.mergeSha !== releaseMerge.sha) {
+      throw new BadRequestException("Release 包已过期，请重新打包后再验证");
+    }
+
     const now = new Date();
     const text = reason?.trim();
 
@@ -609,10 +683,75 @@ export class PipelinesService {
       throw new NotFoundException("流水不存在");
     }
 
-    return this.serialize(pipeline);
+    const latest = await this.latestBuildsFor([
+      { id: pipeline.id, status: pipeline.status }
+    ]);
+
+    return this.serialize(pipeline, latest.get(pipeline.id) ?? null);
   }
 
-  private serialize(pipeline: PipelineWithRelations) {
+  private async latestBuildsFor(
+    pipelines: { id: string; status: string }[]
+  ): Promise<Map<string, PipelineLatestBuild>> {
+    const result = new Map<string, PipelineLatestBuild>();
+    if (pipelines.length === 0) return result;
+
+    const builds = await this.prisma.build.findMany({
+      where: { pipelineId: { in: pipelines.map((pipeline) => pipeline.id) } },
+      orderBy: { createdAt: "desc" }
+    });
+
+    for (const pipeline of pipelines) {
+      const stage = pipelineBuildStage(pipeline.status);
+      if (!stage) continue;
+
+      const build = builds.find(
+        (item) => item.pipelineId === pipeline.id && item.stage === stage
+      );
+
+      if (build) result.set(pipeline.id, this.serializeBuild(build));
+    }
+
+    return result;
+  }
+
+  private serializeBuild(build: {
+    id: string;
+    stage: string;
+    status: string;
+    progress: number;
+    buildNumber: number;
+    versionName: string | null;
+    versionCode: number | null;
+    mergeSha: string | null;
+    failReason: string | null;
+    createdAt: Date;
+  }): PipelineLatestBuild {
+    const labels: Record<string, string> = {
+      running: "打包中",
+      success: "成功",
+      failed: "失败"
+    };
+
+    return {
+      id: build.id,
+      stage: build.stage,
+      status: build.status,
+      statusLabel: labels[build.status] ?? build.status,
+      progress: build.progress,
+      buildNumber: build.buildNumber,
+      versionName: build.versionName,
+      versionCode: build.versionCode,
+      mergeSha: build.mergeSha,
+      failReason: build.failReason,
+      createdAt: build.createdAt
+    };
+  }
+
+  private serialize(
+    pipeline: PipelineWithRelations,
+    latestBuild: PipelineLatestBuild | null = null
+  ) {
     return {
       id: pipeline.id,
       taskId: pipeline.taskId,
@@ -622,6 +761,7 @@ export class PipelinesService {
       status: pipeline.status,
       statusLabel: pipelineStatusLabel(pipeline.status),
       progress: pipelineProgress(pipeline.merges),
+      latestBuild,
       app: {
         id: pipeline.app.id,
         name: pipeline.app.name,

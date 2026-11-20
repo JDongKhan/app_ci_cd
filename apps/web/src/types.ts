@@ -208,6 +208,19 @@ export interface Pipeline {
   status: string;
   statusLabel: string;
   progress: number;
+  latestBuild: {
+    id: string;
+    stage: string;
+    status: string;
+    statusLabel: string;
+    progress: number;
+    buildNumber: number;
+    versionName: string | null;
+    versionCode: number | null;
+    mergeSha: string | null;
+    failReason: string | null;
+    createdAt: string;
+  } | null;
   app: {
     id: string;
     name: string;
@@ -247,6 +260,9 @@ export interface BuildRecord {
   pipelineId: string;
   stage: string;
   stageLabel: string;
+  buildNumber: number;
+  versionName: string | null;
+  versionCode: number | null;
   mergeSha: string | null;
   status: string;
   statusLabel: string;

@@ -111,6 +111,13 @@ onBeforeUnmount(() => {
           </template>
         </el-table-column>
 
+        <el-table-column label="版本 / Build" width="140">
+          <template #default="{ row }">
+            <div>{{ row.versionName || "—" }}</div>
+            <div class="art-sub">#{{ row.buildNumber }}</div>
+          </template>
+        </el-table-column>
+
         <el-table-column label="阶段" width="90">
           <template #default="{ row }">
             <span class="stage-tag">{{ row.stageLabel }}</span>
