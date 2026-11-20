@@ -4,11 +4,14 @@ import {
   NotFoundException,
   OnModuleInit
 } from "@nestjs/common";
-import { promises as fs } from "node:fs";
+import { promises as fs, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import * as path from "node:path";
+import fg from "fast-glob";
 import { AuthUser } from "../common/auth-user.interface";
-import { storageRoot } from "../common/storage";
+import { GitService } from "../common/git.service";
+import { storageRoot, workspaceRoot } from "../common/storage";
 import { PrismaService } from "../prisma/prisma.service";
 
 type BuildStage = "qa" | "uat" | "release";
@@ -59,7 +62,10 @@ type BuildWithPipeline = {
       name: string;
       code: string;
       platform: string;
+      repo: string;
+      defaultBranch: string;
       artifactType: string;
+      artifactPattern: string | null;
       buildScript: string;
     };
   };
@@ -75,10 +81,6 @@ type BuildWithPipeline = {
     createdAt: Date;
   }[];
 };
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function pad(value: number) {
   return String(value).padStart(2, "0");
@@ -96,7 +98,10 @@ export class BuildsService implements OnModuleInit {
   private queue: string[] = [];
   private running = false;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gitService: GitService
+  ) {}
 
   async onModuleInit() {
     await this.prisma.build.updateMany({
@@ -289,35 +294,218 @@ export class BuildsService implements OnModuleInit {
     await this.appendLog(logPath, `Feature 分支 ${build.pipeline.branch}`);
     await this.appendLog(logPath, `合并提交 ${build.mergeSha ?? "—"}`);
     await this.appendLog(logPath, `构建脚本 ${script}`);
+    await this.appendLog(logPath, "检查工作区，必要时克隆仓库");
 
-    const shouldFail = script.toLowerCase().includes("fail");
-
-    const steps: { message: string; progress: number }[] = [
-      { message: "准备构建环境", progress: 10 },
-      { message: `拉取代码 ${build.pipeline.branch}`, progress: 24 },
-      { message: "校验合并提交", progress: 36 },
-      { message: `执行构建脚本：${script}`, progress: 52 },
-      { message: "扫描产物", progress: 78 },
-      { message: "构建完成", progress: 100 }
-    ];
-
-    for (const step of steps) {
-      await sleep(500);
-
-      if (shouldFail && step.progress === 52) {
-        await this.appendLog(logPath, `执行失败：${script} 退出码 1`, "stderr");
-        await this.finishBuild(buildId, logPath, false, 1, "构建脚本执行失败（exit code 1）");
-        return;
-      }
-
-      await this.appendLog(logPath, step.message);
-      await this.prisma.build.update({
-        where: { id: buildId },
-        data: { progress: step.progress }
-      });
+    try {
+      await this.gitService.ensureWorkspace(
+        build.pipeline.appId,
+        build.pipeline.app.repo,
+        build.pipeline.app.defaultBranch
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "克隆仓库失败";
+      await this.appendLog(logPath, message, "stderr");
+      await this.finishBuild(buildId, logPath, false, 1, message);
+      return;
     }
 
+    await this.appendLog(logPath, "执行模式：真实构建（本地 workspace）");
+    await this.executeReal(build, buildId, logPath, script);
+  }
+
+  private async executeReal(
+    build: BuildWithPipeline,
+    buildId: string,
+    logPath: string,
+    script: string
+  ) {
+    const cwd = this.gitService.workspacePath(build.pipeline.appId);
+    const workspace = workspaceRoot();
+
+    await this.appendLog(logPath, `工作区 ${cwd}`);
+
+    const result = await new Promise<{ code: number; timedOut: boolean }>((resolve) => {
+      const child = spawn("bash", ["-lc", script], {
+        cwd,
+        env: process.env
+      });
+
+      let lineCount = 0;
+      let lastProgress = 5;
+      const timeLimit = 30 * 60 * 1000;
+
+      const timeout = setTimeout(() => {
+        child.kill("SIGKILL");
+      }, timeLimit);
+
+      const handleChunk = (stream: string) => (chunk: Buffer) => {
+        const text = chunk
+          .toString("utf8")
+          .split("\n")
+          .filter((line) => line.length > 0);
+        for (const line of text) {
+          lineCount += 1;
+          void this.appendLog(logPath, line, stream);
+        }
+
+        const progress = Math.min(90, 10 + lineCount);
+        if (progress >= lastProgress + 5) {
+          lastProgress = progress;
+          void this.prisma.build
+            .update({ where: { id: buildId }, data: { progress } })
+            .catch(() => {});
+        }
+      };
+
+      child.stdout?.on("data", handleChunk("stdout"));
+      child.stderr?.on("data", handleChunk("stderr"));
+
+      child.on("close", (code) => {
+        clearTimeout(timeout);
+        resolve({ code: code ?? 1, timedOut: code === null });
+      });
+
+      child.on("error", (error) => {
+        clearTimeout(timeout);
+        void this.appendLog(logPath, `启动构建脚本失败：${error.message}`, "stderr");
+        resolve({ code: 1, timedOut: false });
+      });
+    });
+
+    if (result.code !== 0) {
+      await this.finishBuild(
+        buildId,
+        logPath,
+        false,
+        result.code,
+        result.timedOut ? "构建超时（30 分钟）" : `构建脚本退出码 ${result.code}`
+      );
+      return;
+    }
+
+    await this.appendLog(logPath, "构建脚本执行成功，开始扫描产物");
+    const artifacts = await this.collectArtifacts(build, buildId, workspace);
+    await this.appendLog(logPath, `产物扫描完成：${artifacts} 个文件入库`);
+
     await this.finishBuild(buildId, logPath, true, 0, null);
+  }
+
+  private async collectArtifacts(
+    build: BuildWithPipeline,
+    buildId: string,
+    workspace: string
+  ): Promise<number> {
+    const app = build.pipeline.app;
+    const pattern =
+      app.artifactPattern?.trim() || this.defaultPattern(app.artifactType);
+    const cwd = path.join(workspace, app.id);
+
+    let matches: string[] = [];
+    try {
+      matches = await fg(pattern, {
+        cwd,
+        onlyFiles: true,
+        dot: false,
+        followSymbolicLinks: false,
+        ignore: ["**/.git/**", "**/node_modules/**"]
+      });
+    } catch {
+      matches = [];
+    }
+
+    const limited = matches.slice(0, 20);
+    let saved = 0;
+
+    for (const relative of limited) {
+      try {
+        await this.saveRealArtifact(build, buildId, cwd, relative);
+        saved += 1;
+      } catch {
+        continue;
+      }
+    }
+
+    return saved;
+  }
+
+  private async saveRealArtifact(
+    build: BuildWithPipeline,
+    buildId: string,
+    cwd: string,
+    relative: string
+  ) {
+    const app = build.pipeline.app;
+    const source = path.join(cwd, relative);
+    const originalName = path.basename(relative);
+    const ext = path.extname(originalName).replace(".", "") || app.artifactType;
+
+    const dir = path.join(storageRoot(), "artifacts", app.id, buildId);
+    await fs.mkdir(dir, { recursive: true });
+
+    const displayName = this.displayName(
+      app.code,
+      build.stage,
+      build.mergeSha,
+      ext,
+      dir
+    );
+    const target = path.join(dir, displayName);
+
+    await fs.copyFile(source, target);
+
+    const stat = await fs.stat(target);
+    const sha256 = await this.hashFile(target);
+
+    await this.prisma.artifact.create({
+      data: {
+        buildId,
+        originalName,
+        displayName,
+        type: ext,
+        mimeType: MIME_TYPES[ext] ?? "application/octet-stream",
+        sizeBytes: stat.size,
+        sha256,
+        relativePath: path.posix.join(app.id, buildId, displayName)
+      }
+    });
+  }
+
+  private async hashFile(filePath: string): Promise<string> {
+    const hash = createHash("sha256");
+    const data = await fs.readFile(filePath);
+    hash.update(data);
+    return hash.digest("hex");
+  }
+
+  private defaultPattern(artifactType: string): string {
+    return `**/*.${artifactType}`;
+  }
+
+  private displayName(
+    appCode: string,
+    stage: string,
+    mergeSha: string | null,
+    ext: string,
+    dir: string
+  ): string {
+    const now = new Date();
+    const pad2 = (value: number) => String(value).padStart(2, "0");
+    const stamp = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(
+      now.getDate()
+    )}_${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
+    const shortSha = (mergeSha ?? "unknown").slice(0, 7);
+    const code = appCode.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 40) || "app";
+
+    let name = `${code}_${stage}_${stamp}_${shortSha}.${ext}`;
+    let index = 2;
+
+    // 同名追加序号，避免同一构建内重名覆盖
+    while (existsSync(path.join(dir, name))) {
+      name = `${code}_${stage}_${stamp}_${shortSha}_${index}.${ext}`;
+      index += 1;
+    }
+
+    return name;
   }
 
   private async finishBuild(
@@ -367,10 +555,6 @@ export class BuildsService implements OnModuleInit {
 
     const pipeline = build.pipeline;
 
-    if (success) {
-      await this.createArtifact(build, buildId);
-    }
-
     if (success && build.stage === "qa") {
       await this.prisma.pipeline.update({
         where: { id: pipeline.id },
@@ -394,54 +578,8 @@ export class BuildsService implements OnModuleInit {
     });
   }
 
-  private async createArtifact(build: BuildWithPipeline, buildId: string) {
-    const app = build.pipeline.app;
-    const dir = path.join(storageRoot(), "artifacts", app.id, buildId);
-    await fs.mkdir(dir, { recursive: true });
-
-    const now = new Date();
-    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(
-      now.getHours()
-    )}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    const shortSha = (build.mergeSha ?? "unknown").slice(0, 7);
-    const appCode =
-      app.code.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 40) || "app";
-    const ext = app.artifactType;
-    const displayName = `${appCode}_${build.stage}_${stamp}_${shortSha}.${ext}`;
-
-    const content = Buffer.from(
-      [
-        "ShipFlow simulated artifact",
-        `app: ${app.name}`,
-        `stage: ${build.stage}`,
-        `build: ${buildId}`,
-        `sha: ${build.mergeSha ?? "-"}`,
-        `created: ${now.toISOString()}`
-      ].join("\n") + "\n",
-      "utf8"
-    );
-
-    const filePath = path.join(dir, displayName);
-    await fs.writeFile(filePath, content);
-
-    const sha256 = createHash("sha256").update(content).digest("hex");
-    const relativePath = path.posix.join(app.id, buildId, displayName);
-
-    await this.prisma.artifact.create({
-      data: {
-        buildId,
-        originalName: displayName,
-        displayName,
-        type: ext,
-        mimeType: MIME_TYPES[ext] ?? "application/octet-stream",
-        sizeBytes: content.length,
-        sha256,
-        relativePath
-      }
-    });
-  }
-
-  private async failBuild(buildId: string, reason: string) {    const build = await this.prisma.build.findUnique({ where: { id: buildId } });
+  private async failBuild(buildId: string, reason: string) {
+    const build = await this.prisma.build.findUnique({ where: { id: buildId } });
     if (!build || build.status !== "running") return;
 
     await this.prisma.build.update({
@@ -480,7 +618,10 @@ export class BuildsService implements OnModuleInit {
               name: true,
               code: true,
               platform: true,
+              repo: true,
+              defaultBranch: true,
               artifactType: true,
+              artifactPattern: true,
               buildScript: true
             }
           }

@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
-import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
 import { listRequirements } from "@/api/requirements";
 import { getErrorMessage } from "@/api/http";
 import { useAuthStore } from "@/stores/auth";
 import RequirementFormDialog from "@/components/requirements/RequirementFormDialog.vue";
+import RequirementDrawer from "@/components/requirements/RequirementDrawer.vue";
 import type { Person, Requirement, RequirementPriority } from "@/types";
 
 const auth = useAuthStore();
-const router = useRouter();
 
 const filters = reactive({
   keyword: "",
@@ -20,6 +19,8 @@ const filters = reactive({
 const requirements = ref<Requirement[]>([]);
 const loading = ref(false);
 const dialogVisible = ref(false);
+const drawerVisible = ref(false);
+const selectedRequirementId = ref("");
 
 const PRIORITY_META: Record<RequirementPriority, { label: string; cls: string }> = {
   P0: { label: "P0 · 最高", cls: "pri-p0" },
@@ -56,7 +57,8 @@ function resetFilters() {
 }
 
 function openDetail(requirement: Requirement) {
-  router.push(`/reqs/${requirement.id}`);
+  selectedRequirementId.value = requirement.id;
+  drawerVisible.value = true;
 }
 
 function peopleText(people: Person[]): string {
@@ -174,6 +176,7 @@ onMounted(load);
     </section>
 
     <RequirementFormDialog v-model="dialogVisible" @saved="onSaved" />
+    <RequirementDrawer v-model="drawerVisible" :requirement-id="selectedRequirementId" />
   </div>
 </template>
 

@@ -26,6 +26,15 @@ import PipelineFormDialog from "@/components/pipelines/PipelineFormDialog.vue";
 import BuildLogDialog from "@/components/builds/BuildLogDialog.vue";
 import type { BuildRecord, Pipeline, TaskCommit, TaskDetail } from "@/types";
 
+const props = defineProps<{
+  taskId?: string;
+  embedded?: boolean;
+}>();
+
+const emit = defineEmits<{
+  close: [];
+}>();
+
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -43,7 +52,7 @@ const activeBuild = ref<BuildRecord | null>(null);
 const commits = ref<TaskCommit[]>([]);
 let buildsTimer: ReturnType<typeof setInterval> | null = null;
 
-const taskId = computed(() => String(route.params.id || ""));
+const taskId = computed(() => props.taskId || String(route.params.id || ""));
 const statusMeta = computed(() =>
   task.value ? TASK_STATUS_META[task.value.status] : null
 );
@@ -379,6 +388,10 @@ async function removeTask() {
   try {
     await deleteTask(task.value.id);
     ElMessage.success("任务已删除");
+    if (props.embedded) {
+      emit("close");
+      return;
+    }
     router.push(`/reqs/${task.value.requirement.id}`);
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "删除任务失败"));
@@ -394,7 +407,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-loading="loading" class="page-stack">
-    <div class="crumb">
+    <div v-if="!embedded" class="crumb">
       <el-button link :icon="ArrowLeft" @click="router.push('/reqs')">需求管理</el-button>
       <span class="crumb-sep">/</span>
       <el-button v-if="task" link @click="router.push(`/reqs/${task.requirement.id}`)">

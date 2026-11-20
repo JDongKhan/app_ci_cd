@@ -64,6 +64,20 @@ code {
   border-radius: 14px;
 }
 
+.detail-drawer {
+  max-width: 96vw;
+}
+
+.detail-drawer .el-drawer__header {
+  margin-bottom: 0;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-drawer .el-drawer__body {
+  padding: 16px 20px 28px;
+}
+
 .el-table {
   --el-table-border-color: var(--line);
   --el-table-header-bg-color: #f8fafc;
@@ -126,7 +140,6 @@ code {
 
 .app-content {
   width: 100%;
-  max-width: 1400px;
   margin: 0 auto;
   padding: 24px 32px 48px;
 }

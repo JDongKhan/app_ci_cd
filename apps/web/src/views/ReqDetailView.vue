@@ -12,6 +12,16 @@ import QaMembersDialog from "@/components/requirements/QaMembersDialog.vue";
 import TaskFormDialog from "@/components/tasks/TaskFormDialog.vue";
 import type { Requirement, RequirementPriority, TaskSummary } from "@/types";
 
+const props = defineProps<{
+  requirementId?: string;
+  embedded?: boolean;
+}>();
+
+const emit = defineEmits<{
+  close: [];
+  "open-task": [taskId: string];
+}>();
+
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -36,7 +46,7 @@ const STATUS_CLASS: Record<string, string> = {
   done: "st-done"
 };
 
-const requirementId = computed(() => String(route.params.id || ""));
+const requirementId = computed(() => props.requirementId || String(route.params.id || ""));
 
 function formatDate(value: string): string {
   if (!value) return "—";
@@ -63,6 +73,10 @@ async function onTaskSaved() {
 }
 
 function openTask(task: TaskSummary) {
+  if (props.embedded) {
+    emit("open-task", task.id);
+    return;
+  }
   router.push(`/tasks/${task.id}`);
 }
 
@@ -71,7 +85,7 @@ onMounted(load);
 
 <template>
   <div v-loading="loading" class="page-stack">
-    <div class="crumb">
+    <div v-if="!embedded" class="crumb">
       <el-button link :icon="ArrowLeft" @click="router.push('/reqs')">需求管理</el-button>
       <span class="crumb-sep">/</span>
       <span>{{ requirement?.code ?? "需求详情" }}</span>

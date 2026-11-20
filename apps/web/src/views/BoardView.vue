@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { Refresh } from "@element-plus/icons-vue";
 import { listBoard } from "@/api/tasks";
 import { getErrorMessage } from "@/api/http";
 import { PRIORITY_META, TASK_STATUS_META } from "@/config/tasks";
+import TaskDrawer from "@/components/tasks/TaskDrawer.vue";
 import type { TaskSummary } from "@/types";
-
-const router = useRouter();
 
 const tasks = ref<TaskSummary[]>([]);
 const loading = ref(false);
+const taskDrawerVisible = ref(false);
+const selectedTaskId = ref("");
 
 const columns = [
   {
@@ -71,7 +71,8 @@ function formatDate(value: string): string {
 }
 
 function openTask(task: TaskSummary) {
-  router.push(`/tasks/${task.id}`);
+  selectedTaskId.value = task.id;
+  taskDrawerVisible.value = true;
 }
 
 async function load() {
@@ -139,6 +140,8 @@ onMounted(load);
         </div>
       </div>
     </section>
+
+    <TaskDrawer v-model="taskDrawerVisible" :task-id="selectedTaskId" />
   </div>
 </template>
 

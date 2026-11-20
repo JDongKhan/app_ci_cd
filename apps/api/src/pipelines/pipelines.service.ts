@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException
-} from "@nestjs/common";
-import { randomBytes } from "node:crypto";
+import { Injectable, BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { AuthUser } from "../common/auth-user.interface";
 import {
   CONFLICT_FILES,
@@ -16,6 +9,7 @@ import {
 } from "../common/pipeline-status";
 import { PrismaService } from "../prisma/prisma.service";
 import { BuildsService } from "../builds/builds.service";
+import { GitService } from "../common/git.service";
 import { CreatePipelineDto } from "./dto/pipeline.dto";
 
 const PIPELINE_INCLUDE = {
@@ -85,7 +79,8 @@ type PipelineWithRelations = {
 export class PipelinesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly buildsService: BuildsService
+    private readonly buildsService: BuildsService,
+    private readonly gitService: GitService
   ) {}
 
   async listByTask(taskId: string) {
@@ -191,6 +186,19 @@ export class PipelinesService {
     }
 
     const toBranch = this.targetBranch(pipeline.app.branchesJson, stage);
+    const tempBranch = this.tempBranchName(toBranch, pipeline.branch);
+
+    try {
+      await this.gitService.ensureWorkspace(
+        pipeline.appId,
+        pipeline.app.repo,
+        pipeline.app.defaultBranch
+      );
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : "克隆仓库失败"
+      );
+    }
 
     await this.prisma.pipelineEvent.create({
       data: {
@@ -203,10 +211,23 @@ export class PipelinesService {
       }
     });
 
-    const hasConflict = pipeline.branch.toLowerCase().includes("conflict");
+    const outcome = await this.gitService.merge(
+      pipeline.appId,
+      pipeline.branch,
+      toBranch,
+      tempBranch,
+      pipeline.app.defaultBranch
+    );
 
-    if (hasConflict) {
-      const tempBranch = this.tempBranchName(toBranch, pipeline.branch);
+    if (outcome.mode === "error") {
+      throw new BadRequestException(outcome.message);
+    }
+
+    if (outcome.conflict) {
+      const conflictFiles = outcome.files.length
+        ? outcome.files
+        : CONFLICT_FILES[stage];
+      const conflictTemp = outcome.tempBranch;
 
       await this.prisma.pipeline.update({
         where: { id },
@@ -217,9 +238,9 @@ export class PipelinesService {
         data: {
           pipelineId: id,
           stage,
-          tempBranch,
+          tempBranch: conflictTemp,
           files: {
-            create: CONFLICT_FILES[stage].map((path) => ({ path }))
+            create: conflictFiles.map((path: string) => ({ path }))
           }
         }
       });
@@ -230,11 +251,19 @@ export class PipelinesService {
           type: "merge_conflict",
           fromStatus: plan.busy,
           toStatus: plan.conflict,
-          payloadJson: JSON.stringify({ stage, tempBranch, files: CONFLICT_FILES[stage] }),
+          payloadJson: JSON.stringify({
+            stage,
+            tempBranch: conflictTemp,
+            files: conflictFiles,
+            mode: outcome.mode
+          }),
           actorId: user.id
         }
       });
     } else {
+      const sha = outcome.sha;
+      const commits = outcome.commits;
+
       await this.prisma.pipeline.update({
         where: { id },
         data: {
@@ -252,8 +281,8 @@ export class PipelinesService {
           stage,
           fromBranch: pipeline.branch,
           toBranch,
-          sha: this.randomSha(),
-          commits: 1 + Math.floor(Math.random() * 3),
+          sha,
+          commits,
           operatorId: user.id
         }
       });
@@ -264,7 +293,7 @@ export class PipelinesService {
           type: "merge_succeeded",
           fromStatus: plan.busy,
           toStatus: plan.success,
-          payloadJson: JSON.stringify({ stage, toBranch }),
+          payloadJson: JSON.stringify({ stage, toBranch, mode: outcome.mode }),
           actorId: user.id
         }
       });
@@ -302,6 +331,36 @@ export class PipelinesService {
 
     const toBranch = this.targetBranch(pipeline.app.branchesJson, stage);
 
+    try {
+      await this.gitService.ensureWorkspace(
+        pipeline.appId,
+        pipeline.app.repo,
+        pipeline.app.defaultBranch
+      );
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : "克隆仓库失败"
+      );
+    }
+
+    const outcome = await this.gitService.mergeTemp(
+      pipeline.appId,
+      conflict.tempBranch,
+      toBranch,
+      pipeline.app.defaultBranch
+    );
+
+    if (outcome.mode === "error") {
+      throw new BadRequestException(outcome.message);
+    }
+
+    if (outcome.conflict) {
+      throw new BadRequestException("临时分支合并再次冲突，请检查临时分支");
+    }
+
+    const sha = outcome.sha;
+    const commits = outcome.commits;
+
     await this.prisma.$transaction([
       this.prisma.pipelineConflict.update({
         where: { id: conflict.id },
@@ -317,8 +376,8 @@ export class PipelinesService {
           stage,
           fromBranch: conflict.tempBranch,
           toBranch,
-          sha: this.randomSha(),
-          commits: 1,
+          sha,
+          commits,
           operatorId: user.id
         }
       }),
@@ -643,10 +702,6 @@ export class PipelinesService {
   private targetBranch(branchesJson: string, stage: MergeStage): string {
     const branches = this.parseBranches(branchesJson);
     return branches[stage] || stage;
-  }
-
-  private randomSha(): string {
-    return randomBytes(20).toString("hex");
   }
 
   private tempBranchName(toBranch: string, feature: string): string {

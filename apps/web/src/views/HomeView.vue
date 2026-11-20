@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { ArrowRight } from "@element-plus/icons-vue";
 import { listMyTasks } from "@/api/tasks";
@@ -9,15 +8,20 @@ import { getErrorMessage } from "@/api/http";
 import { useAuthStore } from "@/stores/auth";
 import { LEVEL_META, ROLE_META } from "@/config/permissions";
 import { REQUIREMENT_STATUS_CLASS, TASK_STATUS_META } from "@/config/tasks";
+import RequirementDrawer from "@/components/requirements/RequirementDrawer.vue";
+import TaskDrawer from "@/components/tasks/TaskDrawer.vue";
 import type { Requirement, TaskSummary } from "@/types";
 
 const auth = useAuthStore();
-const router = useRouter();
 
 const tasks = ref<TaskSummary[]>([]);
 const requirements = ref<Requirement[]>([]);
 const loading = ref(false);
 const activeTab = ref("ongoing");
+const taskDrawerVisible = ref(false);
+const selectedTaskId = ref("");
+const reqDrawerVisible = ref(false);
+const selectedRequirementId = ref("");
 
 const roleLabel = computed(() =>
   auth.user ? ROLE_META[auth.user.role]?.label ?? auth.user.role : ""
@@ -87,11 +91,13 @@ async function load() {
 }
 
 function openTask(task: TaskSummary) {
-  router.push(`/tasks/${task.id}`);
+  selectedTaskId.value = task.id;
+  taskDrawerVisible.value = true;
 }
 
 function openRequirement(requirement: Requirement) {
-  router.push(`/reqs/${requirement.id}`);
+  selectedRequirementId.value = requirement.id;
+  reqDrawerVisible.value = true;
 }
 
 onMounted(load);
@@ -226,6 +232,9 @@ onMounted(load);
         </el-tab-pane>
       </el-tabs>
     </section>
+
+    <RequirementDrawer v-model="reqDrawerVisible" :requirement-id="selectedRequirementId" />
+    <TaskDrawer v-model="taskDrawerVisible" :task-id="selectedTaskId" />
   </div>
 </template>
 
