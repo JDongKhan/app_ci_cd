@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { ArrowLeft, Delete, Edit, Plus } from "@element-plus/icons-vue";
-import { deleteTask, getTask } from "@/api/tasks";
-import { advanceTaskStatus, mergePipeline, resolvePipeline } from "@/api/pipelines";
+import { deleteTask, getTask, listTaskCommits } from "@/api/tasks";
+import {
+  advanceTaskStatus,
+  mergePipeline,
+  resolvePipeline,
+  testReject,
+  verifyPipeline
+} from "@/api/pipelines";
+import { listTaskBuilds, qaVerdict, triggerBuild } from "@/api/builds";
+import { artifactDownloadUrl } from "@/api/artifacts";
 import { getErrorMessage } from "@/api/http";
 import { useAuthStore } from "@/stores/auth";
 import { PRIORITY_META, TASK_STATUS_META } from "@/config/tasks";
@@ -15,7 +23,8 @@ import {
 } from "@/config/pipelines";
 import TaskFormDialog from "@/components/tasks/TaskFormDialog.vue";
 import PipelineFormDialog from "@/components/pipelines/PipelineFormDialog.vue";
-import type { Pipeline, TaskDetail } from "@/types";
+import BuildLogDialog from "@/components/builds/BuildLogDialog.vue";
+import type { BuildRecord, Pipeline, TaskCommit, TaskDetail } from "@/types";
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -27,6 +36,12 @@ const activeTab = ref("overview");
 const editVisible = ref(false);
 const pipelineVisible = ref(false);
 const actingPipelineId = ref("");
+const builds = ref<BuildRecord[]>([]);
+const buildingPipelineId = ref("");
+const buildLogVisible = ref(false);
+const activeBuild = ref<BuildRecord | null>(null);
+const commits = ref<TaskCommit[]>([]);
+let buildsTimer: ReturnType<typeof setInterval> | null = null;
 
 const taskId = computed(() => String(route.params.id || ""));
 const statusMeta = computed(() =>
@@ -80,6 +95,11 @@ function formatDateTime(value: string): string {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
+function formatCommitDate(value: string): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("zh-CN", { hour12: false });
+}
+
 function canRoleAct(role: string): boolean {
   return auth.isAdmin || auth.user?.role === role;
 }
@@ -104,10 +124,54 @@ function hasStage(pipeline: Pipeline, stage: string): boolean {
   return pipeline.merges.some((merge) => merge.stage === stage && !merge.invalidatedAt);
 }
 
+const BUILD_LABEL: Record<string, string> = {
+  dev_merged: "打包 QA",
+  dev_built: "重新打包",
+  testing: "打包 UAT",
+  release_check: "打包 Release"
+};
+
+function canBuild(pipeline: Pipeline): boolean {
+  return Boolean(BUILD_LABEL[pipeline.status]) && auth.hasPermission("build_run");
+}
+
+async function loadBuilds() {
+  try {
+    builds.value = await listTaskBuilds(taskId.value);
+  } catch {
+    builds.value = [];
+  }
+
+  if (builds.value.some((record) => record.status === "running")) {
+    if (!buildsTimer) {
+      buildsTimer = setInterval(async () => {
+        await loadBuilds();
+        await load();
+      }, 2000);
+    }
+  } else if (buildsTimer) {
+    clearInterval(buildsTimer);
+    buildsTimer = null;
+  }
+}
+
+async function loadCommits() {
+  try {
+    commits.value = await listTaskCommits(taskId.value, 20);
+  } catch {
+    commits.value = [];
+  }
+}
+
+watch(activeTab, (value) => {
+  if (value === "commits") loadCommits();
+});
+
 async function load() {
   loading.value = true;
   try {
     task.value = await getTask(taskId.value);
+    await loadBuilds();
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "加载任务详情失败"));
   } finally {
@@ -171,6 +235,134 @@ async function resolve(pipeline: Pipeline) {
   }
 }
 
+async function build(pipeline: Pipeline) {
+  buildingPipelineId.value = pipeline.id;
+  try {
+    const record = await triggerBuild(pipeline.id);
+    ElMessage.success("已进入打包队列");
+    activeBuild.value = record;
+    buildLogVisible.value = true;
+    await load();
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "触发打包失败"));
+  } finally {
+    buildingPipelineId.value = "";
+  }
+}
+
+async function verdict(pipeline: Pipeline, pass: boolean) {
+  let reason = "";
+
+  if (!pass) {
+    try {
+      const result = await ElMessageBox.prompt("请填写自测拒绝原因", "自测拒绝", {
+        confirmButtonText: "拒绝",
+        cancelButtonText: "取消",
+        inputPlaceholder: "例如 首页列表滚动卡顿"
+      });
+      reason = result.value || "自测拒绝";
+    } catch {
+      return;
+    }
+  } else {
+    try {
+      await ElMessageBox.confirm("确认 QA 包自测通过？", "自测通过", {
+        type: "info",
+        confirmButtonText: "通过",
+        cancelButtonText: "取消"
+      });
+    } catch {
+      return;
+    }
+  }
+
+  try {
+    await qaVerdict(pipeline.id, pass, reason || undefined);
+    ElMessage.success(pass ? "已标记自测通过" : "已拒绝并退回开发");
+    await load();
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "自测判定失败"));
+  }
+}
+
+function openBuildLog(record: BuildRecord) {
+  activeBuild.value = record;
+  buildLogVisible.value = true;
+}
+
+function downloadArtifact(artifactId: string) {
+  window.open(artifactDownloadUrl(artifactId), "_blank");
+}
+
+function buildStatusClass(status: string): string {
+  if (status === "success") return "bs-success";
+  if (status === "failed") return "bs-failed";
+  return "bs-running";
+}
+
+function formatDuration(value: number | null): string {
+  if (!value && value !== 0) return "—";
+  if (value < 1000) return `${value}ms`;
+  return `${(value / 1000).toFixed(1)}s`;
+}
+
+async function rejectTest(pipeline: Pipeline) {
+  let reason = "";
+  try {
+    const result = await ElMessageBox.prompt("请填写测试不通过原因", "测试不通过", {
+      confirmButtonText: "退回开发",
+      cancelButtonText: "取消",
+      inputPlaceholder: "例如 UAT 包登录态失效"
+    });
+    reason = result.value || "测试不通过";
+  } catch {
+    return;
+  }
+
+  try {
+    await testReject(pipeline.id, reason);
+    ElMessage.success("已退回开发，任务回到开发中");
+    await load();
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "测试不通过操作失败"));
+  }
+}
+
+async function verify(pipeline: Pipeline, pass: boolean) {
+  let reason = "";
+
+  if (!pass) {
+    try {
+      const result = await ElMessageBox.prompt("请填写验证不通过原因", "验证不通过", {
+        confirmButtonText: "不通过",
+        cancelButtonText: "取消",
+        inputPlaceholder: "例如 Release 包闪退"
+      });
+      reason = result.value || "Release 验证不通过";
+    } catch {
+      return;
+    }
+  } else {
+    try {
+      await ElMessageBox.confirm("确认 Release 验证通过？", "验证通过", {
+        type: "info",
+        confirmButtonText: "通过",
+        cancelButtonText: "取消"
+      });
+    } catch {
+      return;
+    }
+  }
+
+  try {
+    await verifyPipeline(pipeline.id, pass, reason || undefined);
+    ElMessage.success(pass ? "Release 验证通过" : "已退回测试中");
+    await load();
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "发布验证失败"));
+  }
+}
+
 async function removeTask() {
   if (!task.value) return;
 
@@ -194,6 +386,10 @@ async function removeTask() {
 }
 
 onMounted(load);
+
+onBeforeUnmount(() => {
+  if (buildsTimer) clearInterval(buildsTimer);
+});
 </script>
 
 <template>
@@ -393,14 +589,55 @@ onMounted(load);
                     合回 master
                   </el-button>
 
-                  <span
-                    v-if="['dev_merged', 'dev_built', 'testing', 'release_check', 'release_verified', 'done'].includes(pipeline.status)"
-                    class="stage-hint"
+                  <el-button
+                    v-if="canBuild(pipeline)"
+                    size="small"
+                    :loading="buildingPipelineId === pipeline.id"
+                    @click="build(pipeline)"
                   >
-                    打包与自测将在构建模块接入后可用
-                  </span>
-                  <span v-else-if="pipeline.status === 'none'" class="stage-hint">
+                    {{ BUILD_LABEL[pipeline.status] }}
+                  </el-button>
+                  <template v-if="pipeline.status === 'dev_built' && auth.hasPermission('build_run')">
+                    <el-button size="small" type="success" @click="verdict(pipeline, true)">
+                      自测通过
+                    </el-button>
+                    <el-button size="small" type="danger" plain @click="verdict(pipeline, false)">
+                      拒绝
+                    </el-button>
+                  </template>
+
+                  <el-button
+                    v-if="pipeline.status === 'testing' && auth.hasPermission('test_run')"
+                    size="small"
+                    type="danger"
+                    plain
+                    @click="rejectTest(pipeline)"
+                  >
+                    测试不通过
+                  </el-button>
+                  <template v-if="pipeline.status === 'release_check' && auth.hasPermission('verify')">
+                    <el-button size="small" type="success" @click="verify(pipeline, true)">
+                      验证通过
+                    </el-button>
+                    <el-button size="small" type="danger" plain @click="verify(pipeline, false)">
+                      验证不通过
+                    </el-button>
+                  </template>
+
+                  <span v-if="pipeline.status === 'none'" class="stage-hint">
                     任务进入开发中后可合并 QA
+                  </span>
+                  <span v-else-if="pipeline.status === 'dev_passed'" class="stage-hint">
+                    任务进入测试中后可合并 UAT
+                  </span>
+                  <span v-else-if="pipeline.status === 'testing'" class="stage-hint">
+                    打包 UAT 后可合并 Release
+                  </span>
+                  <span v-else-if="pipeline.status === 'release_check'" class="stage-hint">
+                    Release 打包后等待验证
+                  </span>
+                  <span v-else-if="pipeline.status === 'done'" class="stage-hint">
+                    流水已结束，可从构建记录查看日志
                   </span>
                 </div>
 
@@ -422,17 +659,100 @@ onMounted(load);
           </el-tab-pane>
 
           <el-tab-pane label="提交记录" name="commits">
-            <div class="tab-empty">提交记录将在流水接入后读取任务的 Feature 分支最近提交。</div>
+            <el-table
+              v-if="commits.length"
+              :data="commits"
+              class="build-table"
+              empty-text="暂无提交"
+            >
+              <el-table-column label="提交" width="100">
+                <template #default="{ row }">
+                  <code class="commit-sha">{{ row.sha.slice(0, 7) }}</code>
+                </template>
+              </el-table-column>
+              <el-table-column prop="message" label="说明" min-width="260" show-overflow-tooltip />
+              <el-table-column prop="author" label="作者" width="120" />
+              <el-table-column label="时间" width="180">
+                <template #default="{ row }">{{ formatCommitDate(row.date) }}</template>
+              </el-table-column>
+            </el-table>
+            <div v-else class="tab-empty">
+              暂无提交记录。任务的 Feature 分支尚未接入本地 workspace，真实 Git 接入后会展示最近 20 条提交。
+            </div>
           </el-tab-pane>
 
           <el-tab-pane label="构建记录" name="builds">
-            <div class="tab-empty">构建记录将在打包执行器接入后展示每次构建的日志与产物。</div>
+            <el-table
+              v-if="builds.length"
+              :data="builds"
+              class="build-table"
+              empty-text="暂无构建"
+            >
+              <el-table-column label="流水 / 阶段" min-width="200">
+                <template #default="{ row }">
+                  <div class="build-name">{{ row.pipeline.name }}</div>
+                  <div class="build-sub">
+                    {{ row.stageLabel }} · {{ row.pipeline.branch }}
+                  </div>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="状态" width="130">
+                <template #default="{ row }">
+                  <span class="build-status" :class="buildStatusClass(row.status)">
+                    {{ row.statusLabel }}
+                  </span>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="进度" width="150">
+                <template #default="{ row }">
+                  <div class="build-progress">
+                    <div class="build-progress-bar">
+                      <span
+                        :class="{ failed: row.status === 'failed' }"
+                        :style="{ width: `${row.status === 'failed' ? 100 : row.progress}%` }"
+                      />
+                    </div>
+                    <span class="build-progress-text">
+                      {{ row.status === "failed" ? "失败" : `${row.progress}%` }}
+                    </span>
+                  </div>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="耗时" width="90">
+                <template #default="{ row }">{{ formatDuration(row.durationMs) }}</template>
+              </el-table-column>
+
+              <el-table-column label="开始时间" width="170">
+                <template #default="{ row }">{{ row.startedAt ? formatDateTime(row.startedAt) : "排队中" }}</template>
+              </el-table-column>
+
+              <el-table-column label="" width="150" align="right">
+                <template #default="{ row }">
+                  <el-button
+                    v-if="row.artifacts.length"
+                    size="small"
+                    type="primary"
+                    @click="downloadArtifact(row.artifacts[0].id)"
+                  >
+                    下载产物
+                  </el-button>
+                  <el-button size="small" @click="openBuildLog(row)">日志</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div v-else class="tab-empty">
+              还没有构建记录。在 CI 流水里打包后，这里会展示每次构建的状态、耗时与日志。
+            </div>
           </el-tab-pane>
         </el-tabs>
       </section>
 
       <TaskFormDialog v-model="editVisible" :task="task" @saved="onSaved" />
       <PipelineFormDialog v-model="pipelineVisible" :task="task" @saved="onPipelineSaved" />
+      <BuildLogDialog v-model="buildLogVisible" :build="activeBuild" />
     </template>
 
     <section v-else-if="!loading" class="empty-card">
@@ -872,5 +1192,78 @@ onMounted(load);
 
 .merge-sha {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.build-table {
+  width: 100%;
+  font-size: 12.5px;
+}
+
+.build-name {
+  font-weight: 500;
+}
+
+.build-sub {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.build-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.bs-running {
+  background: #eef3ff;
+  color: #1d4ed8;
+}
+
+.bs-success {
+  background: #e9f7ee;
+  color: #15803d;
+}
+
+.bs-failed {
+  background: #fdecec;
+  color: #b91c1c;
+}
+
+.build-progress {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.build-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.build-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--blue);
+}
+
+.build-progress-bar span.failed {
+  background: #dc2626;
+}
+
+.build-progress-text {
+  min-width: 32px;
+  color: var(--muted);
+  font-size: 10.5px;
+  text-align: right;
+}
+
+.commit-sha {
+  font-size: 11px;
 }
 </style>

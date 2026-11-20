@@ -207,3 +207,53 @@ model PipelineEvent {
   @@index([pipelineId])
   @@map("pipeline_events")
 }
+
+model Build {
+  id           String    @id @default(uuid())
+  pipelineId   String    @map("pipeline_id")
+  stage        String
+  mergeSha     String?   @map("merge_sha")
+  status       String    @default("running")
+  progress     Int       @default(0)
+  startedAt    DateTime? @map("started_at")
+  finishedAt   DateTime? @map("finished_at")
+  durationMs   Int?      @map("duration_ms")
+  exitCode     Int?      @map("exit_code")
+  failReason   String?   @map("fail_reason")
+  logPath      String?   @map("log_path")
+  logSizeBytes Int       @default(0) @map("log_size_bytes")
+  logTail      String?   @map("log_tail")
+  logTruncated Boolean   @default(false) @map("log_truncated")
+  logDeletedAt DateTime? @map("log_deleted_at")
+  triggeredBy  String?   @map("triggered_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  artifacts Artifact[]
+
+  @@index([pipelineId])
+  @@map("builds")
+}
+
+model Artifact {
+  id               String    @id @default(uuid())
+  buildId          String    @map("build_id")
+  originalName     String    @map("original_name")
+  displayName      String    @map("display_name")
+  type             String
+  mimeType         String    @map("mime_type")
+  sizeBytes        Int       @map("size_bytes")
+  sha256           String
+  relativePath     String    @map("relative_path")
+  status           String    @default("available")
+  downloadCount    Int       @default(0) @map("download_count")
+  lastDownloadedAt DateTime? @map("last_downloaded_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  build Build @relation(fields: [buildId], references: [id], onDelete: Cascade)
+
+  @@unique([buildId, relativePath])
+  @@index([status, createdAt])
+  @@map("artifacts")
+}

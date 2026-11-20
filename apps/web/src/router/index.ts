@@ -6,6 +6,8 @@ import HomeView from "@/views/HomeView.vue";
 import RolesView from "@/views/RolesView.vue";
 import StaffView from "@/views/StaffView.vue";
 import AppsView from "@/views/AppsView.vue";
+import ArtifactsView from "@/views/ArtifactsView.vue";
+import BoardView from "@/views/BoardView.vue";
 import ReqsView from "@/views/ReqsView.vue";
 import ReqDetailView from "@/views/ReqDetailView.vue";
 import TaskDetailView from "@/views/TaskDetailView.vue";
@@ -40,7 +42,7 @@ const router = createRouter({
         {
           path: "board",
           name: "board",
-          component: PlaceholderView,
+          component: BoardView,
           meta: { title: "任务看板", description: "按任务状态查看交付进展", permission: "board" }
         },
         {
@@ -70,7 +72,7 @@ const router = createRouter({
         {
           path: "artifacts",
           name: "artifacts",
-          component: PlaceholderView,
+          component: ArtifactsView,
           meta: { title: "打包产物", description: "已入库、打包中与失败的构建", permission: "artifacts" }
         },
         {

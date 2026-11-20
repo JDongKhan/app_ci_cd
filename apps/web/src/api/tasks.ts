@@ -1,5 +1,5 @@
 import { http } from "./http";
-import type { TaskDetail, TaskPayload } from "@/types";
+import type { TaskCommit, TaskDetail, TaskPayload, TaskSummary } from "@/types";
 
 export async function getTask(id: string): Promise<TaskDetail> {
   const { data } = await http.get<TaskDetail>(`/tasks/${id}`);
@@ -18,5 +18,22 @@ export async function updateTask(id: string, payload: TaskPayload): Promise<Task
 
 export async function deleteTask(id: string): Promise<{ ok: boolean }> {
   const { data } = await http.delete<{ ok: boolean }>(`/tasks/${id}`);
+  return data;
+}
+
+export async function listMyTasks(): Promise<TaskSummary[]> {
+  const { data } = await http.get<TaskSummary[]>("/my-tasks");
+  return data;
+}
+
+export async function listBoard(): Promise<TaskSummary[]> {
+  const { data } = await http.get<TaskSummary[]>("/board");
+  return data;
+}
+
+export async function listTaskCommits(id: string, limit = 20): Promise<TaskCommit[]> {
+  const { data } = await http.get<TaskCommit[]>(`/tasks/${id}/commits`, {
+    params: { limit }
+  });
   return data;
 }

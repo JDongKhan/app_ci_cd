@@ -137,6 +137,7 @@ export interface TaskSummary {
   reqId: string;
   title: string;
   owner: Person;
+  requirement?: { id: string; code: string; title: string };
   priority: RequirementPriority;
   status: TaskStatus;
   statusLabel: string;
@@ -145,6 +146,13 @@ export interface TaskSummary {
   overdueType: OverdueType;
   pipelineCount: number;
   progress: number;
+}
+
+export interface TaskCommit {
+  sha: string;
+  author: string;
+  date: string;
+  message: string;
 }
 
 export interface TaskDetail extends TaskSummary {
@@ -220,6 +228,57 @@ export interface PipelinePayload {
   appId: string;
   name?: string;
   branch: string;
+}
+
+export interface ArtifactInfo {
+  id: string;
+  displayName: string;
+  originalName: string;
+  type: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: string;
+  downloadCount: number;
+  createdAt: string;
+}
+
+export interface BuildRecord {
+  id: string;
+  pipelineId: string;
+  stage: string;
+  stageLabel: string;
+  mergeSha: string | null;
+  status: string;
+  statusLabel: string;
+  progress: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+  durationMs: number | null;
+  exitCode: number | null;
+  failReason: string | null;
+  logSizeBytes: number;
+  triggeredBy: string | null;
+  createdAt: string;
+  pipeline: {
+    id: string;
+    name: string;
+    branch: string;
+    app: {
+      id: string;
+      name: string;
+      platform: AppPlatform;
+      artifactType: ArtifactType;
+      buildScript: string;
+    };
+  };
+  artifacts: ArtifactInfo[];
+}
+
+export interface BuildLogChunk {
+  content: string;
+  nextOffset: number;
+  size: number;
+  status: string;
 }
 
 export interface TaskPayload {

@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { AppsModule } from "./apps/apps.module";
+import { ArtifactsModule } from "./artifacts/artifacts.module";
 import { AuthModule } from "./auth/auth.module";
+import { BuildsModule } from "./builds/builds.module";
 import { HealthController } from "./health/health.controller";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -23,7 +25,9 @@ import { UsersModule } from "./users/users.module";
     AppsModule,
     RequirementsModule,
     TasksModule,
-    PipelinesModule
+    PipelinesModule,
+    BuildsModule,
+    ArtifactsModule
   ],
   controllers: [HealthController]
 })

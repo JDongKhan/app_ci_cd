@@ -15,6 +15,7 @@ import {
   pipelineStatusLabel
 } from "../common/pipeline-status";
 import { PrismaService } from "../prisma/prisma.service";
+import { BuildsService } from "../builds/builds.service";
 import { CreatePipelineDto } from "./dto/pipeline.dto";
 
 const PIPELINE_INCLUDE = {
@@ -82,7 +83,10 @@ type PipelineWithRelations = {
 
 @Injectable()
 export class PipelinesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly buildsService: BuildsService
+  ) {}
 
   async listByTask(taskId: string) {
     const pipelines = await this.prisma.pipeline.findMany({
@@ -158,6 +162,10 @@ export class PipelinesService {
     }
 
     await this.assertPermission(user, plan.permission);
+
+    if (this.buildsService.isBusy()) {
+      throw new BadRequestException("打包机正在构建，此时禁止切分支合并");
+    }
 
     const pipeline = await this.prisma.pipeline.findUnique({
       where: { id },
@@ -266,6 +274,10 @@ export class PipelinesService {
   }
 
   async resolve(id: string, user: AuthUser) {
+    if (this.buildsService.isBusy()) {
+      throw new BadRequestException("打包机正在构建，此时禁止切分支合并");
+    }
+
     const pipeline = await this.prisma.pipeline.findUnique({
       where: { id },
       include: { app: true, conflicts: { where: { resolvedAt: null }, orderBy: { createdAt: "desc" } } }
@@ -321,6 +333,204 @@ export class PipelinesService {
         }
       })
     ]);
+
+    return this.detail(id);
+  }
+
+  async qaVerdict(id: string, pass: boolean, reason: string | undefined, user: AuthUser) {
+    await this.assertPermission(user, "build_run");
+
+    const pipeline = await this.prisma.pipeline.findUnique({ where: { id } });
+    if (!pipeline) {
+      throw new NotFoundException("流水不存在");
+    }
+
+    if (pipeline.status !== "dev_built") {
+      throw new BadRequestException("只有 QA 包就绪的流水才能做自测判定");
+    }
+
+    if (pass) {
+      await this.prisma.pipeline.update({
+        where: { id },
+        data: { status: "dev_passed" }
+      });
+      await this.prisma.pipelineEvent.create({
+        data: {
+          pipelineId: id,
+          type: "qa_passed",
+          fromStatus: "dev_built",
+          toStatus: "dev_passed",
+          actorId: user.id
+        }
+      });
+    } else {
+      const merge = await this.prisma.pipelineMerge.findFirst({
+        where: { pipelineId: id, stage: "qa", invalidatedAt: null },
+        orderBy: { mergedAt: "desc" }
+      });
+
+      if (merge) {
+        await this.prisma.pipelineMerge.update({
+          where: { id: merge.id },
+          data: {
+            invalidatedAt: new Date(),
+            invalidatedReason: reason?.trim() || "自测拒绝"
+          }
+        });
+      }
+
+      await this.prisma.pipeline.update({
+        where: { id },
+        data: {
+          status: "dev_merged",
+          reworkFrom: "qa",
+          reworkReason: reason?.trim() || "自测拒绝",
+          reworkBy: user.id,
+          reworkAt: new Date()
+        }
+      });
+
+      await this.prisma.pipelineEvent.create({
+        data: {
+          pipelineId: id,
+          type: "qa_rejected",
+          fromStatus: "dev_built",
+          toStatus: "dev_merged",
+          payloadJson: JSON.stringify({ reason: reason?.trim() || "自测拒绝" }),
+          actorId: user.id
+        }
+      });
+    }
+
+    return this.detail(id);
+  }
+
+  async testReject(id: string, reason: string | undefined, user: AuthUser) {
+    await this.assertPermission(user, "test_run");
+
+    const pipeline = await this.prisma.pipeline.findUnique({
+      where: { id },
+      include: { task: true }
+    });
+
+    if (!pipeline) {
+      throw new NotFoundException("流水不存在");
+    }
+
+    if (pipeline.status !== "testing" || pipeline.task.status !== "testing") {
+      throw new BadRequestException("只有测试中的流水才能执行测试不通过");
+    }
+
+    const now = new Date();
+    const text = reason?.trim() || "测试不通过";
+
+    await this.prisma.pipelineMerge.updateMany({
+      where: {
+        pipelineId: id,
+        stage: { in: ["uat", "release"] },
+        invalidatedAt: null
+      },
+      data: { invalidatedAt: now, invalidatedReason: text }
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.pipeline.update({
+        where: { id },
+        data: {
+          status: "dev_merged",
+          reworkFrom: "testing",
+          reworkReason: text,
+          reworkBy: user.id,
+          reworkAt: now
+        }
+      }),
+      this.prisma.task.update({
+        where: { id: pipeline.taskId },
+        data: { status: "dev", statusAt: now, statusBy: user.id }
+      }),
+      this.prisma.pipelineEvent.create({
+        data: {
+          pipelineId: id,
+          type: "test_rejected",
+          fromStatus: "testing",
+          toStatus: "dev_merged",
+          payloadJson: JSON.stringify({ reason: text }),
+          actorId: user.id
+        }
+      })
+    ]);
+
+    return this.detail(id);
+  }
+
+  async verify(id: string, pass: boolean, reason: string | undefined, user: AuthUser) {
+    await this.assertPermission(user, "verify");
+
+    const pipeline = await this.prisma.pipeline.findUnique({
+      where: { id },
+      include: { task: true }
+    });
+
+    if (!pipeline) {
+      throw new NotFoundException("流水不存在");
+    }
+
+    if (pipeline.status !== "release_check" || pipeline.task.status !== "release") {
+      throw new BadRequestException("只有 Release 验证中的流水才能做发布验证");
+    }
+
+    const now = new Date();
+    const text = reason?.trim();
+
+    if (pass) {
+      await this.prisma.$transaction([
+        this.prisma.pipeline.update({
+          where: { id },
+          data: { status: "release_verified" }
+        }),
+        this.prisma.pipelineEvent.create({
+          data: {
+            pipelineId: id,
+            type: "release_verified",
+            fromStatus: "release_check",
+            toStatus: "release_verified",
+            actorId: user.id
+          }
+        })
+      ]);
+    } else {
+      await this.prisma.pipelineMerge.updateMany({
+        where: { pipelineId: id, stage: "release", invalidatedAt: null },
+        data: { invalidatedAt: now, invalidatedReason: text || "Release 验证不通过" }
+      });
+
+      await this.prisma.$transaction([
+        this.prisma.pipeline.update({
+          where: { id },
+          data: {
+            status: "testing",
+            reworkFrom: "release",
+            reworkReason: text || "Release 验证不通过",
+            reworkBy: user.id,
+            reworkAt: now
+          }
+        }),
+        this.prisma.task.update({
+          where: { id: pipeline.taskId },
+          data: { status: "testing", statusAt: now, statusBy: user.id }
+        }),
+        this.prisma.pipelineEvent.create({
+          data: {
+            pipelineId: id,
+            type: "release_rejected",
+            fromStatus: "release_check",
+            toStatus: "testing",
+            payloadJson: JSON.stringify({ reason: text || "Release 验证不通过" }),
+            actorId: user.id
+          }
+        })
+      ]);
+    }
 
     return this.detail(id);
   }

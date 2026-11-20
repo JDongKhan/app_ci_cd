@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
@@ -28,6 +29,11 @@ export class TasksController {
   @Get(":id")
   detail(@Param("id") id: string) {
     return this.tasksService.detail(id);
+  }
+
+  @Get(":id/commits")
+  commits(@Param("id") id: string, @Query("limit") limit?: string) {
+    return this.tasksService.commits(id, Number(limit) || 20);
   }
 
   @Post()
@@ -55,5 +61,33 @@ export class TasksController {
   @UseGuards(AdminGuard)
   remove(@Param("id") id: string) {
     return this.tasksService.remove(id);
+  }
+}
+
+@ApiTags("tasks")
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Controller("my-tasks")
+export class MyTasksController {
+  constructor(private readonly tasksService: TasksService) {}
+
+  @Get()
+  @RequirePermissions("home")
+  list(@CurrentUser() user: AuthUser) {
+    return this.tasksService.myTasks(user);
+  }
+}
+
+@ApiTags("tasks")
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Controller("board")
+export class BoardController {
+  constructor(private readonly tasksService: TasksService) {}
+
+  @Get()
+  @RequirePermissions("board")
+  list() {
+    return this.tasksService.board();
   }
 }

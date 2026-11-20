@@ -22,6 +22,20 @@ export async function resolvePipeline(id: string): Promise<Pipeline> {
   return data;
 }
 
+export async function testReject(id: string, reason?: string): Promise<Pipeline> {
+  const { data } = await http.post<Pipeline>(`/pipelines/${id}/test-reject`, { reason });
+  return data;
+}
+
+export async function verifyPipeline(
+  id: string,
+  pass: boolean,
+  reason?: string
+): Promise<Pipeline> {
+  const { data } = await http.post<Pipeline>(`/pipelines/${id}/verify`, { pass, reason });
+  return data;
+}
+
 export async function advanceTaskStatus(
   taskId: string,
   status: string

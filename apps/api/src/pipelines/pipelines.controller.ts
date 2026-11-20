@@ -6,7 +6,13 @@ import { JwtAuthGuard } from "../common/jwt-auth.guard";
 import { RequirePermissions } from "../common/permissions.decorator";
 import { PermissionsGuard } from "../common/permissions.guard";
 import { MergeStage } from "../common/pipeline-status";
-import { CreatePipelineDto, MergePipelineDto } from "./dto/pipeline.dto";
+import {
+  CreatePipelineDto,
+  MergePipelineDto,
+  QaVerdictDto,
+  TestRejectDto,
+  VerifyDto
+} from "./dto/pipeline.dto";
 import { PipelinesService } from "./pipelines.service";
 
 @ApiTags("pipelines")
@@ -39,5 +45,32 @@ export class PipelinesController {
   @Post("pipelines/:id/resolve")
   resolve(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.pipelinesService.resolve(id, user);
+  }
+
+  @Post("pipelines/:id/qa-verdict")
+  qaVerdict(
+    @Param("id") id: string,
+    @Body() dto: QaVerdictDto,
+    @CurrentUser() user: AuthUser
+  ) {
+    return this.pipelinesService.qaVerdict(id, dto.pass, dto.reason, user);
+  }
+
+  @Post("pipelines/:id/test-reject")
+  testReject(
+    @Param("id") id: string,
+    @Body() dto: TestRejectDto,
+    @CurrentUser() user: AuthUser
+  ) {
+    return this.pipelinesService.testReject(id, dto.reason, user);
+  }
+
+  @Post("pipelines/:id/verify")
+  verify(
+    @Param("id") id: string,
+    @Body() dto: VerifyDto,
+    @CurrentUser() user: AuthUser
+  ) {
+    return this.pipelinesService.verify(id, dto.pass, dto.reason, user);
   }
 }
