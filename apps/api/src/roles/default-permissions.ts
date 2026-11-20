@@ -1,0 +1,51 @@
+export const DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  "dev/l1": ["home", "board", "spec"],
+  "dev/l2": ["home", "board", "reqs", "spec", "pipe_create", "merge_qa", "build_run"],
+  "dev/l3": [
+    "home",
+    "board",
+    "reqs",
+    "apps",
+    "artifacts",
+    "spec",
+    "pipe_create",
+    "merge_qa",
+    "build_run",
+    "task_create",
+    "artifact_download"
+  ],
+  "qa/l1": ["home", "board", "reqs", "spec", "req_member"],
+  "qa/l2": [
+    "home",
+    "board",
+    "reqs",
+    "artifacts",
+    "spec",
+    "req_member",
+    "test_run",
+    "merge_uat",
+    "verify",
+    "accept",
+    "merge_release",
+    "merge_master"
+  ],
+  "qa/l3": [
+    "home",
+    "board",
+    "reqs",
+    "artifacts",
+    "spec",
+    "req_member",
+    "test_run",
+    "merge_uat",
+    "verify",
+    "accept",
+    "merge_release",
+    "merge_master",
+    "build_run",
+    "artifact_download"
+  ],
+  "pm/l1": ["home", "reqs", "spec", "req_create"],
+  "pm/l2": ["home", "reqs", "board", "artifacts", "spec", "req_create"],
+  "pm/l3": ["home", "reqs", "board", "artifacts", "spec", "req_create", "artifact_download"]
+};

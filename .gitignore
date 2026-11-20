@@ -1,1 +1,11 @@
-/.trae-html-share-packages
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+data/*.db
+data/*.db-journal
+storage/
+workspace/
+.DS_Store
+*.log

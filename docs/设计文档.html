@@ -36,7 +36,6 @@
 <a class="toc-link toc-h3" href="#sec-7">5.2 users 表</a>
 <a class="toc-link toc-h3" href="#sec-8">5.3 登录</a>
 <a class="toc-link toc-h3" href="#sec-9">5.4 人员管理</a>
-<a class="toc-link toc-h3" href="#sec-9b">5.5 工作流程与角色分工</a>
 <a class="toc-link toc-h2" href="#sec-10">6. 权限设计</a>
 <a class="toc-link toc-h3" href="#sec-11">6.1 权限分类</a>
 <a class="toc-link toc-h3" href="#sec-12">6.2 表结构</a>
@@ -94,6 +93,7 @@
 <a class="toc-link toc-h2" href="#sec-64">14. 页面与路由</a>
 <a class="toc-link toc-h2" href="#sec-65">15. 核心时序</a>
 <a class="toc-link toc-h2" href="#sec-66">16. 测试要点</a>
+<a class="toc-link toc-h2" href="#sec-67">17. 与需求说明的差异说明</a>
 <a class="toc-link toc-h2" href="#sec-68">附录 A：完整建表 SQL</a></nav>
   </aside>
   <main class="content">
@@ -113,7 +113,6 @@
 <a class="toc-link toc-h3" href="#sec-7">5.2 users 表</a>
 <a class="toc-link toc-h3" href="#sec-8">5.3 登录</a>
 <a class="toc-link toc-h3" href="#sec-9">5.4 人员管理</a>
-<a class="toc-link toc-h3" href="#sec-9b">5.5 工作流程与角色分工</a>
 <a class="toc-link toc-h2" href="#sec-10">6. 权限设计</a>
 <a class="toc-link toc-h3" href="#sec-11">6.1 权限分类</a>
 <a class="toc-link toc-h3" href="#sec-12">6.2 表结构</a>
@@ -171,11 +170,12 @@
 <a class="toc-link toc-h2" href="#sec-64">14. 页面与路由</a>
 <a class="toc-link toc-h2" href="#sec-65">15. 核心时序</a>
 <a class="toc-link toc-h2" href="#sec-66">16. 测试要点</a>
+<a class="toc-link toc-h2" href="#sec-67">17. 与需求说明的差异说明</a>
 <a class="toc-link toc-h2" href="#sec-68">附录 A：完整建表 SQL</a></nav>
     </details>
     <article class="markdown-body">
 <blockquote>
-<p>关联需求：<a href="./%E9%9C%80%E6%B1%82%E8%AF%B4%E6%98%8E.html">需求说明.html</a><br>关联原型：<a href="./%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%E4%B8%8E%E6%89%93%E5%8C%85%E5%B9%B3%E5%8F%B0-%E5%8E%9F%E5%9E%8B.html">代码合并与打包平台-原型.html</a><br>关联方案：<a href="./%E6%8A%80%E6%9C%AF%E6%96%B9%E6%A1%88.html">技术方案.html</a><br>口径：本文与需求说明、交互原型同为一期设计（v1），表述一致</p>
+<p>关联需求：<a href="./%E9%9C%80%E6%B1%82%E8%AF%B4%E6%98%8E.html">需求说明.html</a><br>关联原型：<a href="./%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%E4%B8%8E%E6%89%93%E5%8C%85%E5%B9%B3%E5%8F%B0-%E5%8E%9F%E5%9E%8B.html">代码合并与打包平台-原型.html</a><br>关联方案：<a href="./%E6%8A%80%E6%9C%AF%E6%96%B9%E6%A1%88.html">技术方案.html</a><br>口径：以需求说明和当前原型 v8 为准；两者冲突处已在第 17 节说明</p>
 </blockquote>
 <h2 id="sec-1">1. 文档说明</h2>
 <p>本文说明一期各模块的具体设计：</p>
@@ -210,9 +210,7 @@
     PIPELINES ||--o{ PIPELINE_CONFLICTS : has
     PIPELINES ||--o{ PIPELINE_EVENTS : logs
     PIPELINES ||--o{ BUILDS : runs
-    BUILDS ||--o{ ARTIFACTS : produces
-    PERMISSION_GROUPS ||--o{ PERMISSION_DEFS : groups
-    PERMISSION_DEFS ||--o{ ROLE_PERMISSIONS : grants</div>
+    BUILDS ||--o{ ARTIFACTS : produces</div>
 <p>核心链路：</p>
 <pre><code class="language-text">Requirement 1 ── N Task 1 ── N Pipeline 1 ── N Build 1 ── N Artifact
 App 1 ── N Pipeline
@@ -386,49 +384,6 @@ User 1 ── N Task（开发负责人）
 <li>至少保留一个启用状态的管理员</li>
 <li>admin 的 level 必须为空</li>
 </ul>
-<h3 id="sec-9b">5.5 工作流程与角色分工</h3>
-<p>一条需求从提出到结束固定走四步，职责不重叠：产品建需求 → 开发负责人拆任务并指定任务负责人、测试负责人只登记测试人员 → 任务负责人领任务开发 → 测试接住提测后的任务直到发布结束。<strong>任务只由开发负责人创建，测试不建任务</strong>。</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>步骤</th>
-<th>执行角色</th>
-<th>入口</th>
-<th>产出 / 权限边界</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>1 提需求</td>
-<td>产品负责人</td>
-<td>需求管理 → 新建需求</td>
-<td>生成需求，指定开发 / 测试 / 产品负责人；产品在「我的需求」只看到自己是产品负责人的需求</td>
-</tr>
-<tr>
-<td>2 拆任务</td>
-<td>开发负责人</td>
-<td>需求详情 →「+ 新建任务」</td>
-<td>生成任务，指定任务负责人与计划开始 / 结束时间；<code>task_create</code> 且必须是该需求的 <code>dev_owner_id</code>，其余角色按钮置灰</td>
-</tr>
-<tr>
-<td>2b 登记测试人员</td>
-<td>测试负责人</td>
-<td>需求详情 →「+ 测试人员」</td>
-<td>写入 <code>requirement_qa_members</code>；测试负责人固定在内；<code>req_member</code> 且必须是该需求的 <code>qa_owner_id</code>；不建任务</td>
-</tr>
-<tr>
-<td>3 开发交付</td>
-<td>任务负责人（开发）</td>
-<td>首页「进行中」→ 任务详情</td>
-<td>开始开发 → 流水合并 QA / 打包 / 自测 → 提测；任务按 <code>owner_id = 当前用户</code> 过滤</td>
-</tr>
-<tr>
-<td>4 测试交付</td>
-<td>测试负责人与测试人员</td>
-<td>首页「进行中」→ 任务详情</td>
-<td>开始测试 → 合并 UAT / 打包 / 测试 → 待发布 → 验证并合回 master → 已结束；任务按需求可见性过滤（负责人 + 测试人员）</td>
-</tr>
-</tbody></table></div>
-<p>可见范围由「我是这个需求的哪个负责人」决定，不由角色统一决定：同一个测试可能既是 A 需求的测试负责人、又是 B 需求的测试人员，两条需求都会进入他的「我的需求」与「我的任务」。</p>
 <h2 id="sec-10">6. 权限设计</h2>
 <h3 id="sec-11">6.1 权限分类</h3>
 <div class="table-wrap"><table>
@@ -471,24 +426,14 @@ User 1 ── N Task（开发负责人）
 </tr>
 </thead>
 <tbody><tr>
-<td><code>permission_groups</code></td>
-<td>key、label、description、sort</td>
-<td>权限分组</td>
-</tr>
-<tr>
-<td><code>permission_defs</code></td>
-<td>key、group_key、label、menu、hash、admin_only、sort</td>
-<td>权限项定义</td>
-</tr>
-<tr>
 <td><code>role_permissions</code></td>
 <td>role、level、permission_key</td>
-<td>角色 × 级别矩阵</td>
+<td>角色 × 级别矩阵；权限项定义在前端</td>
 </tr>
 </tbody></table></div>
-<p>权限定义以 <code>config/permissions.json</code> 为准，启动时同步到 <code>permission_groups</code> 和 <code>permission_defs</code>；授权矩阵存数据库。新增权限只改配置文件或通过「角色权限」页导入 JSON。</p>
+<p>权限项定义放在前端 <code>apps/web/src/config/permissions.ts</code>，当前 5 组 23 项。前端负责渲染权限分组和矩阵，提交选中的权限 key；后端只存储 <code>(role, level, permission_key)</code>，不维护权限目录表。新增权限项时改前端配置即可，不需要迁移数据库。</p>
 <h3 id="sec-13">6.3 权限项</h3>
-<p>权限项共 5 组 23 项：</p>
+<p>原型 v2 共 5 组 23 项：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -638,7 +583,7 @@ User 1 ── N Task（开发负责人）
 </tr>
 </tbody></table></div>
 <h3 id="sec-14">6.4 默认权限矩阵</h3>
-<p>各角色级别的默认权限如下：</p>
+<p>与原型 v2 <code>DEFAULT_PERMS</code> 保持一致：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -722,16 +667,6 @@ User 1 ── N Task（开发负责人）
 <td>任务详情按钮</td>
 </tr>
 <tr>
-<td>新建需求</td>
-<td>产品 / 管理员</td>
-<td><code>req_create</code></td>
-</tr>
-<tr>
-<td>新建任务</td>
-<td>该需求的开发负责人 / 管理员</td>
-<td><code>task_create</code>，且 <code>dev_owner_id</code> 必须是本人</td>
-</tr>
-<tr>
 <td>新建流水</td>
 <td>开发 / 管理员</td>
 <td><code>pipe_create</code></td>
@@ -773,8 +708,8 @@ User 1 ── N Task（开发负责人）
 </tr>
 <tr>
 <td>维护需求测试人员</td>
-<td>该需求的测试负责人 / 管理员</td>
-<td><code>req_member</code>，且 <code>qa_owner_id</code> 必须是本人；测试不建任务</td>
+<td>测试 / 管理员</td>
+<td><code>req_member</code></td>
 </tr>
 <tr>
 <td>删除任务</td>
@@ -996,7 +931,7 @@ User 1 ── N Task（开发负责人）
 <tr>
 <td><code>priority</code></td>
 <td>TEXT</td>
-<td>P0 / P1 / P2（P0 最高，默认 P1）</td>
+<td>高 / 中 / 低</td>
 </tr>
 <tr>
 <td><code>start_at</code></td>
@@ -1047,8 +982,6 @@ User 1 ── N Task（开发负责人）
 <li>产品负责人 <code>role = pm</code> 且启用</li>
 <li>测试人员必须 <code>role = qa</code> 且启用</li>
 <li>新建任务时，任务负责人默认取需求的开发负责人</li>
-<li>建任务必须是该需求的 <code>dev_owner_id</code>（或管理员）并具备 <code>task_create</code> 权限；测试即使有 <code>task_create</code> 也不能替他人需求拆任务，需求详情按钮对其置灰</li>
-<li>维护测试人员必须是该需求的 <code>qa_owner_id</code>（或管理员）并具备 <code>req_member</code>；被登记的测试人员不可从列表移除负责人本人</li>
 </ul>
 <h3 id="sec-27">8.4 需求状态</h3>
 <p>需求状态只读，由任务聚合：</p>
@@ -1119,7 +1052,6 @@ User 1 ── N Task（开发负责人）
 </tr>
 </tbody></table></div>
 <p>页面：<code>/reqs</code> 卡片列表，<code>/reqs/:id</code> 详情，展示负责人、测试人员、任务列表和进度。</p>
-<p>需求详情同时以右侧抽屉呈现（<code>GET /api/requirements/:id</code>）。<strong>抽屉不改变当前路由</strong>：首页「我的需求」tab 点卡片就在首页打开抽屉，不会被带到 <code>/reqs</code> 全量列表；需求管理页点卡片同样原地打开。抽屉按钮行（新建任务、测试人员）与任务详情「打开需求」都指向这个抽屉。</p>
 <h2 id="sec-30">9. 任务设计</h2>
 <h3 id="sec-31">9.1 tasks 表</h3>
 <div class="table-wrap"><table>
@@ -1158,7 +1090,7 @@ User 1 ── N Task（开发负责人）
 <tr>
 <td><code>priority</code></td>
 <td>TEXT</td>
-<td>P0 / P1 / P2（P0 最高，默认 P1）</td>
+<td>高 / 中 / 低</td>
 </tr>
 <tr>
 <td><code>start_at</code></td>
@@ -1258,7 +1190,7 @@ User 1 ── N Task（开发负责人）
 <td><code>done</code></td>
 <td>—</td>
 <td>—</td>
-<td>不能继续推进</td>
+<td>不再推进</td>
 </tr>
 </tbody></table></div>
 <p>任务状态是任务自己的字段，不由流水实时推导。</p>
@@ -1289,7 +1221,7 @@ User 1 ── N Task（开发负责人）
 </code></pre>
 <p>只统计有效合并，四舍五入为 0~100。</p>
 <h3 id="sec-35">9.5 首页 tab</h3>
-<p>首页有三个 tab：</p>
+<p>原型 v8 有三个 tab：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1335,7 +1267,7 @@ User 1 ── N Task（开发负责人）
 <li>CI 流水</li>
 </ul>
 </li>
-<li>打开需求：关闭任务抽屉、打开对应需求的右侧抽屉，停留在当前页面（不跳转 <code>/reqs</code> 全量列表）</li>
+<li>打开需求</li>
 <li>删除任务（仅管理员）</li>
 </ul>
 <p>tabs：概览 / CI 流水 / 提交记录 / 构建记录。</p>
@@ -1352,7 +1284,7 @@ User 1 ── N Task（开发负责人）
 <tbody><tr>
 <td>GET</td>
 <td><code>/api/my-tasks</code></td>
-<td>我的任务：开发按 <code>owner_id = 本人</code>；测试按所属需求的 <code>qa_owner_id</code> 或 <code>requirement_qa_members</code> 含本人；产品按需求的 <code>pm_owner_id = 本人</code>；管理员全量</td>
+<td>我的任务</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -2148,7 +2080,7 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <ul>
 <li>演示阶段默认全部保留</li>
 <li>后续通过 <code>ARTIFACT_RETENTION_DAYS</code> 清理</li>
-<li>清理只删文件，记录标记为 <code>deleted</code> 并写 <code>deleted_at</code></li>
+<li>清理只删文件，记录改为 <code>deleted</code> 并写 <code>deleted_at</code></li>
 <li>启动对账：记录有文件无 → <code>missing</code>；文件有记录无 → 延迟清理</li>
 </ul>
 <h2 id="sec-63">13. API 汇总</h2>
@@ -2445,6 +2377,14 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <li>时间、JSON 字段读写</li>
 <li>软删除过滤</li>
 </ul>
+<h2 id="sec-67">17. 与需求说明的差异说明</h2>
+<p>以下三处需求说明与当前原型 v8 不完全一致，文档按当前原型执行：</p>
+<ol>
+<li><strong>首页 tab</strong>：需求说明写「进行中 / 跟我有关 · 其他状态」两个 tab；原型 v8 增加「我的需求」第三个 tab。本文按三个 tab 设计。</li>
+<li><strong>权限项数量</strong>：需求说明写 22 项；原型 v2 <code>perm-config</code> 已增加 <code>req_member</code>，共 23 项。本文按 23 项设计。</li>
+<li><strong>登录方式</strong>：原型为选账号模拟登录；正式实现仍使用账号 + 密码 + JWT，账号数据模型不变。</li>
+</ol>
+<p>如果这三处以需求说明为准，需要同步调整原型；当前先以原型 v8 为准。</p>
 <h2 id="sec-68">附录 A：完整建表 SQL</h2>
 <blockquote>
 <p>SQLite 语法，用于评审和初始化；正式开发以 Prisma schema 和迁移为准。</p>
@@ -2467,28 +2407,10 @@ CREATE TABLE users (
 CREATE INDEX idx_users_role_level ON users(role, level);
 CREATE INDEX idx_users_active ON users(active);
 
-CREATE TABLE permission_groups (
-  key         TEXT PRIMARY KEY,
-  label       TEXT NOT NULL,
-  description TEXT,
-  sort        INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE permission_defs (
-  key        TEXT PRIMARY KEY,
-  group_key  TEXT NOT NULL REFERENCES permission_groups(key),
-  label      TEXT NOT NULL,
-  menu       INTEGER NOT NULL DEFAULT 0,
-  hash       TEXT,
-  admin_only INTEGER NOT NULL DEFAULT 0,
-  sort       INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX idx_permission_defs_group ON permission_defs(group_key, sort);
-
 CREATE TABLE role_permissions (
   role           TEXT NOT NULL,
   level          TEXT NOT NULL,
-  permission_key TEXT NOT NULL REFERENCES permission_defs(key) ON DELETE CASCADE,
+  permission_key TEXT NOT NULL,
   PRIMARY KEY (role, level, permission_key)
 );
 CREATE INDEX idx_role_permissions_key ON role_permissions(permission_key);
@@ -2520,7 +2442,7 @@ CREATE TABLE requirements (
   dev_owner_id TEXT NOT NULL REFERENCES users(id),
   qa_owner_id  TEXT NOT NULL REFERENCES users(id),
   pm_owner_id  TEXT NOT NULL REFERENCES users(id),
-  priority     TEXT NOT NULL DEFAULT &#39;P1&#39;,
+  priority     TEXT NOT NULL DEFAULT &#39;中&#39;,
   start_at     DATETIME,
   due_at       DATETIME,
   created_at   DATETIME NOT NULL,
@@ -2543,7 +2465,7 @@ CREATE TABLE tasks (
   title       TEXT NOT NULL,
   description TEXT,
   owner_id    TEXT NOT NULL REFERENCES users(id),
-  priority    TEXT NOT NULL DEFAULT &#39;P1&#39;,
+  priority    TEXT NOT NULL DEFAULT &#39;中&#39;,
   start_at    DATETIME,
   due_at      DATETIME,
   status      TEXT NOT NULL DEFAULT &#39;none&#39;,

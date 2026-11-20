@@ -1,0 +1,32 @@
+{
+  "name": "shipflow",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"pnpm --filter @shipflow/api dev\" \"pnpm --filter @shipflow/web dev\"",
+    "dev:api": "pnpm --filter @shipflow/api dev",
+    "dev:web": "pnpm --filter @shipflow/web dev",
+    "build": "pnpm --filter @shipflow/api build && pnpm --filter @shipflow/web build",
+    "prisma:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:init": "prisma migrate deploy && prisma db seed",
+    "db:reset": "prisma migrate reset --force",
+    "db:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "prisma": "^6.3.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
