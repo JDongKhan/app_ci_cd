@@ -20,6 +20,12 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  devRequirements Requirement[]         @relation("RequirementDevOwner")
+  qaRequirements  Requirement[]         @relation("RequirementQaOwner")
+  pmRequirements  Requirement[]         @relation("RequirementPmOwner")
+  qaMemberOf      RequirementQaMember[]
+  tasks           Task[]                @relation("TaskOwner")
+
   @@map("users")
 }
 
@@ -30,4 +36,84 @@ model RolePermission {
 
   @@id([role, level, permissionKey])
   @@map("role_permissions")
+}
+
+model App {
+  id              String   @id @default(uuid())
+  name            String
+  platform        String
+  code            String
+  repo            String
+  defaultBranch   String   @default("main") @map("default_branch")
+  buildScript     String   @default("./build_app") @map("build_script")
+  artifactType    String   @map("artifact_type")
+  artifactPattern String?  @map("artifact_pattern")
+  branchesJson    String   @map("branches_json")
+  machine         String   @default("builder-01")
+  stack           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([name, platform])
+  @@map("apps")
+}
+
+model Requirement {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  title       String
+  description String?
+  devOwnerId  String   @map("dev_owner_id")
+  qaOwnerId   String   @map("qa_owner_id")
+  pmOwnerId   String   @map("pm_owner_id")
+  priority    String   @default("P1")
+  startAt     DateTime @map("start_at")
+  dueAt       DateTime @map("due_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  devOwner  User                  @relation("RequirementDevOwner", fields: [devOwnerId], references: [id])
+  qaOwner   User                  @relation("RequirementQaOwner", fields: [qaOwnerId], references: [id])
+  pmOwner   User                  @relation("RequirementPmOwner", fields: [pmOwnerId], references: [id])
+  qaMembers RequirementQaMember[]
+  tasks     Task[]
+
+  @@map("requirements")
+}
+
+model RequirementQaMember {
+  requirementId String @map("requirement_id")
+  userId        String @map("user_id")
+
+  requirement Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@id([requirementId, userId])
+  @@map("requirement_qa_members")
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  reqId       String    @map("req_id")
+  title       String
+  description String?
+  ownerId     String    @map("owner_id")
+  priority    String    @default("P1")
+  startAt     DateTime  @map("start_at")
+  dueAt       DateTime  @map("due_at")
+  status      String    @default("none")
+  statusAt    DateTime? @map("status_at")
+  statusBy    String?   @map("status_by")
+  finishedAt  DateTime? @map("finished_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  requirement Requirement @relation(fields: [reqId], references: [id])
+  owner       User        @relation("TaskOwner", fields: [ownerId], references: [id])
+
+  @@index([reqId])
+  @@index([ownerId])
+  @@index([status])
+  @@map("tasks")
 }

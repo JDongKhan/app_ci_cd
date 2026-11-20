@@ -5,6 +5,10 @@ import LoginView from "@/views/LoginView.vue";
 import HomeView from "@/views/HomeView.vue";
 import RolesView from "@/views/RolesView.vue";
 import StaffView from "@/views/StaffView.vue";
+import AppsView from "@/views/AppsView.vue";
+import ReqsView from "@/views/ReqsView.vue";
+import ReqDetailView from "@/views/ReqDetailView.vue";
+import TaskDetailView from "@/views/TaskDetailView.vue";
 import PlaceholderView from "@/views/PlaceholderView.vue";
 import ForbiddenView from "@/views/ForbiddenView.vue";
 
@@ -42,13 +46,25 @@ const router = createRouter({
         {
           path: "reqs",
           name: "reqs",
-          component: PlaceholderView,
+          component: ReqsView,
           meta: { title: "需求管理", description: "需求、负责人和任务拆分", permission: "reqs" }
+        },
+        {
+          path: "reqs/:id",
+          name: "req-detail",
+          component: ReqDetailView,
+          meta: { title: "需求详情", description: "负责人、测试人员与任务", permission: "reqs" }
+        },
+        {
+          path: "tasks/:id",
+          name: "task-detail",
+          component: TaskDetailView,
+          meta: { title: "任务详情", description: "任务状态、CI 流水与构建记录" }
         },
         {
           path: "apps",
           name: "apps",
-          component: PlaceholderView,
+          component: AppsView,
           meta: { title: "应用配置", description: "仓库、分支、构建脚本与产物配置", permission: "apps" }
         },
         {

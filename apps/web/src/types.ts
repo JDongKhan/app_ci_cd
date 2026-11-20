@@ -61,3 +61,127 @@ export interface UpdateStaffPayload {
   team?: string | null;
   active: boolean;
 }
+
+export type AppPlatform = "android" | "ios" | "server" | "web";
+export type ArtifactType = "apk" | "ipa" | "jar" | "war";
+export type BranchStage = "qa" | "uat" | "release" | "master";
+
+export type AppBranches = Record<BranchStage, string>;
+
+export interface AppRecord {
+  id: string;
+  name: string;
+  platform: AppPlatform;
+  code: string;
+  repo: string;
+  defaultBranch: string;
+  buildScript: string;
+  artifactType: ArtifactType;
+  artifactPattern: string | null;
+  branches: AppBranches;
+  machine: string;
+  stack: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppPayload {
+  name: string;
+  platform: AppPlatform;
+  code: string;
+  repo: string;
+  defaultBranch?: string;
+  buildScript?: string;
+  artifactType: ArtifactType;
+  artifactPattern?: string | null;
+  branches?: Partial<AppBranches>;
+  machine?: string;
+  stack?: string | null;
+}
+
+export type RequirementPriority = "P0" | "P1" | "P2";
+
+export interface Person {
+  id: string;
+  account: string;
+  name: string;
+  role: Role;
+  level: Level | null;
+}
+
+export interface Requirement {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  devOwner: Person;
+  qaOwner: Person;
+  pmOwner: Person;
+  qaMembers: Person[];
+  priority: RequirementPriority;
+  startAt: string;
+  dueAt: string;
+  createdAt: string;
+  updatedAt: string;
+  taskCount: number;
+  status: string;
+  statusLabel: string;
+  tasks: TaskSummary[];
+}
+
+export type TaskStatus = "none" | "dev" | "ready" | "testing" | "release" | "done";
+export type OverdueType = "dev" | "test" | null;
+
+export interface TaskSummary {
+  id: string;
+  reqId: string;
+  title: string;
+  owner: Person;
+  priority: RequirementPriority;
+  status: TaskStatus;
+  statusLabel: string;
+  startAt: string;
+  dueAt: string;
+  overdueType: OverdueType;
+  pipelineCount: number;
+  progress: number;
+}
+
+export interface TaskDetail extends TaskSummary {
+  description: string;
+  requirement: { id: string; code: string; title: string };
+  statusAt: string | null;
+  statusBy: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  pipelines: unknown[];
+}
+
+export interface TaskPayload {
+  reqId?: string;
+  title: string;
+  description?: string | null;
+  ownerId?: string;
+  priority: RequirementPriority;
+  startAt: string;
+  dueAt: string;
+}
+
+export interface RequirementPayload {
+  code?: string;
+  title: string;
+  description?: string | null;
+  devOwnerId: string;
+  qaOwnerId: string;
+  pmOwnerId: string;
+  priority: RequirementPriority;
+  startAt: string;
+  dueAt: string;
+}
+
+export interface RequirementOwnerOptions {
+  dev: Person[];
+  qa: Person[];
+  pm: Person[];
+}
