@@ -258,6 +258,7 @@ export interface BuildRecord {
   failReason: string | null;
   logSizeBytes: number;
   triggeredBy: string | null;
+  triggeredByName: string | null;
   createdAt: string;
   pipeline: {
     id: string;

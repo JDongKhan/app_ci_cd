@@ -141,6 +141,10 @@ onBeforeUnmount(() => {
           </template>
         </el-table-column>
 
+        <el-table-column label="触发人" width="100">
+          <template #default="{ row }">{{ row.triggeredByName || "—" }}</template>
+        </el-table-column>
+
         <el-table-column label="时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.startedAt || row.createdAt) }}</template>
         </el-table-column>

@@ -755,6 +755,10 @@ onBeforeUnmount(() => {
                 <template #default="{ row }">{{ formatDuration(row.durationMs) }}</template>
               </el-table-column>
 
+              <el-table-column label="触发人" width="100">
+                <template #default="{ row }">{{ row.triggeredByName || "—" }}</template>
+              </el-table-column>
+
               <el-table-column label="开始时间" width="170">
                 <template #default="{ row }">{{ row.startedAt ? formatDateTime(row.startedAt) : "排队中" }}</template>
               </el-table-column>
