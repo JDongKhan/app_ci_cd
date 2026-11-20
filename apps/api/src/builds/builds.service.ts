@@ -169,7 +169,7 @@ export class BuildsService implements OnModuleInit {
     this.queue.push(build.id);
     void this.drain();
 
-    return this.serialize(build);
+    return this.serialize(build, user.name);
   }
 
   async listByTask(taskId: string) {
@@ -179,7 +179,8 @@ export class BuildsService implements OnModuleInit {
       orderBy: { createdAt: "desc" }
     });
 
-    return builds.map((build) => this.serialize(build));
+    const names = await this.triggerNames(builds);
+    return builds.map((build) => this.serialize(build, this.nameOf(names, build.triggeredBy)));
   }
 
   async listAll(status?: string) {
@@ -189,7 +190,8 @@ export class BuildsService implements OnModuleInit {
       orderBy: { createdAt: "desc" }
     });
 
-    return builds.map((build) => this.serialize(build));
+    const names = await this.triggerNames(builds);
+    return builds.map((build) => this.serialize(build, this.nameOf(names, build.triggeredBy)));
   }
 
   async detail(id: string) {
@@ -202,7 +204,8 @@ export class BuildsService implements OnModuleInit {
       throw new NotFoundException("构建不存在");
     }
 
-    return this.serialize(build);
+    const names = await this.triggerNames([build]);
+    return this.serialize(build, this.nameOf(names, build.triggeredBy));
   }
 
   async log(id: string, offset: number) {
@@ -639,7 +642,7 @@ export class BuildsService implements OnModuleInit {
     } as const;
   }
 
-  private serialize(build: BuildWithPipeline) {
+  private serialize(build: BuildWithPipeline, triggeredByName: string | null = null) {
     return {
       id: build.id,
       pipelineId: build.pipelineId,
@@ -656,6 +659,7 @@ export class BuildsService implements OnModuleInit {
       failReason: build.failReason,
       logSizeBytes: build.logSizeBytes,
       triggeredBy: build.triggeredBy,
+      triggeredByName,
       createdAt: build.createdAt,
       pipeline: {
         id: build.pipeline.id,
@@ -675,5 +679,31 @@ export class BuildsService implements OnModuleInit {
         createdAt: artifact.createdAt
       }))
     };
+  }
+
+  private async triggerNames(
+    builds: { triggeredBy: string | null }[]
+  ): Promise<Map<string, string>> {
+    const ids = Array.from(
+      new Set(
+        builds
+          .map((build) => build.triggeredBy)
+          .filter((value): value is string => Boolean(value))
+      )
+    );
+
+    if (ids.length === 0) return new Map();
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true }
+    });
+
+    return new Map(users.map((user) => [user.id, user.name]));
+  }
+
+  private nameOf(names: Map<string, string>, userId: string | null): string | null {
+    if (!userId) return null;
+    return names.get(userId) ?? null;
   }
 }

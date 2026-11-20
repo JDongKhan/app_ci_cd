@@ -9,6 +9,7 @@ import {
 } from "../common/pipeline-status";
 import { PrismaService } from "../prisma/prisma.service";
 import { BuildsService } from "../builds/builds.service";
+import { ACTION_ROLES } from "../common/action-permissions";
 import { GitService } from "../common/git.service";
 import { CreatePipelineDto } from "./dto/pipeline.dto";
 
@@ -674,6 +675,14 @@ export class PipelinesService {
 
   private async assertPermission(user: AuthUser, permissionKey: string) {
     if (user.role === "admin") return;
+
+    const roleBased = ACTION_ROLES[permissionKey];
+    if (roleBased) {
+      if (!(roleBased as readonly string[]).includes(user.role)) {
+        throw new ForbiddenException("没有该操作权限");
+      }
+      return;
+    }
 
     if (!user.level) {
       throw new ForbiddenException("没有该操作权限");
