@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { PrismaService } from "../prisma/prisma.service";
+import { ACTION_ROLES, isActionPermission } from "./action-permissions";
 import { AuthUser } from "./auth-user.interface";
 import { PERMISSIONS_KEY } from "./permissions.decorator";
 
@@ -34,21 +35,30 @@ export class PermissionsGuard implements CanActivate {
 
     if (user.role === "admin") return true;
 
-    if (!user.level) {
-      throw new ForbiddenException("没有该操作权限");
-    }
+    for (const key of required) {
+      if (isActionPermission(key)) {
+        const roles = ACTION_ROLES[key] as readonly string[];
+        if (!roles.includes(user.role)) {
+          throw new ForbiddenException("没有该操作权限");
+        }
+        continue;
+      }
 
-    const rows = await this.prisma.rolePermission.findMany({
-      where: {
-        role: user.role,
-        level: user.level,
-        permissionKey: { in: required }
-      },
-      select: { permissionKey: true }
-    });
+      if (!user.level) {
+        throw new ForbiddenException("没有该操作权限");
+      }
 
-    if (new Set(rows.map((row) => row.permissionKey)).size < required.length) {
-      throw new ForbiddenException("没有该操作权限");
+      const row = await this.prisma.rolePermission.findFirst({
+        where: {
+          role: user.role,
+          level: user.level,
+          permissionKey: key
+        }
+      });
+
+      if (!row) {
+        throw new ForbiddenException("没有该操作权限");
+      }
     }
 
     return true;

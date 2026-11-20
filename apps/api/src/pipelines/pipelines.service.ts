@@ -399,6 +399,10 @@ export class PipelinesService {
   async qaVerdict(id: string, pass: boolean, reason: string | undefined, user: AuthUser) {
     await this.assertPermission(user, "build_run");
 
+    if (user.role !== "admin" && user.role !== "dev") {
+      throw new ForbiddenException("自测判定只能由开发执行");
+    }
+
     const pipeline = await this.prisma.pipeline.findUnique({ where: { id } });
     if (!pipeline) {
       throw new NotFoundException("流水不存在");

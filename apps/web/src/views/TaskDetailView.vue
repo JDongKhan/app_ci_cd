@@ -140,8 +140,19 @@ const BUILD_LABEL: Record<string, string> = {
   release_check: "打包 Release"
 };
 
+const BUILD_STAGE: Record<string, string> = {
+  dev_merged: "qa",
+  dev_built: "qa",
+  testing: "uat",
+  release_check: "release"
+};
+
 function canBuild(pipeline: Pipeline): boolean {
-  return Boolean(BUILD_LABEL[pipeline.status]) && auth.hasPermission("build_run");
+  const stage = BUILD_STAGE[pipeline.status];
+  if (!stage || !auth.hasPermission("build_run")) return false;
+
+  const stageRole = stage === "qa" ? "dev" : "qa";
+  return auth.isAdmin || auth.user?.role === stageRole;
 }
 
 async function loadBuilds() {
@@ -610,12 +621,18 @@ onBeforeUnmount(() => {
                   >
                     {{ BUILD_LABEL[pipeline.status] }}
                   </el-button>
-                  <template v-if="pipeline.status === 'dev_built' && auth.hasPermission('build_run')">
+                  <template
+                    v-if="
+                      pipeline.status === 'dev_built' &&
+                      auth.hasPermission('build_run') &&
+                      (auth.isAdmin || auth.user?.role === 'dev')
+                    "
+                  >
                     <el-button size="small" type="success" @click="verdict(pipeline, true)">
                       自测通过
                     </el-button>
                     <el-button size="small" type="danger" plain @click="verdict(pipeline, false)">
-                      拒绝
+                      自测不通过
                     </el-button>
                   </template>
 

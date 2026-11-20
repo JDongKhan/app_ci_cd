@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.service";
+import { actionPermissionsFor } from "../common/action-permissions";
 import { LoginDto } from "./dto/login.dto";
 
 type UserRecord = {
@@ -97,8 +98,10 @@ export class AuthService {
       return { isAdmin: true, permissions: [] as string[] };
     }
 
+    const actionKeys = actionPermissionsFor(role);
+
     if (!level) {
-      return { isAdmin: false, permissions: [] as string[] };
+      return { isAdmin: false, permissions: actionKeys };
     }
 
     const rows = await this.prisma.rolePermission.findMany({
@@ -107,7 +110,12 @@ export class AuthService {
       orderBy: { permissionKey: "asc" }
     });
 
-    return { isAdmin: false, permissions: rows.map((row) => row.permissionKey) };
+    const menuKeys = rows.map((row) => row.permissionKey);
+
+    return {
+      isAdmin: false,
+      permissions: Array.from(new Set([...menuKeys, ...actionKeys]))
+    };
   }
 
   sanitizeUser(user: UserRecord) {

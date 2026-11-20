@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   OnModuleInit
@@ -131,6 +132,13 @@ export class BuildsService implements OnModuleInit {
     const stage = this.stageForStatus(pipeline.status);
     if (!stage) {
       throw new BadRequestException("当前流水状态不能打包");
+    }
+
+    const stageRole = stage === "qa" ? "dev" : "qa";
+    if (user.role !== "admin" && user.role !== stageRole) {
+      throw new ForbiddenException(
+        stage === "qa" ? "QA 打包只能由开发执行" : "UAT / Release 打包只能由测试执行"
+      );
     }
 
     const running = await this.prisma.build.findFirst({
