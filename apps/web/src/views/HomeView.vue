@@ -37,18 +37,26 @@ const ongoingStatuses = computed<string[]>(() => {
   return ["none", "dev"];
 });
 
+const overdueTasks = computed(() =>
+  tasks.value.filter((task) => Boolean(task.overdueType))
+);
+
 const ongoingTasks = computed(() => {
   if (auth.isAdmin || auth.user?.role === "pm") {
-    return tasks.value.filter((task) => task.status !== "done");
+    return tasks.value.filter((task) => task.status !== "done" && !task.overdueType);
   }
-  return tasks.value.filter((task) => ongoingStatuses.value.includes(task.status));
+  return tasks.value.filter(
+    (task) => ongoingStatuses.value.includes(task.status) && !task.overdueType
+  );
 });
 
 const otherTasks = computed(() => {
   if (auth.isAdmin || auth.user?.role === "pm") {
     return tasks.value.filter((task) => task.status === "done");
   }
-  return tasks.value.filter((task) => !ongoingStatuses.value.includes(task.status));
+  return tasks.value.filter(
+    (task) => !ongoingStatuses.value.includes(task.status) && !task.overdueType
+  );
 });
 
 const devOverdue = computed(
@@ -57,9 +65,7 @@ const devOverdue = computed(
 const testOverdue = computed(
   () => tasks.value.filter((task) => task.overdueType === "test").length
 );
-const activeCount = computed(
-  () => tasks.value.filter((task) => task.status !== "done").length
-);
+const activeCount = computed(() => ongoingTasks.value.length);
 const doneCount = computed(
   () => tasks.value.filter((task) => task.status === "done").length
 );
@@ -72,10 +78,16 @@ const tabs = computed(() => [
     hint: "只看当前阶段归我处理的任务"
   },
   {
+    key: "overdue",
+    label: "待处理异常",
+    count: overdueTasks.value.length,
+    hint: "开发 / 测试超时的任务统一收在这里"
+  },
+  {
     key: "other",
     label: "其他状态",
     count: otherTasks.value.length,
-    hint: "已交接 / 超时 / 已结束，仍可跟踪"
+    hint: "已交接 / 已结束，仍可跟踪"
   },
   {
     key: "requirements",
@@ -89,9 +101,11 @@ const activeTabMeta = computed(
   () => tabs.value.find((tab) => tab.key === activeTab.value) ?? tabs.value[0]
 );
 
-const visibleTasks = computed(() =>
-  activeTab.value === "other" ? otherTasks.value : ongoingTasks.value
-);
+const visibleTasks = computed(() => {
+  if (activeTab.value === "overdue") return overdueTasks.value;
+  if (activeTab.value === "other") return otherTasks.value;
+  return ongoingTasks.value;
+});
 
 function progressPercent(task: TaskSummary): number {
   return Math.min(100, Math.max(0, Math.round(((task.progress ?? 0) / 4) * 100)));
@@ -201,7 +215,13 @@ onMounted(load);
       <div class="card-head">
         <h3>{{ activeTabMeta.label }} · {{ activeTabMeta.count }} 条</h3>
         <span class="muted-text">
-          {{ activeTab === "requirements" ? "点卡片打开需求详情" : "点任务打开详情，合并 / 打包在任务详情里操作" }}
+          {{
+            activeTab === "requirements"
+              ? "点卡片打开需求详情"
+              : activeTab === "overdue"
+                ? "超时任务请尽快处理，进入详情继续流转"
+                : "点任务打开详情，合并 / 打包在任务详情里操作"
+          }}
         </span>
       </div>
 
@@ -220,6 +240,13 @@ onMounted(load);
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
             <span class="task-status" :class="statusClass(row.status)">{{ row.statusLabel }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column v-if="activeTab === 'overdue'" label="异常" width="110">
+          <template #default="{ row }">
+            <span class="overdue-tag">
+              {{ row.overdueType === "dev" ? "开发超时" : "测试超时" }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="开始 - 结束" width="200">
@@ -243,7 +270,13 @@ onMounted(load);
       </el-table>
 
       <div v-else-if="activeTab !== 'requirements'" class="empty-hint">
-        {{ activeTab === "ongoing" ? "当前没有归你阶段的任务。" : "没有其他状态的任务。" }}
+        {{
+          activeTab === "ongoing"
+            ? "当前没有归你阶段的任务。"
+            : activeTab === "overdue"
+              ? "没有超时的任务，状态良好。"
+              : "没有其他状态的任务。"
+        }}
       </div>
 
       <div v-else-if="requirements.length" class="home-req-list">
@@ -322,6 +355,15 @@ onMounted(load);
 .task-status {
   padding: 2px 8px;
   border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.overdue-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fdecec;
+  color: #b91c1c;
   font-size: 10.5px;
   font-weight: 600;
 }
