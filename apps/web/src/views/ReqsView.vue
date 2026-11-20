@@ -79,48 +79,46 @@ onMounted(load);
 
 <template>
   <div class="page-stack">
-    <section class="toolbar-card">
-      <div class="toolbar-head">
-        <div>
-          <h2>需求管理</h2>
-          <p>
-            需求不绑定应用；应用在任务的 CI 流水里选择。开发负责人拆任务并指定任务负责人，测试负责人登记参与测试的测试人员。
-          </p>
-        </div>
-        <div class="toolbar-actions">
-          <el-button :icon="Refresh" @click="load">刷新</el-button>
-          <el-button
-            v-if="auth.hasPermission('req_create')"
-            type="primary"
-            :icon="Plus"
-            @click="dialogVisible = true"
-          >
-            新建需求
-          </el-button>
-        </div>
+    <section class="page-head">
+      <div>
+        <h1>需求管理</h1>
+        <p class="sub">
+          需求不绑定应用；应用在任务的 CI 流水里选择。开发负责人拆任务并指定任务负责人，测试负责人登记参与测试的测试人员。
+        </p>
       </div>
-
-      <div class="filter-row">
-        <el-input
-          v-model="filters.keyword"
-          class="filter-input"
-          placeholder="搜索需求编号 / 标题 / 描述"
-          clearable
-          @keyup.enter="load"
+      <div class="head-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button
+          v-if="auth.hasPermission('req_create')"
+          type="primary"
+          :icon="Plus"
+          @click="dialogVisible = true"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
-        </el-input>
-
-        <el-select v-model="filters.priority" class="filter-select" placeholder="全部优先级" clearable>
-          <el-option label="P0 · 最高" value="P0" />
-          <el-option label="P1 · 高" value="P1" />
-          <el-option label="P2 · 普通" value="P2" />
-        </el-select>
-
-        <el-button type="primary" :icon="Search" @click="load">查询</el-button>
-        <el-button @click="resetFilters">重置</el-button>
-        <span class="muted-text">{{ requirements.length }} 条需求</span>
+          新建需求
+        </el-button>
       </div>
+    </section>
+
+    <section class="page-toolbar">
+      <el-input
+        v-model="filters.keyword"
+        class="filter-input"
+        placeholder="搜索需求编号 / 标题 / 描述"
+        clearable
+        @keyup.enter="load"
+      >
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
+
+      <el-select v-model="filters.priority" class="filter-select" placeholder="全部优先级" clearable>
+        <el-option label="P0 · 最高" value="P0" />
+        <el-option label="P1 · 高" value="P1" />
+        <el-option label="P2 · 普通" value="P2" />
+      </el-select>
+
+      <el-button type="primary" :icon="Search" @click="load">查询</el-button>
+      <el-button @click="resetFilters">重置</el-button>
+      <span class="muted-text">{{ requirements.length }} 条需求</span>
     </section>
 
     <section v-loading="loading" class="req-section">

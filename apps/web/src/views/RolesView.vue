@@ -177,34 +177,32 @@ onMounted(load);
 
 <template>
   <div class="page-stack">
-    <section class="toolbar-card">
-      <div class="toolbar-head">
-        <div>
-          <h2>角色权限矩阵</h2>
-          <p>
-            菜单权限按角色 × 级别配置；动作执行仍由角色决定。权限项定义来自
-            <code>apps/web/src/config/permissions.ts</code>，勾选结果存储在数据库。
-          </p>
-        </div>
-        <div class="toolbar-actions">
-          <span v-if="dirty" class="dirty-tag">有未保存修改</span>
-          <el-button :disabled="saving" @click="reset">恢复默认</el-button>
-          <el-button type="primary" :loading="saving" :disabled="!dirty" @click="save">
-            保存权限
-          </el-button>
-        </div>
+    <section class="page-head">
+      <div>
+        <h1>角色权限</h1>
+        <p class="sub">
+          菜单权限按角色 × 级别配置；动作执行仍由角色决定。权限项定义来自
+          <code>apps/web/src/config/permissions.ts</code>，勾选结果存储在数据库。
+        </p>
       </div>
+      <div class="head-actions">
+        <span v-if="dirty" class="dirty-tag">有未保存修改</span>
+        <el-button :disabled="saving" @click="reset">恢复默认</el-button>
+        <el-button type="primary" :loading="saving" :disabled="!dirty" @click="save">
+          保存权限
+        </el-button>
+      </div>
+    </section>
 
-      <div class="matrix-toolbar">
-        <el-input v-model="search" class="search-input" placeholder="搜索权限名称或 key" clearable>
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <span class="muted-text">
-          共 {{ ALL_PERMISSIONS.length }} 项权限 · 已勾选 {{ totalChecked }} 项
-        </span>
-      </div>
+    <section class="page-toolbar">
+      <el-input v-model="search" class="search-input" placeholder="搜索权限名称或 key" clearable>
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+      <span class="muted-text">
+        共 {{ ALL_PERMISSIONS.length }} 项权限 · 已勾选 {{ totalChecked }} 项
+      </span>
     </section>
 
     <section v-loading="loading" class="matrix-card">

@@ -4,7 +4,7 @@ import { ElMessage } from "element-plus";
 import { Refresh } from "@element-plus/icons-vue";
 import { listBoard } from "@/api/tasks";
 import { getErrorMessage } from "@/api/http";
-import { PRIORITY_META, TASK_STATUS_META } from "@/config/tasks";
+import { TASK_STATUS_META } from "@/config/tasks";
 import TaskDrawer from "@/components/tasks/TaskDrawer.vue";
 import type { TaskSummary } from "@/types";
 
@@ -65,9 +65,8 @@ const grouped = computed(() =>
   }))
 );
 
-function formatDate(value: string): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("zh-CN");
+function filledStages(task: TaskSummary): number {
+  return Math.min(4, Math.max(0, Math.round(task.progress ?? 0)));
 }
 
 function openTask(task: TaskSummary) {
@@ -91,52 +90,75 @@ onMounted(load);
 
 <template>
   <div class="page-stack">
-    <section class="toolbar-card">
-      <div class="toolbar-head">
-        <div>
-          <h2>任务看板</h2>
-          <p>看板只看任务状态：未开始 / 开发中 / 已提测 / 测试中 / 待发布 / 超时 / 已结束。合并、打包、验证都在任务详情里操作。</p>
-        </div>
-        <div class="toolbar-actions">
-          <el-button :icon="Refresh" @click="load">刷新</el-button>
-        </div>
+    <section class="page-head">
+      <div>
+        <h1>任务看板</h1>
+        <p class="sub">
+          看板只看任务状态（未开始 / 开发中 / 已提测 / 测试中 / 待发布 / 超时 / 已结束）·
+          合并 / 打包 / 下载都在「任务详情 → CI 流水」里操作
+        </p>
+      </div>
+      <div class="head-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
     </section>
 
-    <section v-loading="loading" class="board">
-      <div v-for="column in grouped" :key="column.key" class="board-col" :class="`col-${column.key}`">
-        <div class="col-head">
-          <span>{{ column.label }}</span>
-          <span class="col-count">{{ column.items.length }}</span>
+    <section v-loading="loading" class="board-wrap">
+      <div class="board-stats">
+        <div class="bs">
+          <span>任务总数</span>
+          <b>{{ tasks.length }}</b>
         </div>
-        <div class="col-sub">{{ column.hint }}</div>
+        <div v-for="column in grouped" :key="column.key" class="bs">
+          <span>{{ column.label }}</span>
+          <b :class="{ hot: column.key === 'overdue' && column.items.length > 0 }">
+            {{ column.items.length }}
+          </b>
+        </div>
+      </div>
 
-        <div class="col-cards">
-          <article
-            v-for="task in column.items"
-            :key="task.id"
-            class="board-card"
-            @click="openTask(task)"
-          >
-            <div class="card-top">
-              <span class="card-req">{{ task.requirement?.code ?? "—" }}</span>
-              <span class="card-pri" :class="PRIORITY_META[task.priority].cls">
-                {{ task.priority }}
-              </span>
-            </div>
-            <div class="card-title">{{ task.title }}</div>
-            <div class="card-owner">{{ task.owner.name }}</div>
-            <div class="card-foot">
-              <span class="card-status" :class="TASK_STATUS_META[task.status]?.cls">
-                {{ task.statusLabel }}
-              </span>
-              <span v-if="task.overdueType" class="card-overdue">
-                {{ task.overdueType === "dev" ? "开发超时" : "测试超时" }}
-              </span>
-              <span v-else class="card-due">{{ formatDate(task.dueAt) }}</span>
-            </div>
-          </article>
-          <div v-if="!column.items.length" class="col-empty">暂无任务</div>
+      <div class="board">
+        <div
+          v-for="column in grouped"
+          :key="column.key"
+          class="board-col"
+          :class="`col-${column.key}`"
+        >
+          <div class="col-head">
+            <span class="col-name">{{ column.label }}</span>
+            <span class="col-count">{{ column.items.length }}</span>
+          </div>
+          <div class="col-sub">{{ column.hint }}</div>
+
+          <div class="col-cards">
+            <article
+              v-for="task in column.items"
+              :key="task.id"
+              class="board-card"
+              @click="openTask(task)"
+            >
+              <div class="card-top">
+                <span class="card-req">{{ task.requirement?.code ?? "—" }}</span>
+                <span class="card-owner">{{ task.owner.name }}</span>
+              </div>
+              <div class="card-title">{{ task.title }}</div>
+              <div class="stage-dots">
+                <span
+                  v-for="index in 4"
+                  :key="index"
+                  class="sd"
+                  :class="{ on: index <= filledStages(task) }"
+                ></span>
+              </div>
+              <div class="card-foot">
+                <span class="card-status" :class="TASK_STATUS_META[task.status]?.cls">
+                  {{ task.statusLabel }}
+                </span>
+                <span class="card-pipes">{{ task.pipelineCount }} 条流水</span>
+              </div>
+            </article>
+            <div v-if="!column.items.length" class="col-empty">暂无任务</div>
+          </div>
         </div>
       </div>
     </section>
@@ -146,20 +168,56 @@ onMounted(load);
 </template>
 
 <style scoped>
+.board-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 11px 15px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.bs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-right: 18px;
+  border-right: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.bs:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.bs b {
+  color: var(--ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bs b.hot {
+  color: #b45309;
+}
+
 .board {
   display: grid;
-  grid-template-columns: repeat(7, minmax(210px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(7, minmax(200px, 1fr));
+  gap: 10px;
+  align-items: start;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .board-col {
-  display: flex;
-  flex-direction: column;
-  min-height: 320px;
-  padding: 12px;
-  background: #eef2f7;
+  min-height: 280px;
+  padding: 11px;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
 }
 
@@ -167,22 +225,63 @@ onMounted(load);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 2px 3px 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.col-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-2);
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--ink-2);
+}
+
+.col-name::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.col-dev .col-name::before {
+  background: #3b82f6;
+}
+
+.col-ready .col-name::before {
+  background: #8b5cf6;
+}
+
+.col-testing .col-name::before {
+  background: #0d9488;
+}
+
+.col-release .col-name::before {
+  background: #f59e0b;
+}
+
+.col-overdue .col-name::before {
+  background: #ef4444;
+}
+
+.col-done .col-name::before {
+  background: #22c55e;
 }
 
 .col-count {
-  padding: 0 7px;
-  border-radius: 999px;
-  background: #ffffff;
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: #f4f6f9;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .col-sub {
-  margin: 2px 0 10px;
-  color: var(--muted);
+  padding: 7px 3px 9px;
+  color: #9aa8b8;
   font-size: 10.5px;
 }
 
@@ -194,78 +293,77 @@ onMounted(load);
 
 .board-card {
   padding: 10px 11px;
-  background: #ffffff;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 9px;
   cursor: pointer;
-  transition: border-color 0.15s, transform 0.15s;
+  transition: 0.15s;
 }
 
 .board-card:hover {
-  border-color: #bfd3fb;
+  border-color: #c9d6e8;
+  box-shadow: 0 8px 20px -16px rgba(15, 23, 42, 0.5);
   transform: translateY(-1px);
 }
 
 .card-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 6px;
+  margin-bottom: 5px;
+  font-size: 10.5px;
 }
 
 .card-req {
-  color: var(--muted);
+  color: #5b6b80;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-}
-
-.card-pri {
-  padding: 0 6px;
-  border-radius: 4px;
-  font-size: 9.5px;
-  font-weight: 600;
-}
-
-.pri-p0 {
-  background: #fdecec;
-  color: #b91c1c;
-}
-
-.pri-p1 {
-  background: #fff5e6;
-  color: #b45309;
-}
-
-.pri-p2 {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.card-title {
-  margin-top: 5px;
-  font-size: 12.5px;
-  font-weight: 500;
-  line-height: 1.45;
 }
 
 .card-owner {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 10.5px;
+  margin-left: auto;
+  color: #7d8a9b;
+}
+
+.card-title {
+  display: -webkit-box;
+  margin-bottom: 7px;
+  overflow: hidden;
+  color: #16202e;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.stage-dots {
+  display: flex;
+  gap: 3px;
+  margin: 6px 0;
+}
+
+.sd {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #edf1f6;
+}
+
+.sd.on {
+  background: #22c55e;
 }
 
 .card-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  margin-top: 8px;
+  margin-top: 3px;
 }
 
 .card-status {
-  padding: 1px 6px;
+  padding: 1px 7px;
   border-radius: 999px;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 600;
 }
 
@@ -280,13 +378,13 @@ onMounted(load);
 }
 
 .ts-ready {
-  background: #e8f5f2;
-  color: #0f766e;
+  background: #f4f0ff;
+  color: #5b46b0;
 }
 
 .ts-testing {
-  background: #f4f0ff;
-  color: #5b46b0;
+  background: #e8f5f2;
+  color: #0f766e;
 }
 
 .ts-release {
@@ -299,26 +397,17 @@ onMounted(load);
   color: #15803d;
 }
 
-.card-overdue {
-  color: #b91c1c;
-  font-size: 9.5px;
-}
-
-.card-due {
+.card-pipes {
   color: var(--muted);
-  font-size: 9.5px;
+  font-size: 10.5px;
 }
 
 .col-empty {
-  padding: 18px 6px;
-  color: var(--muted);
-  font-size: 11px;
+  padding: 20px 0;
+  border: 1px dashed #e6ecf4;
+  border-radius: 8px;
+  color: #a5b1c2;
+  font-size: 11.5px;
   text-align: center;
-}
-
-@media (max-width: 960px) {
-  .board {
-    grid-template-columns: repeat(7, minmax(190px, 1fr));
-  }
 }
 </style>

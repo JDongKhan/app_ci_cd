@@ -178,20 +178,18 @@ onMounted(load);
 
 <template>
   <div class="page-stack">
-    <section class="toolbar-card">
-      <div class="toolbar-head">
-        <div>
-          <h2>应用配置</h2>
-          <p>
-            应用按平台分开建（Android / iOS 各一个），仓库、分支映射、产物类型与构建脚本都在这里配置；CI 流水只选应用和 Feature 分支。
-          </p>
-        </div>
-        <div class="toolbar-actions">
-          <el-button :icon="Refresh" @click="load">刷新</el-button>
-          <el-button v-if="auth.isAdmin" type="primary" :icon="Plus" @click="openCreate">
-            新建应用
-          </el-button>
-        </div>
+    <section class="page-head">
+      <div>
+        <h1>应用配置</h1>
+        <p class="sub">
+          应用按平台分开建（Android / iOS 各一个），仓库、分支映射、产物类型与构建脚本都在这里配置；CI 流水只选应用和 Feature 分支。
+        </p>
+      </div>
+      <div class="head-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button v-if="auth.isAdmin" type="primary" :icon="Plus" @click="openCreate">
+          新建应用
+        </el-button>
       </div>
     </section>
 

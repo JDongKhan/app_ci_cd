@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { ArrowRight } from "@element-plus/icons-vue";
+import { ArrowRight, Refresh } from "@element-plus/icons-vue";
 import { listMyTasks } from "@/api/tasks";
 import { listMyRequirements } from "@/api/requirements";
 import { getErrorMessage } from "@/api/http";
@@ -60,6 +60,43 @@ const testOverdue = computed(
 const activeCount = computed(
   () => tasks.value.filter((task) => task.status !== "done").length
 );
+const doneCount = computed(
+  () => tasks.value.filter((task) => task.status === "done").length
+);
+
+const tabs = computed(() => [
+  {
+    key: "ongoing",
+    label: "进行中",
+    count: ongoingTasks.value.length,
+    hint: "只看当前阶段归我处理的任务"
+  },
+  {
+    key: "other",
+    label: "其他状态",
+    count: otherTasks.value.length,
+    hint: "已交接 / 超时 / 已结束，仍可跟踪"
+  },
+  {
+    key: "requirements",
+    label: "我的需求",
+    count: requirements.value.length,
+    hint: "只显示我是开发 / 测试 / 产品负责人的需求"
+  }
+]);
+
+const activeTabMeta = computed(
+  () => tabs.value.find((tab) => tab.key === activeTab.value) ?? tabs.value[0]
+);
+
+const visibleTasks = computed(() =>
+  activeTab.value === "other" ? otherTasks.value : ongoingTasks.value
+);
+
+function progressPercent(task: TaskSummary): number {
+  return Math.min(100, Math.max(0, Math.round(((task.progress ?? 0) / 4) * 100)));
+}
+
 
 function formatDate(value: string): string {
   if (!value) return "—";
@@ -105,132 +142,135 @@ onMounted(load);
 
 <template>
   <div class="page-stack">
-    <section class="hero-card">
+    <section class="page-head">
       <div>
-        <div class="eyebrow">WELCOME BACK</div>
-        <h2>你好，{{ auth.user?.name }}</h2>
-        <p>
-          当前以 <b>{{ roleLabel }}</b> · <b>{{ levelLabel }}</b> 身份登录。
-          进行中任务 {{ activeCount }} 个，开发超时 {{ devOverdue }} 个，测试超时 {{ testOverdue }} 个。
+        <h1>你好，{{ auth.user?.name }}</h1>
+        <p class="sub">
+          {{ roleLabel }}{{ auth.user?.level ? ` · ${levelLabel}` : "" }} 视角 · 进行中
+          {{ activeCount }} 个，开发超时 {{ devOverdue }} 个，测试超时 {{ testOverdue }} 个。
         </p>
       </div>
-      <div class="hero-avatar">{{ auth.user?.name.slice(0, 1) }}</div>
-    </section>
-
-    <section class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">进行中任务</div>
-        <div class="stat-value">{{ activeCount }}</div>
-        <div class="stat-note">按你的角色与需求关系统计</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">开发超时</div>
-        <div class="stat-value over">{{ devOverdue }}</div>
-        <div class="stat-note">未开始 / 开发中且超过截止</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">测试超时</div>
-        <div class="stat-value over">{{ testOverdue }}</div>
-        <div class="stat-note">提测后超过截止</div>
+      <div class="head-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
     </section>
 
-    <section v-loading="loading" class="panel tabs-panel">
-      <el-tabs v-model="activeTab">
-        <el-tab-pane :label="`进行中 (${ongoingTasks.length})`" name="ongoing">
-          <el-table
-            v-if="ongoingTasks.length"
-            :data="ongoingTasks"
-            class="home-table"
-            @row-click="openTask"
-          >
-            <el-table-column label="任务" min-width="240">
-              <template #default="{ row }">
-                <div class="task-title">{{ row.title }}</div>
-                <div class="task-sub">{{ row.requirement?.code }} · {{ row.owner.name }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">
-                <span class="task-status" :class="statusClass(row.status)">{{ row.statusLabel }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="流水" width="80">
-              <template #default="{ row }">{{ row.pipelineCount }}</template>
-            </el-table-column>
-            <el-table-column label="截止" width="120">
-              <template #default="{ row }">{{ formatDate(row.dueAt) }}</template>
-            </el-table-column>
-            <el-table-column label="" width="80" align="right">
-              <template #default="{ row }">
-                <el-button size="small" @click.stop="openTask(row)">详情</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div v-else class="empty-hint">当前没有进行中的任务。</div>
-        </el-tab-pane>
+    <section class="stats">
+      <div class="stat">
+        <div class="stat-k">我的任务</div>
+        <div class="stat-v">{{ tasks.length }}</div>
+        <div class="stat-n">按你的角色负责人归属</div>
+      </div>
+      <div class="stat">
+        <div class="stat-k">进行中</div>
+        <div class="stat-v">{{ activeCount }}</div>
+        <div class="stat-n">未结束的任务</div>
+      </div>
+      <div class="stat">
+        <div class="stat-k">开发超时</div>
+        <div class="stat-v over">{{ devOverdue }}</div>
+        <div class="stat-n">未开始 / 开发中且超过截止</div>
+      </div>
+      <div class="stat">
+        <div class="stat-k">测试超时</div>
+        <div class="stat-v over">{{ testOverdue }}</div>
+        <div class="stat-n">提测后超过截止</div>
+      </div>
+      <div class="stat">
+        <div class="stat-k">已结束</div>
+        <div class="stat-v">{{ doneCount }}</div>
+        <div class="stat-n">任务已发布并归档</div>
+      </div>
+    </section>
 
-        <el-tab-pane :label="`其他状态 (${otherTasks.length})`" name="other">
-          <el-table
-            v-if="otherTasks.length"
-            :data="otherTasks"
-            class="home-table"
-            @row-click="openTask"
-          >
-            <el-table-column label="任务" min-width="240">
-              <template #default="{ row }">
-                <div class="task-title">{{ row.title }}</div>
-                <div class="task-sub">{{ row.requirement?.code }} · {{ row.owner.name }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">
-                <span class="task-status" :class="statusClass(row.status)">{{ row.statusLabel }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="流水" width="80">
-              <template #default="{ row }">{{ row.pipelineCount }}</template>
-            </el-table-column>
-            <el-table-column label="截止" width="120">
-              <template #default="{ row }">{{ formatDate(row.dueAt) }}</template>
-            </el-table-column>
-            <el-table-column label="" width="80" align="right">
-              <template #default="{ row }">
-                <el-button size="small" @click.stop="openTask(row)">详情</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div v-else class="empty-hint">没有其他状态的任务。</div>
-        </el-tab-pane>
+    <section class="home-tabs">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        type="button"
+        class="htab"
+        :class="{ on: activeTab === tab.key }"
+        @click="activeTab = tab.key"
+      >
+        {{ tab.label }}<span class="cnt">{{ tab.count }}</span>
+      </button>
+      <span class="htab-hint">{{ activeTabMeta.hint }}</span>
+    </section>
 
-        <el-tab-pane :label="`我的需求 (${requirements.length})`" name="requirements">
-          <div v-if="requirements.length" class="home-req-list">
-            <button
-              v-for="requirement in requirements"
-              :key="requirement.id"
-              type="button"
-              class="home-req"
-              @click="openRequirement(requirement)"
-            >
-              <span class="home-req-main">
-                <span class="home-req-code">{{ requirement.code }}</span>
-                <b>{{ requirement.title }}</b>
-                <small>
-                  开发 {{ requirement.devOwner.name }} · 测试 {{ requirement.qaOwner.name }} ·
-                  产品 {{ requirement.pmOwner.name }}
-                </small>
-              </span>
-              <span class="home-req-side">
-                <span class="task-status" :class="reqStatusClass(requirement.status)">
-                  {{ requirement.statusLabel }}
-                </span>
-                <el-icon><ArrowRight /></el-icon>
-              </span>
-            </button>
-          </div>
-          <div v-else class="empty-hint">还没有和你相关的需求。</div>
-        </el-tab-pane>
-      </el-tabs>
+    <section v-loading="loading" class="table-card">
+      <div class="card-head">
+        <h3>{{ activeTabMeta.label }} · {{ activeTabMeta.count }} 条</h3>
+        <span class="muted-text">
+          {{ activeTab === "requirements" ? "点卡片打开需求详情" : "点任务打开详情，合并 / 打包在任务详情里操作" }}
+        </span>
+      </div>
+
+      <el-table
+        v-if="activeTab !== 'requirements' && visibleTasks.length"
+        :data="visibleTasks"
+        class="home-table"
+        @row-click="openTask"
+      >
+        <el-table-column label="任务" min-width="240">
+          <template #default="{ row }">
+            <div class="task-title">{{ row.title }}</div>
+            <div class="task-sub">{{ row.requirement?.code }} · {{ row.owner.name }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="110">
+          <template #default="{ row }">
+            <span class="task-status" :class="statusClass(row.status)">{{ row.statusLabel }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="开始 - 结束" width="200">
+          <template #default="{ row }">
+            <span class="task-range">
+              {{ formatDate(row.startAt) }} ~ {{ formatDate(row.dueAt) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="进度" width="150">
+          <template #default="{ row }">
+            <div class="pbar"><span :style="{ width: `${progressPercent(row)}%` }"></span></div>
+            <div class="pbar-t">{{ progressPercent(row) }}%</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="" width="90" align="right">
+          <template #default="{ row }">
+            <el-button size="small" @click.stop="openTask(row)">详情</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div v-else-if="activeTab !== 'requirements'" class="empty-hint">
+        {{ activeTab === "ongoing" ? "当前没有归你阶段的任务。" : "没有其他状态的任务。" }}
+      </div>
+
+      <div v-else-if="requirements.length" class="home-req-list">
+        <button
+          v-for="requirement in requirements"
+          :key="requirement.id"
+          type="button"
+          class="home-req"
+          @click="openRequirement(requirement)"
+        >
+          <span class="home-req-main">
+            <span class="home-req-code">{{ requirement.code }}</span>
+            <b>{{ requirement.title }}</b>
+            <small>
+              开发 {{ requirement.devOwner.name }} · 测试 {{ requirement.qaOwner.name }} ·
+              产品 {{ requirement.pmOwner.name }}
+            </small>
+          </span>
+          <span class="home-req-side">
+            <span class="task-status" :class="reqStatusClass(requirement.status)">
+              {{ requirement.statusLabel }}
+            </span>
+            <el-icon><ArrowRight /></el-icon>
+          </span>
+        </button>
+      </div>
+      <div v-else class="empty-hint">还没有和你相关的需求。</div>
     </section>
 
     <RequirementDrawer v-model="reqDrawerVisible" :requirement-id="selectedRequirementId" />
@@ -239,12 +279,19 @@ onMounted(load);
 </template>
 
 <style scoped>
-.stat-value.over {
-  color: #b91c1c;
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.tabs-panel {
-  padding: 12px 18px 18px;
+.card-head h3 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
 }
 
 .home-table {
@@ -264,6 +311,12 @@ onMounted(load);
   margin-top: 2px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.task-range {
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
 }
 
 .task-status {
@@ -314,6 +367,7 @@ onMounted(load);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 16px;
 }
 
 .home-req {

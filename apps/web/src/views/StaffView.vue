@@ -278,43 +278,45 @@ onMounted(load);
 
 <template>
   <div class="page-stack">
-    <section class="toolbar-card">
-      <div class="toolbar-head">
-        <div>
-          <h2>人员管理</h2>
-          <p>管理员可以新增账号、调整角色与级别、重置密码和停用账号。账号数据全部存储在数据库中。</p>
-        </div>
+    <section class="page-head">
+      <div>
+        <h1>人员管理</h1>
+        <p class="sub">
+          管理员可以新增账号、调整角色与级别、重置密码和停用账号。账号数据全部存储在数据库中。
+        </p>
+      </div>
+      <div class="head-actions">
         <el-button type="primary" :icon="Plus" @click="openCreate">新增人员</el-button>
       </div>
+    </section>
 
-      <div class="filter-row">
-        <el-input
-          v-model="filters.keyword"
-          class="filter-input"
-          placeholder="搜索姓名、账号或团队"
-          clearable
-          @keyup.enter="load"
-        >
-          <template #prefix><el-icon><Search /></el-icon></template>
-        </el-input>
+    <section class="page-toolbar">
+      <el-input
+        v-model="filters.keyword"
+        class="filter-input"
+        placeholder="搜索姓名、账号或团队"
+        clearable
+        @keyup.enter="load"
+      >
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
 
-        <el-select v-model="filters.role" class="filter-select" placeholder="全部角色" clearable>
-          <el-option
-            v-for="option in roleFilterOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
+      <el-select v-model="filters.role" class="filter-select" placeholder="全部角色" clearable>
+        <el-option
+          v-for="option in roleFilterOptions"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
+      </el-select>
 
-        <el-select v-model="filters.active" class="filter-select" placeholder="全部状态" clearable>
-          <el-option label="启用" value="true" />
-          <el-option label="停用" value="false" />
-        </el-select>
+      <el-select v-model="filters.active" class="filter-select" placeholder="全部状态" clearable>
+        <el-option label="启用" value="true" />
+        <el-option label="停用" value="false" />
+      </el-select>
 
-        <el-button type="primary" :icon="Search" @click="load">查询</el-button>
-        <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
-      </div>
+      <el-button type="primary" :icon="Search" @click="load">查询</el-button>
+      <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
     </section>
 
     <section v-loading="loading" class="table-card">

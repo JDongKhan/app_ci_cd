@@ -76,27 +76,27 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page-stack">
-    <section class="toolbar-card">
-      <div class="toolbar-head">
-        <div>
-          <h2>打包产物</h2>
-          <p>按构建展示：成功构建的产物可直接下载；打包中显示进度；失败的构建保留日志，不产生产物。</p>
-        </div>
-        <div class="toolbar-actions">
-          <el-button :icon="Refresh" @click="load">刷新</el-button>
-        </div>
+    <section class="page-head">
+      <div>
+        <h1>打包产物</h1>
+        <p class="sub">
+          已入库产物可下载；正在打包与打包失败的构建也在列表里，点行看详情与打包日志。
+        </p>
       </div>
+      <div class="head-actions">
+        <el-button :icon="Refresh" @click="load">刷新</el-button>
+      </div>
+    </section>
 
-      <div class="filter-row">
-        <el-select v-model="statusFilter" class="filter-select" placeholder="全部状态" clearable @change="load">
-          <el-option label="已入库" value="success" />
-          <el-option label="打包中" value="running" />
-          <el-option label="失败" value="failed" />
-        </el-select>
-        <span class="muted-text">
-          已入库 {{ stats.success }} · 打包中 {{ stats.running }} · 失败 {{ stats.failed }}
-        </span>
-      </div>
+    <section class="page-toolbar">
+      <el-select v-model="statusFilter" class="filter-select" placeholder="全部状态" clearable @change="load">
+        <el-option label="已入库" value="success" />
+        <el-option label="打包中" value="running" />
+        <el-option label="失败" value="failed" />
+      </el-select>
+      <span class="muted-text">
+        已入库 {{ stats.success }} · 打包中 {{ stats.running }} · 失败 {{ stats.failed }}
+      </span>
     </section>
 
     <section v-loading="loading" class="table-card">

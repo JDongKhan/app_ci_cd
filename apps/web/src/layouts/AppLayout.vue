@@ -35,9 +35,6 @@ const iconMap: Record<string, Component> = {
 
 const visibleMenus = computed(() => MENU_ITEMS.filter((item) => auth.hasPermission(item.key)));
 
-const pageTitle = computed(() => (route.meta.title as string) || "ShipFlow");
-const pageDescription = computed(() => (route.meta.description as string) || "");
-
 const roleLabel = computed(() => (auth.user ? ROLE_META[auth.user.role]?.label ?? auth.user.role : ""));
 const levelLabel = computed(() => {
   if (!auth.user?.level) return "管理员";
@@ -112,10 +109,6 @@ watch(
         <button class="mobile-menu" type="button" aria-label="打开菜单" @click="sidebarOpen = true">
           <el-icon><MenuIcon /></el-icon>
         </button>
-        <div class="topbar-title">
-          <h1>{{ pageTitle }}</h1>
-          <p v-if="pageDescription">{{ pageDescription }}</p>
-        </div>
         <div v-if="auth.user" class="topbar-user">
           <span class="topbar-role">{{ roleLabel }}</span>
           <span class="topbar-name">{{ auth.user.name }}</span>
