@@ -1,0 +1,3156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShipFlow · 代码合并与打包平台原型</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f6f9;--panel:#fff;--line:#e3e9f1;--line2:#eef2f7;
+  --ink:#0f172a;--ink2:#4a5768;--ink3:#7d8a9b;
+  --blue:#2563eb;--blue-bg:#eef3ff;
+  --teal:#0f766e;--teal-bg:#e8f5f2;
+  --red:#b91c1c;--red-bg:#fdeeee;
+  --amber:#b45309;--amber-bg:#fff5e6;
+  --green:#15803d;--green-bg:#e9f7ee;
+  --mono:"JetBrains Mono","SFMono-Regular",Menlo,Consolas,"Courier New",monospace;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 12px 32px -20px rgba(15,23,42,.22);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.6;
+  font-family:"Noto Sans SC",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+a{color:inherit;text-decoration:none}
+.mono{font-family:var(--mono)}
+.mini{font-size:11.5px}
+.shell{display:flex;min-height:100vh}
+
+/* ===== 侧栏 ===== */
+.sidebar{position:sticky;top:0;height:100vh;flex:0 0 244px;width:244px;background:#0c1420;color:#cbd5e1;
+  display:flex;flex-direction:column;padding:20px 14px 16px}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 22px}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,#2563eb,#0ea5e9);
+  display:grid;place-items:center;box-shadow:0 6px 16px -8px rgba(37,99,235,.8)}
+.brand-name{font-size:15px;font-weight:700;color:#f1f5f9;letter-spacing:.02em}
+.brand-sub{font-size:11px;color:#7d8fa5;letter-spacing:.02em}
+.nav-label{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5b6b80;padding:10px 10px 6px}
+nav{display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:#9fb0c4;font-size:13px;
+  transition:.15s;position:relative}
+.nav-item:hover{background:#16202e;color:#e2e8f0}
+.nav-item.active{background:#1a2635;color:#fff;font-weight:500}
+.nav-item.active::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:2px;background:#3b82f6}
+.ni-ico{width:16px;height:16px;flex:0 0 16px;opacity:.75;display:grid;place-items:center}
+.nav-item.active .ni-ico{opacity:1}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.role-card{background:#131d2a;border:1px solid #1e2b3b;border-radius:10px;padding:10px 11px}
+.rc-label{font-size:10.5px;color:#7d8fa5;letter-spacing:.06em;margin-bottom:7px}
+.rc-switch{display:flex;gap:5px}
+.rc-btn{flex:1;height:26px;border-radius:6px;border:1px solid #26374a;background:#0f1926;color:#8fa2b8;
+  font-size:11px;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap;padding:0 4px}
+.rc-btn:hover{color:#e2e8f0;border-color:#3a4f68}
+.rc-btn.on{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.rc-note{font-size:10px;color:#5b6b80;margin-top:7px;line-height:1.5}
+.builder-card{background:#131d2a;border:1px solid #1e2b3b;border-radius:10px;padding:11px 12px}
+.bc-head{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#8fa2b8;margin-bottom:9px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot-on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.16)}
+.dot-busy{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.18)}
+.bc-row{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:#b6c5d6;padding:3px 0}
+.bc-badge{font-size:10.5px;color:#7dd3a8;background:#16312a;border-radius:4px;padding:1px 6px}
+.bc-badge-busy{color:#fcd34d;background:#3a2a12}
+.bc-running{font-size:10px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 0 4px;
+  border-bottom:1px dashed #24313f;margin-bottom:4px}
+.bc-note{font-size:10.5px;color:#66788e;margin-top:7px;border-top:1px solid #1c2837;padding-top:7px}
+.btn-side{width:100%;height:31px;border-radius:8px;border:1px solid #22303f;background:#131d2a;color:#8fa2b8;
+  font-size:11.5px;cursor:pointer;transition:.15s;font-family:inherit}
+.btn-side:hover{color:#e2e8f0;border-color:#33465c}
+
+/* ===== 主区 ===== */
+.main{flex:1;min-width:0}
+.page{max-width:1260px;margin:0 auto;padding:28px 32px 90px}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}
+.page-head h1{margin:0;font-size:23px;font-weight:700;letter-spacing:-.01em}
+.page-head .sub{margin:5px 0 0;color:var(--ink3);font-size:12.5px}
+.head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.crumb{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink3);margin-bottom:8px}
+.crumb a{color:var(--ink2)}
+.crumb a:hover{color:var(--blue)}
+
+/* ===== 通用组件 ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 13px;border-radius:8px;
+  border:1px solid #dde4ed;background:#fff;color:#243044;font-size:12.5px;font-weight:500;cursor:pointer;
+  white-space:nowrap;transition:.15s;font-family:inherit}
+.btn:hover{background:#f8fafc;border-color:#c8d3e1}
+.btn:disabled{opacity:.5;cursor:not-allowed;background:#f7f9fc}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 1px 2px rgba(37,99,235,.28)}
+.btn-primary:hover{background:#1d4ed8;border-color:#1d4ed8}
+.btn-primary:disabled{background:#9fb8ee;border-color:#9fb8ee;color:#fff;opacity:.65}
+.btn-build{background:var(--teal);border-color:var(--teal);color:#fff;box-shadow:0 1px 2px rgba(15,118,110,.25)}
+.btn-build:hover{background:#0d6259;border-color:#0d6259}
+.btn-build:disabled{background:#8fb8b3;border-color:#8fb8b3;color:#fff;opacity:.65}
+.btn-danger{background:#fff;border-color:#f0caca;color:var(--red)}
+.btn-danger:hover{background:#fdf5f5;border-color:#e3a7a7}
+.btn-sm{height:28px;padding:0 10px;font-size:12px;border-radius:7px}
+.btn-xs{height:24px;padding:0 8px;font-size:11.5px;border-radius:6px}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--ink2);padding:0 8px}
+.btn-ghost:hover{background:#f1f5f9;color:var(--ink)}
+.btn-ghost:disabled{background:transparent;border-color:transparent;color:#a5b1c2}
+.btn-link{border:0;background:none;color:var(--blue);padding:0;height:auto;font-size:12px;cursor:pointer;font-family:inherit}
+.btn-link:hover{text-decoration:underline;color:#1d4ed8}
+.spin{width:11px;height:11px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;
+  display:inline-block;animation:rot .7s linear infinite;opacity:.8}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;
+  font-size:11.5px;font-weight:500;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.85}
+.pill-idle{background:#f1f5f9;color:#4a5768}
+.pill-merging{background:var(--blue-bg);color:#1d4ed8}
+.pill-conflict{background:var(--red-bg);color:var(--red)}
+.pill-merged{background:var(--amber-bg);color:var(--amber)}
+.pill-packaged{background:var(--green-bg);color:var(--green)}
+.pill-done{background:var(--green-bg);color:var(--green)}
+
+.bchip{display:inline-block;position:relative;font-family:var(--mono);font-size:11.5px;padding:1px 7px 1px 18px;
+  border-radius:5px;background:#f8fafc;border:1px solid #e3e9f1;color:#3a4759;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:100%;vertical-align:middle;line-height:1.6}
+.bchip::before{content:"";position:absolute;left:7px;top:50%;transform:translateY(-50%);
+  width:6px;height:6px;border-radius:2px;background:#94a3b8}
+.bchip.src::before{border-radius:50%;background:#94a3b8}
+.bchip.qa{background:#eff4ff;border-color:#dbe6ff;color:#1d4ed8}
+.bchip.qa::before{background:#3b82f6}
+.bchip.uat{background:#fff6e8;border-color:#fae3c0;color:#a16207}
+.bchip.uat::before{background:#f59e0b}
+.bchip.release{background:#e9f7f4;border-color:#c9ece3;color:#0f766e}
+.bchip.release::before{background:#14b8a6}
+.bchip.master{background:#f4f0ff;border-color:#e2d9fa;color:#5b46b0}
+.bchip.master::before{background:#8b5cf6}
+
+.stage-tag{display:inline-block;font-family:var(--mono);font-size:10px;padding:0 5px;border-radius:4px;
+  background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;line-height:1.7;vertical-align:middle}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.section-title{font-size:14px;font-weight:700;margin:30px 0 12px;display:flex;align-items:center;gap:8px}
+.section-title .count{font-size:11px;font-weight:500;color:var(--ink3);background:#f1f5f9;border-radius:5px;padding:1px 6px}
+
+/* stats */
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-bottom:22px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+.stat-k{font-size:11px;color:var(--ink3);letter-spacing:.02em}
+.stat-v{font-size:21px;font-weight:700;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums}
+.stat-n{font-size:10.5px;color:var(--ink3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat.alert .stat-v{color:var(--red)}
+.stat.ok .stat-v{color:var(--green)}
+
+/* board */
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;align-items:start}
+.col{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;min-height:260px}
+.col-head{display:flex;align-items:center;justify-content:space-between;padding:3px 4px 10px;border-bottom:1px solid var(--line2);margin-bottom:9px}
+.col-name{font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px}
+.col-name::before{content:"";width:7px;height:7px;border-radius:50%;background:#94a3b8}
+.col.c-none .col-name::before{background:#94a3b8}
+.col.c-dev .col-name::before{background:#3b82f6}
+.col.c-test .col-name::before{background:#0d9488}
+.col.c-release .col-name::before{background:#f59e0b}
+.col.c-done .col-name::before{background:#22c55e}
+.col-count{font-size:11px;color:var(--ink3);background:#f4f6f9;border-radius:5px;padding:1px 7px;font-variant-numeric:tabular-nums}
+.col-empty{color:#a5b1c2;font-size:11.5px;text-align:center;padding:22px 0;border:1px dashed #e6ecf4;border-radius:8px}
+
+.tcard{background:#fff;border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px;cursor:pointer;transition:.15s}
+.tcard:hover{border-color:#c9d6e8;box-shadow:0 6px 16px -12px rgba(15,23,42,.4);transform:translateY(-1px)}
+.tcard-top{display:flex;align-items:center;gap:6px;color:var(--ink3);font-size:11px;margin-bottom:5px;white-space:nowrap}
+.tcard-ref{font-family:var(--mono);color:#5b6b80;flex:0 0 auto}
+.tcard-top .app-nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tcard h4{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tcard-title{font-size:12.5px;font-weight:500;line-height:1.45;margin-bottom:7px;color:#16202e}
+.branchline{display:flex;flex-direction:column;gap:2px;margin-bottom:7px}
+.src-line,.tg-line{display:flex;align-items:center;gap:4px;min-width:0}
+.branchline .bchip{font-size:10.5px;max-width:100%}
+.arrow{color:#a8b4c4;font-size:11px;flex:0 0 auto;transform:rotate(90deg);line-height:1}
+.stage-dots{display:flex;gap:3px;margin-bottom:8px}
+.stage-dots.slim{margin:7px 0 0;width:104px}
+.sd{flex:1;height:4px;border-radius:2px;background:#e8edf4}
+.sd.on{background:#22c55e}
+.sd.cur{background:#3b82f6}
+.sd.fail{background:#ef4444}
+.tcard-note{font-size:10.5px;color:var(--ink3);margin-bottom:8px;line-height:1.5}
+.tcard-note.warn{color:var(--red)}
+.tcard-note.good{color:var(--green)}
+.tcard-foot{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.tcard-foot .btn{flex:1 1 auto;width:auto;min-width:0;font-size:11.5px;padding:0 7px}
+.role-tag{font-size:10px;padding:1px 6px;border-radius:4px;margin-left:auto;white-space:nowrap;line-height:1.5;flex:0 0 auto}
+.role-tag.dev{background:#eff4ff;color:#1d4ed8}
+.role-tag.qa{background:#e8f5f2;color:#0f766e}
+
+/* app cards */
+.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.appcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.appcard-head{display:flex;align-items:center;gap:10px}
+.app-avatar{width:36px;height:36px;border-radius:9px;background:#eff4ff;color:#1d4ed8;display:grid;place-items:center;
+  font-weight:700;font-size:14px;flex:0 0 36px;border:1px solid #dbe6ff}
+.app-name{font-size:14px;font-weight:700}
+.app-stack{font-size:11px;color:var(--ink3);margin-top:1px}
+.kv{display:flex;gap:8px;font-size:12px;color:var(--ink2);align-items:baseline}
+.kv .k{color:var(--ink3);flex:0 0 58px;font-size:11.5px}
+.kv .v{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11.5px;color:#2c3a4d}
+.branch-map{display:flex;gap:5px;flex-wrap:wrap;padding-top:2px}
+.appcard-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line2);
+  padding-top:10px;margin-top:2px;font-size:11.5px;color:var(--ink3)}
+.appcard-foot .btn{height:26px;font-size:11.5px;padding:0 9px}
+
+/* requirement cards */
+.req-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+select,input[type=text],input[type=date],textarea{font-family:inherit;font-size:12.5px;color:#243044;
+  border:1px solid #dde4ed;background:#fff;border-radius:8px;height:32px;padding:0 10px;outline:none;transition:.15s}
+select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%237d8a9b' stroke-width='1.4'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer}
+input:focus,select:focus,textarea:focus{border-color:#9dbcf5;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+textarea{height:auto;min-height:74px;padding:9px 10px;resize:vertical;line-height:1.6}
+.search{position:relative;display:inline-flex;align-items:center}
+.search input{padding-left:30px;width:220px}
+.search svg{position:absolute;left:10px;opacity:.5;pointer-events:none}
+
+.req-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:13px}
+.reqcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;box-shadow:var(--shadow);
+  cursor:pointer;transition:.16s;display:flex;flex-direction:column;gap:10px}
+.reqcard:hover{border-color:#cfdcee;box-shadow:0 12px 28px -20px rgba(15,23,42,.5)}
+.reqcard-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.req-code{font-family:var(--mono);font-size:11.5px;color:#5b6b80;letter-spacing:.02em}
+.req-title{font-size:13.5px;font-weight:700;line-height:1.5;letter-spacing:-.005em;color:#131f30}
+.req-meta{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--ink3);flex-wrap:wrap}
+.req-meta .sep{color:#cbd5e1}
+.req-progress{display:flex;flex-direction:column;gap:5px}
+.bar{height:5px;border-radius:3px;background:#eef2f7;overflow:hidden}
+.bar span{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width .35s}
+.req-stats{display:flex;gap:6px;flex-wrap:wrap;font-size:10.5px;color:var(--ink3)}
+.req-stats .rs{background:#f6f8fb;border:1px solid #e9eff6;border-radius:5px;padding:1px 6px}
+.pri{font-size:10.5px;font-weight:600;border-radius:5px;padding:1px 6px}
+.pri-高{background:#fdeeee;color:#b91c1c}
+.pri-中{background:#fff5e6;color:#b45309}
+.pri-低{background:#f1f5f9;color:#5b6b80}
+
+/* table */
+table.grid{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);
+  border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+table.grid th{text-align:left;font-weight:600;color:#64748b;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  padding:10px 13px;background:#f8fafc;border-bottom:1px solid var(--line);white-space:nowrap}
+table.grid td{padding:12px 13px;border-bottom:1px solid var(--line2);vertical-align:middle;font-size:12.5px}
+table.grid tbody tr:last-child td{border-bottom:0}
+table.grid tbody tr:hover{background:#fbfcfe}
+.t-title{font-size:12.5px;font-weight:600;color:#16202e;cursor:pointer}
+.t-title:hover{color:var(--blue)}
+.t-sub{font-size:10.5px;color:var(--ink3);margin-top:2px}
+.muted{color:var(--ink3);font-size:11.5px}
+.warnrow td{background:#fdf7f7;border-bottom:1px solid #f6e3e3;padding:0}
+.warnbox{display:flex;gap:12px;align-items:flex-start;padding:10px 13px 11px 14px;border-left:3px solid #dc2626;font-size:11.5px;color:#7f1d1d;line-height:1.6}
+.warnbox .wf{font-family:var(--mono);font-size:11px;color:#8b2a2a;display:block}
+.warnbox .grow{flex:1;min-width:0}
+.warnbox strong{font-weight:600;color:#991b1b}
+
+/* detail header */
+.detail-head{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);margin-bottom:16px}
+.detail-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.detail-title{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:6px 0 4px}
+.detail-desc{color:var(--ink2);font-size:12.5px;max-width:760px;line-height:1.65}
+.detail-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:13px;border-top:1px solid var(--line2);font-size:11.5px;color:var(--ink3)}
+.detail-meta b{color:#2c3a4d;font-weight:500;font-family:var(--mono);font-size:11.5px}
+
+/* drawer */
+.drawer{position:fixed;top:0;right:0;height:100vh;width:480px;max-width:94vw;background:#fff;border-left:1px solid var(--line);
+  box-shadow:-20px 0 50px -26px rgba(15,23,42,.45);display:flex;flex-direction:column;z-index:45;
+  animation:slidein .18s ease-out}
+@keyframes slidein{from{transform:translateX(26px);opacity:.4}to{transform:none;opacity:1}}
+.drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 14px;border-bottom:1px solid var(--line2)}
+.drawer-head h3{margin:3px 0 0;font-size:15.5px;font-weight:700;line-height:1.45}
+.icon-btn{width:28px;height:28px;border-radius:7px;border:1px solid #e6ecf4;background:#fff;color:#8a97a7;
+  cursor:pointer;display:grid;place-items:center;font-size:14px;flex:0 0 28px;transition:.15s;font-family:inherit}
+.icon-btn:hover{background:#f4f7fb;color:#334155}
+.drawer-body{padding:16px 18px 40px;overflow-y:auto;flex:1}
+.statusline{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+.stage-dots.big{gap:5px;margin-bottom:14px}
+.stage-dots.big .sd{height:6px}
+.meta-grid{display:flex;flex-direction:column;gap:0;border:1px solid var(--line2);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.mrow{display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line2);font-size:11.5px;align-items:flex-start}
+.mrow:last-child{border-bottom:0}
+.mrow .mk{color:var(--ink3);flex:0 0 78px}
+.mrow .mv{color:#243044;min-width:0;word-break:break-all}
+.drawer-actions{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.drawer-actions .btn{width:100%;height:36px}
+.role-hint{background:#fff8eb;border:1px solid #f5e2c1;color:#a16207;border-radius:8px;padding:8px 11px;
+  font-size:11.5px;line-height:1.65;margin-bottom:8px}
+.blk-title{font-size:12px;font-weight:700;color:#2c3a4d;letter-spacing:.02em;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+.build-item{border:1px solid var(--line2);border-radius:9px;padding:9px 11px;margin-bottom:8px;font-size:11.5px;display:flex;flex-direction:column;gap:4px}
+.build-item .bi-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.build-item .bi-name{font-family:var(--mono);font-size:11px;color:#2c3a4d;word-break:break-all}
+.hint{font-size:11.5px;color:var(--ink3);line-height:1.7;margin:0}
+.conflict-box{border:1px solid #f1cccc;background:#fdf6f6;border-radius:9px;padding:11px 12px;margin-bottom:14px;font-size:11.5px;color:#7f1d1d;line-height:1.65}
+.conflict-box b{display:block;color:#991b1b;font-size:12px;margin-bottom:4px}
+
+/* timeline */
+.timeline{display:flex;flex-direction:column;border:1px solid var(--line2);border-radius:10px;overflow:hidden;margin-bottom:16px}
+.tl{display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line2);align-items:flex-start}
+.tl:last-child{border-bottom:0}
+.tl-dot{width:8px;height:8px;border-radius:50%;background:#e2e8f0;margin-top:5px;flex:0 0 8px}
+.tl.on .tl-dot{background:#22c55e}
+.tl.cur .tl-dot{background:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.tl.fail .tl-dot{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+.tl-t{font-size:12px;font-weight:600;color:#243044;display:flex;align-items:center;gap:6px}
+.tl-s{font-size:10.5px;color:#7d8a9b;font-family:var(--mono);margin-top:1px;word-break:break-all}
+.tl-x{font-size:10.5px;color:#8a97a7;margin-left:auto;white-space:nowrap;padding-left:8px}
+
+/* log drawer */
+.log-drawer{position:fixed;top:0;right:0;height:100vh;width:640px;max-width:96vw;background:#0d1520;color:#c7d3e0;
+  display:flex;flex-direction:column;z-index:48;box-shadow:-24px 0 60px -30px rgba(0,0,0,.6);animation:slidein .18s ease-out}
+.log-head{padding:15px 18px;border-bottom:1px solid #1d2a3a;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.log-title{font-size:13.5px;font-weight:600;color:#eaf1f8}
+.log-sub{font-size:11px;color:#7d8fa3;margin-top:3px;font-family:var(--mono)}
+.log-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #1d2a3a;font-size:11px;color:#8ba0b6}
+.progress-track{height:5px;background:#172335;border-radius:3px;overflow:hidden}
+.progress-track span{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563eb,#22c55e);transition:width .3s}
+.logbox{flex:1;overflow-y:auto;padding:14px 18px 30px;font-family:var(--mono);font-size:11.8px;line-height:1.85;background:#0b131d}
+.ll{white-space:pre-wrap;word-break:break-all}
+.ll-cmd{color:#6eb6ff}
+.ll-out{color:#b9c6d6}
+.ll-dim{color:#5f7287}
+.ll-ok{color:#4ade80}
+.ll-warn{color:#fbbf24}
+.ll-err{color:#f87171}
+.log-empty{color:#4c5f73;font-style:italic}
+.log-foot{padding:11px 18px;border-top:1px solid #1d2a3a;display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:11px;color:#7d8fa3}
+.log-drawer .icon-btn{background:#152132;border-color:#233247;color:#8ba0b6}
+.log-drawer .icon-btn:hover{background:#1b293c;color:#e2e8f0}
+.log-drawer .btn{background:#152132;border-color:#233247;color:#c7d3e0}
+.log-drawer .btn:hover{background:#1b293c;color:#eaf1f8}
+.log-drawer .btn-primary{background:#2563eb;border-color:#2563eb;color:#fff}
+
+/* 代码合并冲突通知 */
+.ci-facts{display:grid;grid-template-columns:88px 1fr;gap:7px 14px;font-size:12px;padding:12px 14px;
+  border:1px solid var(--line2);border-radius:10px;background:#fafbfc;margin-bottom:16px}
+.ci-facts .k{color:#7d8a9b}
+.ci-facts .v{font-family:var(--mono);font-size:11.5px;word-break:break-all;color:#0f172a}
+.ci-step{display:flex;gap:10px;margin-bottom:13px}
+.ci-num{flex:none;width:19px;height:19px;border-radius:50%;background:#eef2ff;color:#2563eb;
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ci-step-main{flex:1;min-width:0}
+.ci-step-main .t{font-size:12.5px;color:#374151;margin-bottom:6px;line-height:1.6}
+.cmd{display:flex;align-items:center;gap:8px;background:#f4f6f8;border:1px solid #e5e8ee;border-radius:8px;padding:7px 10px}
+.cmd code{flex:1;font-family:var(--mono);font-size:11.5px;color:#0f172a;word-break:break-all}
+.cmd .cp{flex:none;border:1px solid #d7dce4;background:#fff;border-radius:6px;font-size:11px;padding:3px 9px;cursor:pointer;color:#475569}
+.cmd .cp:hover{border-color:#2563eb;color:#2563eb}
+.ci-tip{font-size:11.8px;color:#8a5209;background:#fffaef;border:1px solid #f3d9b6;border-radius:8px;padding:9px 12px;margin-top:4px}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(10,18,28,.42);z-index:60;display:flex;align-items:flex-start;justify-content:center;
+  padding:56px 20px 32px;overflow-y:auto;animation:fade .16s ease-out;backdrop-filter:blur(2px)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:14px;width:660px;max-width:100%;box-shadow:0 30px 80px -30px rgba(10,18,28,.6);
+  animation:pop .18s ease-out;margin-bottom:40px}
+@keyframes pop{from{transform:translateY(10px) scale(.985);opacity:.5}to{transform:none;opacity:1}}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--line2)}
+.modal-head h3{margin:0;font-size:16px;font-weight:700}
+.modal-head p{margin:4px 0 0;font-size:11.5px;color:var(--ink3)}
+.modal-body{padding:18px 22px}
+.modal-foot{padding:14px 22px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line2)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:11.5px;font-weight:600;color:#374559;letter-spacing:.01em}
+.field .req-star{color:#dc2626;margin-left:2px}
+.field .fx{font-size:10.5px;color:var(--ink3);line-height:1.5}
+.field input,.field select,.field textarea{width:100%}
+.inline4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.inline4 .lb{font-size:11px;color:#64748b;margin-bottom:4px;display:block}
+.form-divider{grid-column:1/-1;border-top:1px solid var(--line2);margin:4px 0 2px;padding-top:12px;
+  font-size:11.5px;font-weight:700;color:#374559;letter-spacing:.02em}
+.flow-hint{grid-column:1/-1;background:#fbfcfe;border:1px dashed #e0e8f2;border-radius:8px;padding:9px 11px;
+  font-size:11.5px;color:#5b6b80;line-height:1.8}
+
+/* spec */
+.spec{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 26px;box-shadow:var(--shadow);margin-bottom:16px;overflow-x:auto}
+.spec h2{margin:0 0 4px;font-size:16px;font-weight:700}
+.spec h2 .n{font-family:var(--mono);font-size:11px;color:#9aa7b7;margin-right:8px}
+.spec p{margin:6px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.75}
+.spec ul{margin:8px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink2);line-height:1.85}
+.spec table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+.spec table th{text-align:left;background:#f8fafc;color:#64748b;font-size:11px;font-weight:600;letter-spacing:.04em;
+  padding:7px 10px;border:1px solid var(--line)}
+.spec table td{padding:7px 10px;border:1px solid var(--line);color:#243044;vertical-align:top}
+.spec table td.mono{font-size:11.5px;color:#334155}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.fnode{background:#f8fafc;border:1px solid #dfe7f1;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:500;color:#2c3a4d}
+.fnode.acc{background:var(--blue-bg);border-color:#d5e2ff;color:#1d4ed8}
+.fnode.warn{background:var(--amber-bg);border-color:#f7e2c2;color:var(--amber)}
+.fnode.ok{background:var(--green-bg);border-color:#cdebd8;color:var(--green)}
+.fnode.err{background:var(--red-bg);border-color:#f4d2d2;color:var(--red)}
+.farr{color:#a8b4c4;font-size:13px}
+.fnote{margin-top:10px;font-size:11.5px;color:var(--ink3);background:#fbfcfe;border:1px dashed #e4eaf2;border-radius:8px;padding:9px 12px;line-height:1.7}
+.todo{display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed #e9eff6;font-size:12.5px;align-items:flex-start}
+.todo:last-child{border-bottom:0}
+.todo .num{font-family:var(--mono);font-size:11px;color:#9aa7b7;flex:0 0 22px;padding-top:2px}
+.todo .q{font-weight:600;color:#243044}
+.todo .a{color:var(--ink3);font-size:11.5px;display:block;margin-top:1px}
+
+/* toast */
+.toast-root{position:fixed;right:22px;bottom:22px;z-index:80;display:flex;flex-direction:column;gap:9px;align-items:flex-end}
+.toast{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);border-radius:10px;
+  padding:10px 14px;box-shadow:0 18px 40px -20px rgba(15,23,42,.5);font-size:12.5px;max-width:420px;
+  animation:tin .2s ease-out;transition:.25s}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.toast.out{opacity:0;transform:translateY(6px)}
+.toast-dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;background:var(--blue)}
+.toast-success .toast-dot{background:#22c55e}
+.toast-error .toast-dot{background:#ef4444}
+.toast-warn .toast-dot{background:#f59e0b}
+
+.empty{text-align:center;padding:60px 20px;color:var(--ink3);font-size:12.5px}
+.empty .big{font-size:15px;color:#3a4759;font-weight:600;margin-bottom:6px}
+
+/* responsive */
+@media (max-width:1240px){
+  .board{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stat-row{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:900px){
+  .shell{flex-direction:column}
+  .sidebar{position:relative;height:auto;width:100%;flex:none;flex-direction:column;padding:14px 14px 10px}
+  .sidebar .nav-label,.builder-card,.btn-side{display:none}
+  .side-foot{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+  .role-card{display:flex;flex-direction:row;align-items:center;gap:8px;padding:6px 8px;margin:0}
+  .rc-label,.rc-note{display:none}
+  .rc-switch{flex:1}
+  .rc-btn{height:28px}
+  .brand{padding:0 0 12px}
+  .sidebar nav{display:flex;flex-direction:row;gap:4px;overflow-x:auto;padding-bottom:4px;min-width:0}
+  .nav-item{flex:0 0 auto;padding:6px 10px;font-size:12.5px;white-space:nowrap}
+  .nav-item .ni-ico{display:none}
+  .page{padding:20px 16px 70px}
+  .page-head{flex-direction:column}
+  .page-head h1{font-size:20px}
+  .board{grid-template-columns:1fr}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .app-grid,.req-grid{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .inline4{grid-template-columns:repeat(2,1fr)}
+  table.grid{display:block;overflow-x:auto;white-space:nowrap}
+  .drawer,.log-drawer{width:100%}
+  .main{overflow-x:hidden}
+}
+
+/* ===== v7 追加：登录 / 首页 / 任务详情 / CI 流水 ===== */
+.logged-out .sidebar{display:none}
+.logged-out .main{width:100%}
+
+/* 登录 */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:40px 20px;
+  background:radial-gradient(1200px 600px at 20% -10%,#16304d 0%,#0b1421 55%,#0a111b 100%)}
+.login-card{width:800px;max-width:100%;background:#fff;border-radius:20px;padding:32px 34px 26px;
+  box-shadow:0 50px 110px -50px rgba(0,0,0,.75)}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.login-title{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.login-sub{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.login-lead{font-size:12px;color:var(--ink2);margin-bottom:14px}
+.login-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.login-user{display:flex;align-items:center;gap:12px;text-align:left;background:#fbfcfe;border:1px solid var(--line);
+  border-radius:12px;padding:13px 14px;cursor:pointer;transition:.15s;font-family:inherit}
+.login-user:hover{border-color:#bfd3f5;background:#f6f9ff;box-shadow:0 8px 22px -16px rgba(37,99,235,.6);transform:translateY(-1px)}
+.lu-avatar{width:38px;height:38px;border-radius:10px;color:#fff;display:grid;place-items:center;font-size:15px;font-weight:700;flex:0 0 38px}
+.lu-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.lu-main b{font-size:13.5px;color:#16202e}
+.lu-role{font-size:11px;color:var(--ink3)}
+.lu-desc{font-size:10.5px;color:#8a97a7;line-height:1.5;margin-top:3px}
+.lu-arrow{font-size:11px;color:#2563eb;flex:0 0 auto}
+.login-foot{margin-top:16px;padding-top:13px;border-top:1px solid var(--line2);font-size:10.8px;color:#8a97a7;line-height:1.7}
+
+/* 侧栏新增 */
+.nav-label{font-size:10.5px;color:#5d6f84;letter-spacing:.12em;padding:6px 10px 6px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;font-size:12.5px;color:#a9bbcd;transition:.15s}
+.nav-item:hover{background:#131f2e;color:#eaf1ff}
+.nav-item.on{background:#15263c;color:#eaf1ff;font-weight:600}
+.nav-badge{margin-left:auto;background:#2563eb;color:#fff;font-size:10px;border-radius:999px;min-width:17px;height:17px;
+  display:grid;place-items:center;padding:0 5px}
+.side-foot{margin-top:auto;border-top:1px solid #1a2839;padding-top:12px;margin-bottom:10px}
+.side-user{display:flex;align-items:center;gap:9px;padding:2px 4px 9px}
+.su-avatar{width:30px;height:30px;border-radius:8px;color:#fff;display:grid;place-items:center;font-size:12.5px;font-weight:700;flex:0 0 30px}
+.su-main{display:flex;flex-direction:column;min-width:0}
+.su-main b{font-size:12.5px;color:#e6edf6;font-weight:600}
+.su-main span{font-size:10.5px;color:#7d8fa5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-acts{display:flex;gap:6px}
+.side-acts .btn{flex:1;background:#152132;border-color:#233247;color:#c7d3e0;font-size:11.5px;height:28px}
+.side-acts .btn:hover{background:#1b293c;color:#eaf1f8}
+.built-card{background:#0f1a28;border:1px solid #1b293b;border-radius:10px;padding:10px 11px;font-size:11px;color:#9db0c4}
+.bc-top{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#d6e2ef;margin-bottom:7px}
+.dot-idle{width:6px;height:6px;border-radius:50%;background:#22c55e}
+.bc-row{display:flex;justify-content:space-between;padding:2px 0;color:#8ba0b6}
+.bc-tag{color:#cfe0f2}
+.bc-hint{margin-top:6px;padding-top:6px;border-top:1px solid #1b293b;font-size:10px;color:#687d93;line-height:1.6}
+
+/* 首页 */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:11px;margin-bottom:18px}
+.home-tabs{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.htab{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:8px;
+  border:1px solid var(--line);background:#fff;color:#4a5768;font-size:12px;cursor:pointer;font-family:inherit}
+.htab:hover{border-color:#c9d9f8;background:#f8fbff}
+.htab.on{background:#eff4ff;border-color:#c9d9f8;color:#1d4ed8;font-weight:600}
+.htab .cnt{font-family:var(--mono);font-size:11px;background:#f1f5f9;border-radius:5px;padding:0 5px;color:#4a5768}
+.htab.on .cnt{background:#fff;color:#1d4ed8}
+.htab-hint{font-size:11px;color:#94a3b8;margin-left:auto}
+.stat-v.accent{color:#2563eb}
+.card-head{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.card-head h2{font-size:13.5px;margin:0;font-weight:700}
+.pill-role{background:#eef2ff;color:#3730a3}
+.pbar{height:5px;background:#eef2f7;border-radius:3px;overflow:hidden;width:100%}
+.pbar span{display:block;height:100%;background:linear-gradient(90deg,#3b82f6,#22c55e)}
+.pbar-t{font-size:10px;color:#7d8a9b;margin-top:3px}
+.pmini{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:1px 7px;border-radius:6px;margin:2px 4px 2px 0;
+  border:1px solid #e5e8ee;background:#fbfcfe;color:#4a5768;max-width:100%}
+.pmini b{font-weight:600;color:#1f2937;font-size:10px}
+.pmini.pill-conflict{background:#fdf0f0;border-color:#f4d5d5;color:#b91c1c}
+.pmini.pill-done{background:#eefaf2;border-color:#cdeedb;color:#15803d}
+.pmini.pill-merging{background:#eff4ff;border-color:#dbe6ff;color:#1d4ed8}
+.pmini.pill-merged{background:#fff7ea;border-color:#f6e3c4;color:#a16207}
+.pmini.pill-packaged{background:#eefaf2;border-color:#cdeedb;color:#15803d}
+.pmini.pill-ready,.pmini.pill-testing,.pmini.pill-verify,.pmini.pill-verified{background:#f5f3ff;border-color:#e3dcfb;color:#5b46b0}
+
+/* 看板（3 列） */
+.board{display:grid;grid-template-columns:repeat(7,minmax(200px,1fr));gap:10px;align-items:start;overflow-x:auto;padding-bottom:6px}
+.col.c-overdue .col-head span:first-child::before{background:#ef4444}
+.col.c-ready .col-head span:first-child::before{background:#8b5cf6}
+.col.c-testing .col-head span:first-child::before{background:#0d9488}
+.col.c-release .col-head span:first-child::before{background:#f59e0b}
+.col{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px;min-height:280px}
+.col-head{display:flex;align-items:center;justify-content:space-between;padding:2px 3px 8px;border-bottom:1px solid var(--line2)}
+.col-head span:first-child{font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px}
+.col-head span:first-child::before{content:"";width:7px;height:7px;border-radius:50%;background:#94a3b8}
+.col.c-dev .col-head span:first-child::before{background:#3b82f6}
+.col.c-test .col-head span:first-child::before{background:#f59e0b}
+.col.c-done .col-head span:first-child::before{background:#22c55e}
+.col .cnt{font-size:11px;color:var(--ink3);background:#f4f6f9;border-radius:5px;padding:1px 7px}
+.col-sub{font-size:10.5px;color:#9aa8b8;padding:7px 3px 9px}
+.col-empty{color:#a5b1c2;font-size:11.5px;text-align:center;padding:20px 0;border:1px dashed #e6ecf4;border-radius:8px}
+.board-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;background:#fff;border:1px solid var(--line);
+  border-radius:11px;padding:11px 15px}
+.bs{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink3);padding-right:18px;border-right:1px solid var(--line2)}
+.bs:last-child{border-offset:0;border-right:0}
+.bs b{font-size:15px;color:#16202e;font-variant-numeric:tabular-nums}
+.bs b.hot{color:#b45309}
+
+/* 看板卡（无操作按钮） */
+.tcard{background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px;margin-bottom:8px;cursor:pointer;transition:.15s}
+.tcard:hover{border-color:#c9d6e8;box-shadow:0 8px 20px -16px rgba(15,23,42,.5);transform:translateY(-1px)}
+.req-mini{font-family:var(--mono);font-size:10.5px;color:#5b6b80}
+.rtag-t{font-size:10.5px;color:#7d8a9b;margin-left:auto}
+.tcard-title{font-size:12.5px;font-weight:600;color:#16202e;margin:5px 0 7px;line-height:1.4}
+.tcard-pipes{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px}
+.tcard-foot{display:flex;align-items:center;justify-content:space-between;margin-top:3px}
+.stage-dots-in{display:flex;gap:3px;margin:6px 0}
+.stage-dots-in .sd{height:4px;flex:1;border-radius:2px;background:#edf1f6}
+.stage-dots-in .sd.on{background:#22c55e}
+.stage-dots-in .sd.cur{background:#3b82f6}
+
+/* 抽屉宽版 + tab + 流水卡 */
+.drawer.wide{width:760px}
+.tbar{display:flex;align-items:center;gap:8px;padding:11px 18px;border-bottom:1px solid var(--line2);background:#fbfcfe}
+.tb-role{font-size:10.5px;color:#7d8a9b}
+.tb-gap{flex:1}
+.task-actions{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:4px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line2);margin:14px 0 14px}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;font-size:12.5px;color:var(--ink2);
+  cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.tab:hover{color:#16202e}
+.tab.on{color:#2563eb;border-bottom-color:#2563eb;font-weight:600}
+.tab-n{font-size:10px;background:#eff4ff;color:#2563eb;border-radius:999px;padding:0 6px;height:16px;display:inline-flex;align-items:center}
+.pipe-card{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:10px;background:#fff}
+.pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pc-title{display:flex;flex-direction:column;gap:2px}
+.pc-title b{font-size:12.5px;color:#16202e}
+.pc-app{font-size:10.5px;color:#7d8a9b}
+.pc-branch{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 2px;font-size:11px}
+.pc-arrow{color:#9aa8b8}
+.pc-stage{font-size:10.5px;color:#7d8a9b}
+.pc-dots{margin:2px 0 4px}
+.pc-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:#7d8a9b;margin-bottom:8px}
+.pc-meta b{font-family:var(--mono);font-size:10.5px;color:#243044;font-weight:500}
+.pc-rework{font-size:10.8px;color:#a16207;background:#fffaef;border:1px solid #f3d9b6;border-radius:7px;padding:6px 9px;margin-bottom:8px}
+.pc-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pc-acts .btn{flex:0 0 auto}
+.ov-pipe{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line2);font-size:11.5px}
+.ov-pipe .mono{flex:0 0 auto;color:#243044}
+.ov-pipe .muted{flex:1;min-width:0}
+
+/* 应用 / 需求卡 */
+.app-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow)}
+.ac-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.ac-name{font-size:14px;font-weight:700;color:#16202e}
+.ac-code{font-size:10.8px;color:#7d8a9b;margin-top:2px}
+.ac-repo{font-size:10.5px;color:#5b6b80;margin:9px 0;word-break:break-all;background:#f7f9fb;border:1px solid var(--line2);border-radius:6px;padding:6px 8px}
+.ac-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:#7d8a9b;margin-bottom:9px}
+.bl-k{font-size:10px;color:#8a97a7;margin-right:5px}
+.ac-foot{display:flex;justify-content:flex-end;margin-top:10px}
+.req-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 16px;cursor:pointer;transition:.15s;box-shadow:var(--shadow)}
+.req-card:hover{border-color:#c9d6e8;transform:translateY(-1px)}
+.rc-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.req-code{font-family:var(--mono);font-size:11px;color:#5b6b80}
+.rc-title{font-size:13.5px;font-weight:700;color:#16202e;line-height:1.45}
+.rc-desc{font-size:11.5px;color:#7d8a9b;line-height:1.6;margin:6px 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rc-foot{display:flex;align-items:center;gap:10px;font-size:10.8px;color:#7d8a9b;border-top:1px solid var(--line2);padding-top:9px}
+.rc-foot .pill{margin-left:auto}
+
+
+
+/* 角色权限 / 人员管理 */
+.user-cell{display:flex;align-items:center;gap:9px}
+.u-av{width:26px;height:26px;border-radius:7px;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;flex:0 0 26px}
+.u-name{font-size:12.5px;font-weight:600;color:#16202e}
+.perm-tools{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.perm-search{width:260px;height:32px;border:1px solid var(--line);border-radius:7px;padding:0 11px;
+  font-size:12px;font-family:inherit;background:#fff;color:#16202e}
+.perm-search:focus{outline:none;border-color:#b9cef2;box-shadow:0 0 0 3px rgba(59,111,212,.08)}
+.pm-total{font-size:11.5px;color:#7d8a9b}
+.pm-table{border-collapse:collapse;width:100%;font-size:11.5px}
+.pm-table th{background:#fbfcfe;color:#64748b;font-weight:600;border-bottom:1px solid var(--line2);padding:7px 5px;font-size:11px;text-align:center}
+.pm-table th.pm-name-head{text-align:left;padding-left:14px !important;width:330px;color:#4a5768}
+.pm-role-head{border-left:1px solid var(--line2);color:#243044}
+.pm-admin-head{border-left:1px solid var(--line2);color:#5b46b0;width:70px}
+.pm-lv-head{color:#94a3b8;font-weight:500;font-size:10.5px;width:44px;padding:3px 3px 5px !important;vertical-align:top}
+.pm-lv{display:block;line-height:1.4}
+.pm-colall{display:block;width:100%;margin:2px 0 0;padding:1px 0;font-size:9.5px;line-height:1.6;border-radius:4px;
+  border:1px solid #e6ebf2;background:#fff;color:#7d8a9b;cursor:pointer;font-family:inherit;transition:.12s}
+.pm-colall:hover{border-color:#bfd3f5;background:#f4f8ff;color:#1d4ed8}
+.pm-colall.on{border-color:#c9c2ef;background:#f5f3ff;color:#5b46b0}
+.pm-group{cursor:pointer}
+.pm-group td{padding:7px 14px;background:#f7f9fc;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);color:#243044}
+.pm-caret{margin-right:7px;color:#94a3b8;font-size:11px}
+.pm-glabel{font-weight:700;font-size:12px}
+.pm-gdesc{color:#94a3b8;margin-left:8px;font-size:10.5px}
+.pm-gcount{float:right;color:#94a3b8;font-family:var(--mono);font-size:10.5px}
+.pm-row td{padding:5px 4px;border-bottom:1px solid #f0f3f8}
+.pm-table td.pm-namecell{padding-left:14px !important}
+.pm-label{font-size:12px;color:#16202e}
+.pm-krow{display:flex;align-items:center;gap:6px;margin-top:3px}
+.pm-krow code{font-family:var(--mono);font-size:10.5px;color:#7d8a9b;background:#f6f8fb;border-radius:4px;padding:0 4px}
+.pm-badge{font-size:9.5px;border-radius:4px;padding:1px 5px;line-height:1.55}
+.pm-badge.menu{background:#eff4ff;color:#1d4ed8}
+.pm-badge.op{background:#f4f6f9;color:#6b7a8c}
+.pm-badge.sys{background:#f5f3ff;color:#5b46b0}
+.pm-cell{text-align:center}
+.pm-empty{padding:40px 0;text-align:center;color:#94a3b8}
+.perm-json{width:100%;height:300px;border:1px solid var(--line);border-radius:9px;padding:12px;
+  font-family:var(--mono);font-size:11.5px;line-height:1.65;background:#fbfcfe;color:#16202e;resize:vertical}
+.perm-json:focus{outline:none;border-color:#b9cef2;background:#fff}
+.chk{width:24px;height:24px;border-radius:6px;border:1px solid #dfe5ee;background:#fff;color:#15803d;
+  font-size:12.5px;line-height:1;cursor:pointer;display:inline-grid;place-items:center;font-family:inherit;transition:.12s}
+.chk:hover{border-color:#bfd3f5;background:#f6f9ff}
+.chk.on{background:#eefaf2;border-color:#b9e3c9;color:#15803d;font-weight:700}
+.chk.lock{background:#f4f6f9;border-color:#e6ebf2;color:#94a3b8;cursor:not-allowed;font-weight:400}
+
+/* 布局微调 */
+.main{padding:26px 30px 46px}
+.tcard .stage-dots{display:block}
+.tcard .stage-dots .stage-dots-in{display:flex;width:100%}
+.tcard-title{margin:4px 0 8px}
+
+
+.drawer-mask{position:fixed;inset:0;background:rgba(15,23,42,.34);z-index:44}
+.stat{padding:12px 14px 11px}
+.pmini{white-space:nowrap}
+.pc-conflict{font-size:10.8px;color:#b91c1c;background:#fdf2f2;border:1px solid #f3d3d3;border-radius:7px;
+  padding:6px 9px;margin-bottom:8px;word-break:break-all;line-height:1.55}
+
+
+.pill-plat{background:#eff4ff;color:#1d4ed8}
+.plat{display:inline-flex;align-items:center;font-size:10px;font-weight:600;border-radius:5px;padding:1px 7px;
+  border:1px solid #e3e8ef;background:#f5f7fa;color:#4a5768}
+.plat-android{background:#eefaf2;border-color:#cdeedb;color:#15803d}
+.plat-ios{background:#eff4ff;border-color:#dbe6ff;color:#1d4ed8}
+.plat-server{background:#f5f3ff;border-color:#e3dcfb;color:#5b46b0}
+.plat-web{background:#fff6e8;border-color:#f6e3c4;color:#a16207}
+.app-facts{display:flex;flex-wrap:wrap;gap:6px 14px;background:#f7f9fb;border:1px solid var(--line2);
+  border-radius:8px;padding:9px 11px;font-size:11px;color:#4a5768;margin-top:2px}
+.app-facts code{font-family:var(--mono);font-size:10.8px;background:#fff;border:1px solid #e3e8ef;border-radius:4px;padding:0 4px}
+.ac-facts{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:10.5px;color:#7d8a9b;margin:0 0 9px}
+.ac-facts b{font-family:var(--mono);font-weight:500;color:#243044}
+
+/* pill 补充 */
+.pill-none{background:#f1f5f9;color:#4a5768}
+.pill-dev{background:#eff4ff;color:#1d4ed8}
+.pill-overdue{background:#fdecec;color:#b3261e}
+.pill-overdue-qa{background:#fdf1e3;color:#b45309}
+.t-range{font-size:11px;color:#4a5768;white-space:nowrap}
+.rc-people{color:#4a5768}
+.t-range .late{color:#b3261e;font-weight:600}
+.stat-v.over{color:#b3261e}
+.bs b.over{color:#b3261e}
+.pill-ready{background:#f5f3ff;color:#5b46b0}
+.pill-testing{background:#eff9f7;color:#0f766e}
+.pill-verify{background:#fff6e8;color:#a16207}
+.pill-verified{background:#eefaf2;color:#15803d}
+.pill-soft{background:#f4f6f9;color:#4a5768}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main"><div id="view"></div></div>
+</div>
+<div id="drawerRoot"></div>
+<div id="modalRoot"></div>
+<div class="toast-root" id="toastRoot"></div>
+
+<script type="application/json" id="perm-config">
+{
+  "version": 1,
+  "updatedAt": "2026-11-20",
+  "note": "权限配置文件：新增权限只改这里，刷新页面即生效；也可在「角色权限」页导入 JSON 覆盖。menu=true 的项会同时控制左侧菜单可见性。",
+  "groups": [
+    { "key": "workbench", "label": "工作台", "desc": "首页与看板",
+      "perms": [
+        { "key": "home",  "label": "首页 · 我的任务", "menu": true, "hash": "#/home" },
+        { "key": "board", "label": "任务看板", "menu": true, "hash": "#/board" }
+      ] },
+    { "key": "delivery", "label": "需求与任务", "desc": "需求、任务的创建与删除",
+      "perms": [
+        { "key": "reqs",        "label": "需求管理", "menu": true, "hash": "#/reqs" },
+        { "key": "req_create",  "label": "新建需求" },
+        { "key": "task_create", "label": "新建任务" },
+        { "key": "task_delete", "label": "删除任务" }
+      ] },
+    { "key": "build", "label": "应用与产物", "desc": "应用配置与打包产物",
+      "perms": [
+        { "key": "apps",              "label": "应用配置", "menu": true, "hash": "#/apps" },
+        { "key": "app_edit",          "label": "新建 / 编辑应用" },
+        { "key": "artifacts",         "label": "打包产物", "menu": true, "hash": "#/artifacts" },
+        { "key": "artifact_download", "label": "下载产物" }
+      ] },
+    { "key": "pipeline", "label": "CI 流水操作", "desc": "建流水、合并、打包、验证、归档",
+      "perms": [
+        { "key": "pipe_create",   "label": "新建 CI 流水" },
+        { "key": "merge_qa",      "label": "合并 QA" },
+        { "key": "build_run",     "label": "打包 QA" },
+        { "key": "merge_uat",     "label": "合并 UAT" },
+        { "key": "test_run",      "label": "开始测试" },
+        { "key": "merge_release", "label": "合并 Release" },
+        { "key": "verify",        "label": "发布验证" },
+        { "key": "merge_master",  "label": "合回 master" },
+        { "key": "accept",        "label": "验收归档" }
+      ] },
+    { "key": "system", "label": "系统管理", "desc": "角色、人员与说明",
+      "perms": [
+        { "key": "roles", "label": "角色权限", "menu": true, "hash": "#/roles", "adminOnly": true },
+        { "key": "staff", "label": "人员管理", "menu": true, "hash": "#/staff", "adminOnly": true },
+        { "key": "spec",  "label": "需求说明", "menu": true, "hash": "#/spec" }
+      ] }
+  ]
+}
+</script>
+
+<script>
+/* =========================================================
+   ShipFlow 原型 v7：登录 → 首页 → 需求 → 任务 → CI 流水
+   任务只表达“谁在做什么”，一条任务下可挂多条 CI 流水
+   （例如 Flutter 任务同时打 Android apk 与 iOS ipa）
+   每条流水独立走：合并 QA → 打包自测 → 提测 → 合并 UAT
+   → 合并 Release → 打包验证 → 合回 master
+   ========================================================= */
+
+var LS_KEY = 'shipflow_proto_v7a';
+var USER_KEY = 'shipflow_user_v7';
+var PROTO_V = 7;
+
+/* ---------- 通用工具 ---------- */
+function byId(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function pad2(n){ n = String(n); return n.length < 2 ? '0'+n : n; }
+function fmtNow(d){
+  d = d || new Date();
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+function randSha(){
+  var c = '0123456789abcdef', s = '';
+  for(var i=0;i<7;i++) s += c[Math.floor(Math.random()*16)];
+  return s;
+}
+function uid(pre){ uid.n = (uid.n||0)+1; return pre + Date.now().toString(36).slice(-4) + uid.n; }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function shortBranch(b){ return b; }
+function slugifyBranch(branch){
+  var last = String(branch||'').split('/').pop().replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^[-.]+|[-.]+$/g,'');
+  return last || 'feature';
+}
+
+/* ---------- 账号与角色 ---------- */
+var ROLES = {
+  dev:   { label:'开发',   desc:'拆任务、建流水、合并代码、打包自测、提测', cls:'role-dev' },
+  qa:    { label:'测试',   desc:'开始测试、合并 UAT、发布验证、验收归档', cls:'role-qa' },
+  admin: { label:'管理员', desc:'维护应用配置、可代任意角色操作、查看全量任务', cls:'role-admin' },
+  pm:    { label:'产品',   desc:'提需求、看进度，不直接操作代码与打包', cls:'role-pm' }
+};
+var ACCOUNTS = [
+  { id:'u1', name:'陈默', role:'dev',   level:'l3', account:'chenmo', password:'Init@123', active:true, team:'出行 App 组', color:'#2563eb' },
+  { id:'u2', name:'林晓', role:'qa',    level:'l2', account:'linxiao', password:'Init@123', active:true, team:'质量保障组',   color:'#0f766e' },
+  { id:'u3', name:'王强', role:'admin', level:'',   account:'wangqiang', password:'Init@123', active:true, team:'研发效能',     color:'#7c3aed' },
+  { id:'u4', name:'苏晴', role:'pm',    level:'l1', account:'suqing', password:'Init@123', active:true, team:'海外产品',     color:'#b45309' },
+  { id:'u5', name:'周然', role:'dev',   level:'l2', account:'zhouran', password:'Init@123', active:true, team:'商家工作台',   color:'#0891b2' }
+];
+function accounts(){ return (state && state.accounts && state.accounts.length) ? state.accounts : ACCOUNTS; }
+/* ---------- 角色级别与菜单权限 ---------- */
+var ROLE_LEVELS = {
+  dev: [ {key:'l1', label:'L1 初级'}, {key:'l2', label:'L2 中级'}, {key:'l3', label:'L3 高级'} ],
+  qa:  [ {key:'l1', label:'L1 初级'}, {key:'l2', label:'L2 中级'}, {key:'l3', label:'L3 高级'} ],
+  pm:  [ {key:'l1', label:'L1 初级'}, {key:'l2', label:'L2 中级'}, {key:'l3', label:'L3 高级'} ]
+};
+var MENUS = [
+  { key:'home',      label:'首页 · 我的任务', short:'首页', hash:'#/home' },
+  { key:'board',     label:'任务看板',       short:'看板', hash:'#/board' },
+  { key:'reqs',      label:'需求管理',       short:'需求', hash:'#/reqs' },
+  { key:'apps',      label:'应用配置',       short:'应用', hash:'#/apps' },
+  { key:'artifacts', label:'打包产物',       short:'产物', hash:'#/artifacts' },
+  { key:'roles',     label:'角色权限',       short:'角色', hash:'#/roles', adminOnly:true },
+  { key:'staff',     label:'人员管理',       short:'人员', hash:'#/staff', adminOnly:true },
+  { key:'spec',      label:'需求说明',       short:'说明', hash:'#/spec' }
+];
+function routeKey(h){
+  if(h.indexOf('#/roles') === 0) return 'roles';
+  if(h.indexOf('#/staff') === 0) return 'staff';
+  if(h.indexOf('#/board') === 0) return 'board';
+  if(h.indexOf('#/apps') === 0) return 'apps';
+  if(h.indexOf('#/artifacts') === 0) return 'artifacts';
+  if(h.indexOf('#/spec') === 0) return 'spec';
+  if(h.indexOf('#/reqs') === 0 || /^#\/req\//.test(h || '')) return 'reqs';
+  return 'home';
+}
+/* ---------- 权限配置（从页面内 perm-config JSON 块读取） ---------- */
+var PERM_FALLBACK = { version:0, groups:[ { key:'fallback', label:'菜单', perms:MENUS.map(function(m){
+  return { key:m.key, label:m.label, menu:true, hash:m.hash, adminOnly:!!m.adminOnly };
+}) } ] };
+function readPermConfig(){
+  try{
+    var el = document.getElementById('perm-config');
+    if(el){
+      var cfg = JSON.parse(el.textContent);
+      if(cfg && cfg.groups && cfg.groups.length) return cfg;
+    }
+  }catch(e){}
+  return PERM_FALLBACK;
+}
+var PERM_CONFIG = readPermConfig();
+function permConfig(){ return (state && state.permCfg && state.permCfg.groups && state.permCfg.groups.length) ? state.permCfg : PERM_CONFIG; }
+function permGroups(){ return permConfig().groups || []; }
+function allPerms(){
+  var out = [];
+  permGroups().forEach(function(g){
+    (g.perms || []).forEach(function(p){
+      out.push({ group:g.key, groupLabel:g.label, key:p.key, label:p.label, menu:!!p.menu,
+                 hash:p.hash || '', adminOnly:!!p.adminOnly });
+    });
+  });
+  return out;
+}
+function allPermKeys(){ return allPerms().map(function(p){ return p.key; }); }
+function permByKey(k){ return allPerms().filter(function(p){ return p.key === k; })[0] || null; }
+function permColKeys(){
+  return allPerms().filter(function(p){ return !p.adminOnly; }).map(function(p){ return p.key; });
+}
+function colAllOn(rk){
+  var parts = String(rk).split('/'), cols = permColKeys();
+  if(!cols.length) return false;
+  var have = permsFor(parts[0], parts[1]);
+  return cols.every(function(k){ return have.indexOf(k) >= 0; });
+}
+function roleLevelKeys(){
+  var out = [];
+  ['dev','qa','pm'].forEach(function(r){ (ROLE_LEVELS[r]||[]).forEach(function(lv){ out.push(r + '/' + lv.key); }); });
+  return out;
+}
+
+var DEFAULT_PERMS = {
+  'dev/l1': ['home','board','spec'],
+  'dev/l2': ['home','board','reqs','spec','pipe_create','merge_qa','build_run'],
+  'dev/l3': ['home','board','reqs','apps','artifacts','spec','pipe_create','merge_qa','build_run','task_create','artifact_download'],
+  'qa/l1':  ['home','board','spec'],
+  'qa/l2':  ['home','board','artifacts','spec','test_run','merge_uat'],
+  'qa/l3':  ['home','board','reqs','artifacts','spec','test_run','merge_uat','verify','accept','merge_release','merge_master'],
+  'pm/l1':  ['home','reqs','spec'],
+  'pm/l2':  ['home','reqs','board','spec','req_create'],
+  'pm/l3':  ['home','reqs','board','artifacts','spec']
+};
+function levelLabel(role, level){
+  var ls = ROLE_LEVELS[role] || [];
+  var x = ls.filter(function(v){ return v.key === level; })[0];
+  return x ? x.label : '—';
+}
+function permsFor(role, level){
+  if(role === 'admin') return allPermKeys();
+  var key = role + '/' + level;
+  var list = state.perms && state.perms[key];
+  return list || DEFAULT_PERMS[key] || [];
+}
+function canMenu(menuKey){
+  var m = me();
+  if(!m) return false;
+  if(m.role === 'admin') return true;
+  return permsFor(m.role, m.level).indexOf(menuKey) >= 0;
+}
+function me(){ return accounts().filter(function(a){ return a.id === ui.userId; })[0] || null; }
+function accountById(id){ return accounts().filter(function(a){ return a.id === id; })[0] || null; }
+function roleLabel(r){ return (ROLES[r] || ROLES.dev).label; }
+
+/* ---------- 阶段与状态 ---------- */
+var STAGES = [
+  { key:'qa',      label:'QA',      hint:'开发自测' },
+  { key:'uat',     label:'UAT',     hint:'测试验证' },
+  { key:'release', label:'Release', hint:'发布验证' },
+  { key:'master',  label:'master',  hint:'归档' }
+];
+var STATUS_META = {
+  none:             { label:'未开始',           cls:'none' },
+  dev_merging:      { label:'QA 合并中',        cls:'merging' },
+  dev_conflict:     { label:'QA 合并冲突',      cls:'conflict' },
+  dev_merged:       { label:'已合入 QA',        cls:'merged' },
+  dev_built:        { label:'QA 包就绪 · 待自测确认', cls:'merged' },
+  dev_passed:       { label:'自测通过 · 待提测', cls:'packaged' },
+  ready_test:       { label:'已提测 · 待开始测试', cls:'ready' },
+  test_merging:     { label:'UAT 合并中',       cls:'merging' },
+  test_conflict:    { label:'UAT 合并冲突',     cls:'conflict' },
+  testing:          { label:'测试中',           cls:'testing' },
+  release_merging:  { label:'Release 合并中',   cls:'merging' },
+  release_conflict: { label:'Release 冲突',     cls:'conflict' },
+  release_check:    { label:'Release 验证中',   cls:'verify' },
+  release_verified: { label:'已验证 · 待合回 master', cls:'verified' },
+  accept_merging:   { label:'master 合并中',    cls:'merging' },
+  accept_conflict:  { label:'master 冲突',      cls:'conflict' },
+  done:             { label:'已合入 master',    cls:'done' }
+};
+var MERGE_PLAN = {
+  qa:      { busy:'dev_merging',      fail:'dev_conflict',     ok:'dev_merged',   role:'dev' },
+  uat:     { busy:'test_merging',     fail:'test_conflict',    ok:'testing',      role:'qa' },
+  release: { busy:'release_merging',  fail:'release_conflict', ok:'release_check',role:'qa' },
+  master:  { busy:'accept_merging',   fail:'accept_conflict',  ok:'done',         role:'qa' }
+};
+
+/* ---------- 全局状态 ---------- */
+var state = null;
+var ui = {
+  userId: localStorage.getItem(USER_KEY) || null,
+  taskId: null, pipeId: null, logBuildId: null, reqId: null,
+  tab: 'overview', modal: null,
+  reqQ: '', boardFilter: 'all', artifactApp: 'all',
+  taskQ: '', permQ: '', permCollapsed: {}, homeTab: 'active'
+};
+/* 打包机运行时（不持久化）：单 clone，构建期间禁止切分支合并 */
+var runtime = { busy: null, queue: [] };
+
+/* ---------- 种子数据 ---------- */
+function seed(){
+  var apps = [
+    { id:'a1', name:'出行 App', platform:'android', code:'virtual_com.travel.overseas.app',
+      repo:'git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git',
+      defaultBranch:'main', buildScript:'./build_app',
+      artifactType:'apk', artifactPattern:'build/app/outputs/**/*.apk',
+      stack:'Flutter 3.24', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
+      machine:'builder-01', createdAt:'2026-06-12' },
+    { id:'a1i', name:'出行 App', platform:'ios', code:'virtual_com.travel.overseas.app',
+      repo:'git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git',
+      defaultBranch:'main', buildScript:'./build_app',
+      artifactType:'ipa', artifactPattern:'build/ios/ipa/*.ipa',
+      stack:'Flutter 3.24 / Xcode 15', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
+      machine:'builder-02', createdAt:'2026-06-12' },
+    { id:'a2', name:'订单中心', platform:'server', code:'order-center',
+      repo:'https://gitlab.corp.com/backend/order-center.git',
+      defaultBranch:'main', buildScript:'./build_app',
+      artifactType:'jar', artifactPattern:'target/order-center-*.jar',
+      stack:'Spring Boot 3.2 / JDK 17', branches:{qa:'qa',uat:'uat',release:'release',master:'master'},
+      machine:'builder-02', createdAt:'2026-08-03' },
+    { id:'a3', name:'商家工作台', platform:'web', code:'merchant-web',
+      repo:'git@gitlab.corp.com:web/merchant-web.git',
+      defaultBranch:'main', buildScript:'./build_app',
+      artifactType:'war', artifactPattern:'dist/merchant-web.war',
+      stack:'React 18 / Node 20', branches:{qa:'qa-test',uat:'uat-test',release:'release',master:'master'},
+      machine:'builder-03', createdAt:'2026-10-02' }
+  ];
+  var reqs = [
+    { id:'r1', code:'REQ-1042', title:'【出行日本】乘换方案增加无需换乘字段信息', devOwner:'u1', qaOwner:'u2', pmOwner:'u4', priority:'高',
+      createdAt:'2026-11-10', due:'2026-11-21',
+      desc:'乘换方案列表与详情新增「无需换乘」标识，接口补充 transferCount 字段，支持「仅看直达」筛选，旧版本字段缺失时降级展示。' },
+    { id:'r2', code:'REQ-1043', title:'订单列表支持批量导出 Excel', devOwner:'u5', qaOwner:'u2', pmOwner:'u4', priority:'中',
+      createdAt:'2026-11-12', due:'2026-11-25',
+      desc:'B 端订单列表新增批量导出能力，单次上限 5000 条，导出任务异步生成并提供下载中心入口。' },
+    { id:'r3', code:'REQ-1041', title:'商家首页数据看板改版', devOwner:'u5', qaOwner:'u2', pmOwner:'u4', priority:'高',
+      createdAt:'2026-11-05', due:'2026-11-19',
+      desc:'重构首页 KPI 卡片与趋势图，接入近 30 天实时数据，支持时间区间与门店维度切换。' }
+  ];
+  var tasks = [
+    { id:'t1', reqId:'r1', title:'乘换方案接口字段扩展', ownerId:'u1', priority:'高',
+      start:'2026-11-10', createdAt:'2026-11-11', due:'2026-11-19',
+      desc:'接口返回 transferCount / isDirect，兼容旧版本字段缺失场景。' },
+    { id:'t2', reqId:'r1', title:'结果页展示无需换乘标签', ownerId:'u1', priority:'中',
+      start:'2026-11-12', createdAt:'2026-11-13', due:'2026-11-18',
+      desc:'方案卡片与详情展示「直达」标签，多段行程展示换乘次数。' },
+    { id:'t3', reqId:'r1', title:'筛选支持仅看直达', ownerId:'u1', priority:'中',
+      start:'2026-11-13', createdAt:'2026-11-14', due:'2026-11-20',
+      desc:'结果页筛选增加「仅看直达」，与排序、时间筛选联动。' },
+    { id:'t4', reqId:'r2', title:'导出接口与异步任务', ownerId:'u2', priority:'高',
+      start:'2026-11-12', createdAt:'2026-11-13', due:'2026-11-24',
+      desc:'批量导出接口、异步任务落库与进度查询。' },
+    { id:'t5', reqId:'r2', title:'导出弹窗与进度轮询', ownerId:'u2', priority:'中',
+      start:'2026-11-14', createdAt:'2026-11-15', due:'2026-11-25',
+      desc:'导出弹窗交互、进度轮询与失败重试。' },
+    { id:'t6', reqId:'r3', title:'KPI 卡片组件重构', ownerId:'u5', priority:'高',
+      start:'2026-11-06', createdAt:'2026-11-08', due:'2026-11-24',
+      desc:'KPI 卡片支持环比、同比与异常高亮。' },
+    { id:'t7', reqId:'r3', title:'看板筛选支持多门店', ownerId:'u5', priority:'高',
+      start:'2026-11-07', createdAt:'2026-11-09', due:'2026-11-18',
+      desc:'门店多选筛选与已选项回显。' },
+    { id:'t8', reqId:'r3', title:'趋势图数据接入', ownerId:'u5', priority:'中',
+      start:'2026-11-08', createdAt:'2026-11-10', due:'2026-11-25',
+      desc:'趋势图接近 30 天数据，切换门店后刷新。' },
+    { id:'t9', reqId:'r2', title:'导出文件清洗与命名', ownerId:'u2', priority:'低',
+      start:'2026-11-15', createdAt:'2026-11-17', due:'2026-11-26',
+      desc:'导出文件名带商家与时间戳，去除非法字符。' }
+  ];
+  var pipelines = [
+    { id:'p1', taskId:'t1', appId:'a1', name:'Android 包', branch:'feature/transfer-direct-field',
+      status:'done', artifactType:'apk', createdAt:'2026-11-11 10:20',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[
+        { stage:'qa', from:'feature/transfer-direct-field', to:'qa', sha:'7f3a91c', at:'2026-11-12 10:20', commits:2 },
+        { stage:'uat', from:'feature/transfer-direct-field', to:'uat', sha:'b21d7a4', at:'2026-11-14 15:10', commits:2 },
+        { stage:'release', from:'feature/transfer-direct-field', to:'release', sha:'c93e0f5', at:'2026-11-16 09:40', commits:2 },
+        { stage:'master', from:'release', to:'master', sha:'e01b8c2', at:'2026-11-17 11:00', commits:2 }
+      ] },
+    { id:'p2', taskId:'t1', appId:'a1i', name:'iOS 包', branch:'feature/transfer-direct-field',
+      status:'done', artifactType:'ipa', createdAt:'2026-11-11 10:22',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[
+        { stage:'qa', from:'feature/transfer-direct-field', to:'qa', sha:'8d11c4e', at:'2026-11-12 10:35', commits:1 },
+        { stage:'uat', from:'feature/transfer-direct-field', to:'uat', sha:'c4a0b19', at:'2026-11-14 15:35', commits:1 },
+        { stage:'release', from:'feature/transfer-direct-field', to:'release', sha:'d7be316', at:'2026-11-16 10:05', commits:1 },
+        { stage:'master', from:'release', to:'master', sha:'e01b8c2', at:'2026-11-17 11:00', commits:1 }
+      ] },
+    { id:'p3', taskId:'t2', appId:'a1', name:'Android 包', branch:'feature/transfer-direct-label',
+      status:'dev_built', artifactType:'apk', createdAt:'2026-11-14 09:30',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[{ stage:'qa', from:'feature/transfer-direct-label', to:'qa', sha:'2e9c7b3', at:'2026-11-18 16:20', commits:3 }] },
+    { id:'p4', taskId:'t2', appId:'a1i', name:'iOS 包', branch:'feature/transfer-direct-label',
+      status:'none', artifactType:'ipa', createdAt:'2026-11-14 09:31',
+      conflicts:{qa:false,uat:false,release:false,master:false}, merges:[] },
+    { id:'p5', taskId:'t3', appId:'a1', name:'Android 包', branch:'feature/transfer-direct-filter',
+      status:'dev_conflict', artifactType:'apk', createdAt:'2026-11-15 14:10',
+      conflicts:{ qa:{ at:'2026-11-19 09:42', temp:'temp/Conflict_qa_feature/transfer-direct-filter_26.1119.0942.31',
+        files:['lib/features/transfer/transfer_service.dart','lib/features/transfer/widgets/transfer_card.dart'] },
+        uat:false, release:false, master:false },
+      conflictFiles:['lib/features/transfer/transfer_service.dart','lib/features/transfer/widgets/transfer_card.dart'],
+      merges:[] },
+    { id:'p6', taskId:'t4', appId:'a2', name:'主包', branch:'feature/order-export-api',
+      status:'none', artifactType:'jar', createdAt:'2026-11-16 11:00',
+      conflicts:{qa:false,uat:false,release:false,master:false}, merges:[] },
+    { id:'p7', taskId:'t5', appId:'a2', name:'主包', branch:'feature/order-export-ui',
+      status:'testing', artifactType:'jar', createdAt:'2026-11-16 15:40',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[
+        { stage:'qa', from:'feature/order-export-ui', to:'qa', sha:'2a8c4b1', at:'2026-11-17 10:10', commits:2 },
+        { stage:'uat', from:'feature/order-export-ui', to:'uat', sha:'5df0e93', at:'2026-11-18 14:20', commits:2 }
+      ] },
+    { id:'p8', taskId:'t6', appId:'a3', name:'主包', branch:'feature/dashboard-kpi',
+      status:'release_check', artifactType:'war', createdAt:'2026-11-10 10:00',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[
+        { stage:'qa', from:'feature/dashboard-kpi', to:'qa-test', sha:'9b2f4d0', at:'2026-11-12 09:12', commits:2 },
+        { stage:'uat', from:'feature/dashboard-kpi', to:'uat-test', sha:'aa71c3e', at:'2026-11-14 13:20', commits:2 },
+        { stage:'release', from:'feature/dashboard-kpi', to:'release', sha:'f2d90b6', at:'2026-11-17 18:05', commits:2 }
+      ] },
+    { id:'p9', taskId:'t7', appId:'a3', name:'主包', branch:'feature/dashboard-filter',
+      status:'ready_test', artifactType:'war', createdAt:'2026-11-12 14:00',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[{ stage:'qa', from:'feature/dashboard-filter', to:'qa-test', sha:'4c1e8a0', at:'2026-11-18 10:15', commits:1 }] },
+    { id:'p10', taskId:'t8', appId:'a3', name:'主包', branch:'feature/dashboard-trend',
+      status:'dev_merged', artifactType:'war', createdAt:'2026-11-12 16:30',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      rework:{ from:'uat', label:'测试不通过', reason:'切换门店后 KPI 卡片数值未刷新，需要补充依赖监听',
+        by:'林晓', at:'2026-11-18 17:20' },
+      merges:[{ stage:'qa', from:'feature/dashboard-trend', to:'qa-test', sha:'d3f7a12', at:'2026-11-18 17:15', commits:2 }] },
+    { id:'p11', taskId:'t9', appId:'a2', name:'主包', branch:'feature/order-export-file',
+      status:'dev_built', artifactType:'jar', createdAt:'2026-11-18 10:40',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[{ stage:'qa', from:'feature/order-export-file', to:'qa', sha:'8e4b2f7', at:'2026-11-19 11:02', commits:1 }] }
+  ];
+  var builds = [
+    { id:'b1', pipelineId:'p1', stage:'release', mergeSha:'c93e0f5', status:'success',
+      startedAt:'2026-11-16 09:55', duration:'4m 12s', artifact:{ name:'travel_app_release_20261116_0940.apk', size:'28.4MB', type:'apk', url:'/artifacts/b1' },
+      log:['$ git checkout release','Switched to branch release','$ ./build_app --flavor release','Building APK...','Gradle task assembleRelease','BUILD SUCCESSFUL in 3m 41s','artifact: build/app/outputs/flutter-apk/app-release.apk','upload -> /artifacts/b1'] },
+    { id:'b2', pipelineId:'p2', stage:'release', mergeSha:'d7be316', status:'success',
+      startedAt:'2026-11-16 10:20', duration:'5m 36s', artifact:{ name:'travel_app_release_20261116_1005.ipa', size:'31.2MB', type:'ipa', url:'/artifacts/b2' }, log:[] },
+    { id:'b3', pipelineId:'p3', stage:'qa', mergeSha:'2e9c7b3', status:'success',
+      startedAt:'2026-11-18 16:35', duration:'4m 05s', artifact:{ name:'travel_app_qa_20261118_1620.apk', size:'28.1MB', type:'apk', url:'/artifacts/b3' }, log:[] },
+    { id:'b4', pipelineId:'p7', stage:'uat', mergeSha:'5df0e93', status:'success',
+      startedAt:'2026-11-18 14:30', duration:'4m 22s', artifact:{ name:'order-center_uat_20261118_1420.jar', size:'19.8MB', type:'jar', url:'/artifacts/b4' }, log:[] },
+    { id:'b5', pipelineId:'p8', stage:'release', mergeSha:'f2d90b6', status:'success',
+      startedAt:'2026-11-17 18:10', duration:'3m 48s', artifact:{ name:'merchant-web_release_20261117_1805.war', size:'19.9MB', type:'war', url:'/artifacts/b5' }, log:[] },
+    { id:'b6', pipelineId:'p11', stage:'qa', mergeSha:'8e4b2f7', status:'success',
+      startedAt:'2026-11-19 11:10', duration:'2m 51s', artifact:{ name:'order-center_qa_20261119_1102.jar', size:'30.9MB', type:'jar', url:'/artifacts/b6' }, log:[] }
+  ];
+  return { v: PROTO_V, apps:apps, reqs:reqs, tasks:tasks, pipelines:pipelines, builds:builds,
+    accounts:ACCOUNTS.map(function(a){ return JSON.parse(JSON.stringify(a)); }),
+    perms:JSON.parse(JSON.stringify(DEFAULT_PERMS)),
+    permCfg:JSON.parse(JSON.stringify(PERM_CONFIG)) };
+}
+
+function loadState(){
+  try{
+    var raw = localStorage.getItem(LS_KEY);
+    if(!raw) return seed();
+    var st = JSON.parse(raw);
+    if(!st || st.v !== PROTO_V) return seed();
+    if(!st.accounts || !st.accounts.length) st.accounts = ACCOUNTS.map(function(a){ return JSON.parse(JSON.stringify(a)); });
+    (st.tasks||[]).forEach(function(t){ if(!t.start) t.start = t.createdAt || '—'; });
+    (st.reqs||[]).forEach(function(r){
+      if(!r.devOwner) r.devOwner = r.ownerId || 'u1';
+      if(!r.qaOwner) r.qaOwner = 'u2';
+      if(!r.pmOwner) r.pmOwner = r.ownerId || 'u4';
+    });
+    if(!st.perms) st.perms = JSON.parse(JSON.stringify(DEFAULT_PERMS));
+    if(!st.permCfg || !st.permCfg.groups || !st.permCfg.groups.length){
+      st.permCfg = JSON.parse(JSON.stringify(PERM_CONFIG));
+    }
+    var validKeys = [];
+    (st.permCfg.groups || []).forEach(function(g){
+      (g.perms || []).forEach(function(pp){ validKeys.push(pp.key); });
+    });
+    Object.keys(st.perms).forEach(function(k){
+      st.perms[k] = (st.perms[k] || []).filter(function(x){ return validKeys.indexOf(x) >= 0; });
+    });
+    return st;
+  }catch(e){ return seed(); }
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ---------- 查询 ---------- */
+function appById(id){ return state.apps.find(function(a){ return a.id === id; }); }
+function appOf(p){ return p ? appById(p.appId) : null; }
+var PLATFORMS = { android:'Android', ios:'iOS', server:'服务端', web:'Web', other:'其他' };
+function platformLabel(p){ return PLATFORMS[p] || '其他'; }
+function platformPill(a){ return '<span class="plat plat-'+(a&&a.platform||'other')+'">'+esc(platformLabel(a?a.platform:''))+'</span>'; }
+function appFacts(a){
+  if(!a) return '<span class="muted">先选择应用</span>';
+  return '<span class="fact"><b>'+esc(platformLabel(a.platform))+'</b></span>'+
+    '<span class="fact">产物 '+esc(a.artifactType)+'</span>'+
+    '<span class="fact">脚本 <code>'+esc(a.buildScript)+'</code></span>'+
+    '<span class="fact">产物路径 '+esc(a.artifactPattern||'—')+'</span>';
+}
+function reqOf(t){ return t ? state.reqs.find(function(r){ return r.id === t.reqId; }) : null; }
+function taskOf(id){ return state.tasks.find(function(t){ return t.id === id; }); }
+function pipeOf(id){ return state.pipelines.find(function(p){ return p.id === id; }); }
+function pipesOf(taskId){ return state.pipelines.filter(function(p){ return p.taskId === taskId; }); }
+function tasksOf(reqId){ return state.tasks.filter(function(t){ return t.reqId === reqId; }); }
+function ownerName(t){ var a = accountById(t.ownerId); return a ? a.name : '未分配'; }
+function personName(id){ var a = accountById(id); return a ? a.name : '未分配'; }
+function reqPeopleText(r){
+  if(!r) return '';
+  return '开发 '+personName(r.devOwner)+' · 测试 '+personName(r.qaOwner)+' · 产品 '+personName(r.pmOwner);
+}
+function branchName(p, stage){
+  var app = appOf(p);
+  if(!app || !app.branches) return stage;
+  return app.branches[stage] || stage;
+}
+function targetStage(p){ 
+  if(p.status === 'done') return 'master';
+  if(/^dev_/.test(p.status) || p.status === 'none' || p.status === 'ready_test') return 'qa';
+  if(/^test_/.test(p.status) || p.status === 'testing') return 'uat';
+  if(/^release_/.test(p.status)) return 'release';
+  return 'master';
+}
+function currentStage(p){ return targetStage(p); }
+function stageLabel(s){ var x = STAGES.find(function(v){ return v.key === s; }); return x ? x.label : s; }
+function mergedCount(p){ return (p.merges||[]).length; }
+function stageDone(p, stage){ return (p.merges||[]).some(function(m){ return m.stage === stage; }); }
+
+/* ---------- 任务状态（由流水聚合） ---------- */
+function todayStr(){ return fmtNow().slice(0,10); }
+var STAGE_RANK = {
+  none:1, dev_merging:1, dev_conflict:1, dev_merged:1, dev_built:1,
+  dev_passed:2, ready_test:2,
+  test_merging:3, test_conflict:3, testing:3,
+  release_merging:4, release_conflict:4, release_check:4, release_verified:4,
+  accept_merging:4, accept_conflict:4,
+  done:5
+};
+var RANK_STATE = {
+  1: { key:'dev',     label:'开发中', cls:'dev',     hint:'开发阶段：合并 QA / 打包 / 自测确认' },
+  2: { key:'ready',   label:'已提测', cls:'ready',   hint:'自测通过并提测，等待测试开始' },
+  3: { key:'testing', label:'测试中', cls:'testing', hint:'测试阶段：合并 UAT / 打包 / 测试验证' },
+  4: { key:'release', label:'待发布', cls:'verify',  hint:'Release 验证或合回 master 中' }
+};
+function taskRank(t){
+  var ps = pipesOf(t.id);
+  if(!ps.length) return 0;
+  var minRank = 5;
+  ps.forEach(function(p){ var rk = STAGE_RANK[p.status] || 1; if(rk < minRank) minRank = rk; });
+  return minRank;
+}
+function daysLate(due){
+  var d = (new Date(todayStr()) - new Date(due)) / 86400000;
+  return Math.max(0, Math.round(d));
+}
+function taskState(t){
+  var ps = pipesOf(t.id);
+  var allDone = ps.length && ps.every(function(p){ return p.status === 'done'; });
+  if(allDone) return { key:'done', label:'已结束', cls:'done', hint:'任务已发布，全部流水已归档' };
+  if(t.due && t.due < todayStr()){
+    var rk = taskRank(t);
+    var over = rk >= 2 ? 'qa' : 'dev';           // 已提测（rank 2）起算测试侧
+    var late = daysLate(t.due);
+    return {
+      key:'overdue', over:over, days:late, rank:rk,
+      label: over === 'qa' ? '测试超时' : '开发超时',
+      cls:   over === 'qa' ? 'overdue-qa' : 'overdue',
+      phase: over === 'qa' ? '已提测 / 测试 / 发布阶段' : '开发阶段（未提测）',
+      hint: '已超过结束时间 '+t.due+'（超期 '+late+' 天），当前在'+
+            (over === 'qa' ? '测试阶段，开发已提测' : '开发阶段，还没有提测')
+    };
+  }
+  if(!ps.length) return { key:'none', label:'未开始', cls:'none', hint:'还没有 CI 流水' };
+  var minRank = taskRank(t);
+  var st = RANK_STATE[minRank] || RANK_STATE[1];
+  return { key:st.key, label:st.label, cls:st.cls, hint:st.hint, rank:minRank };
+}
+function taskProgress(t){
+  var ps = pipesOf(t.id);
+  if(!ps.length) return 0;
+  var sum = 0;
+  ps.forEach(function(p){ sum += mergedCount(p) / 4; });
+  return Math.round(sum / ps.length * 100);
+}
+
+/* ---------- 产物 ---------- */
+function buildOf(p){
+  if(!p) return null;
+  if(p.buildId){
+    var b = state.builds.find(function(x){ return x.id === p.buildId; });
+    if(b && b.status === 'success' && b.artifact) return b;
+  }
+  var ok = state.builds.filter(function(x){ return x.pipelineId === p.id && x.status === 'success' && x.artifact; });
+  if(!ok.length) return null;
+  return ok.sort(function(a,b){ return String(a.startedAt) < String(b.startedAt) ? 1 : -1; })[0];
+}
+function buildsOf(p){ return state.builds.filter(function(x){ return x.pipelineId === p.id; }); }
+function freshBuild(p, stage){
+  var last = (p.merges||[]).filter(function(m){ return m.stage === stage; }).slice(-1)[0];
+  if(!last) return null;
+  return state.builds.filter(function(b){
+    return b.pipelineId === p.id && b.stage === stage && b.mergeSha === last.sha && b.status === 'success' && b.artifact;
+  }).sort(function(a,b){ return String(a.startedAt) < String(b.startedAt) ? 1 : -1; })[0] || null;
+}
+function shortArtifact(b){
+  if(!b || !b.artifact) return '—';
+  var n = b.artifact.name;
+  return n.length > 30 ? n.slice(0, 27) + '…' : n;
+}
+
+/* ---------- 打包机队列 ---------- */
+function isQueued(p){ return runtime.queue.some(function(q){ return q.pipelineId === p.id; }); }
+function queuePos(p){ return runtime.queue.findIndex(function(q){ return q.pipelineId === p.id; }) + 1; }
+function machineBusy(){ return !!runtime.busy; }
+
+/* ---------- 权限 ---------- */
+function canRole(role){
+  var m = me();
+  if(!m) return false;
+  if(m.role === 'pm') return false;
+  if(m.role === 'admin') return true;
+  return m.role === role;
+}
+function roleLockReason(role){
+  var m = me();
+  if(!m) return '请先登录';
+  if(m.role === 'pm') return '产品角色只能查看进度，代码合并与打包由开发/测试执行';
+  return '需要切换到「'+roleLabel(role)+'」账号才能操作这一步';
+}
+
+/* ---------- 合并 ---------- */
+function canMerge(p, stage){
+  if(runtime.busy) return false;
+  if(p.status === 'done') return false;
+  if(stage === 'qa') return p.status === 'none' || p.status === 'dev_conflict' || (p.status === 'dev_merged' && !!p.rework);
+  if(stage === 'uat') return p.status === 'ready_test' || p.status === 'test_conflict';
+  if(stage === 'release') return p.status === 'testing' || p.status === 'release_conflict';
+  if(stage === 'master') return p.status === 'release_verified' || p.status === 'accept_conflict';
+  return false;
+}
+function tempBranchName(p, stage){
+  var c = (p.conflicts||{})[stage];
+  if(c && typeof c === 'object' && c.temp) return c.temp;
+  var name = 'temp/Conflict_' + branchName(p, stage) + '_feature/' + slugifyBranch(p.branch) + '_' + branchStamp();
+  if(c){
+    p.conflicts = p.conflicts || {};
+    p.conflicts[stage] = { at: fmtNow(), temp: name, files: (p.conflictFiles||[]).slice() };
+    save();
+  }
+  return name;
+}
+function branchStamp(d){
+  d = d || new Date();
+  return String(d.getFullYear()).slice(2)+'.'+pad2(d.getMonth()+1)+pad2(d.getDate())+'.'+pad2(d.getHours())+pad2(d.getMinutes())+'.'+pad2(d.getSeconds());
+}
+function conflictFilesFor(p, stage){
+  var known = {
+    qa: ['lib/features/transfer/transfer_service.dart','lib/features/transfer/widgets/transfer_card.dart'],
+    uat: ['lib/features/transfer/widgets/transfer_card.dart'],
+    release: ['lib/features/transfer/widgets/transfer_card.dart','lib/ui/common/theme.dart'],
+    master: ['CHANGELOG.md']
+  };
+  return known[stage] || ['目标分支存在冲突'];
+}
+
+function doMerge(pid, stage){
+  var p = pipeOf(pid);
+  if(!p) return;
+  if(runtime.busy){ toast('打包机正在构建，此时禁止切分支合并','error'); return; }
+  if(!canMerge(p, stage)){ toast('当前流水状态不能执行该阶段合并','warn'); return; }
+  var plan = MERGE_PLAN[stage];
+  if(!canRole(plan.role)){ toast(roleLockReason(plan.role),'warn'); return; }
+
+  var viaTemp = /conflict/.test(p.status) ? (p.resolveViaTemp || tempBranchName(p, stage)) : null;
+  p.status = plan.busy;
+  save(); render();
+
+  setTimeout(function(){
+    if(!viaTemp && p.conflicts && p.conflicts[stage]){
+      p.status = plan.fail;
+      p.conflictFiles = conflictFilesFor(p, stage);
+      p.conflicts[stage] = { at: fmtNow(), temp: 'temp/Conflict_'+branchName(p,stage)+'_feature/'+slugifyBranch(p.branch)+'_'+branchStamp(),
+        files: p.conflictFiles.slice() };
+      save(); render();
+      ui.modal = { type:'conflict', pipeId:p.id };
+      renderModal();
+      toast('合并中止：Feature 分支 '+p.branch+' → '+branchName(p,stage)+' 有冲突，已创建临时分支 '+p.conflicts[stage].temp,'error');
+      return;
+    }
+    p.merges = p.merges || [];
+    p.merges.push({ stage:stage, from: viaTemp || p.branch, to: branchName(p,stage), sha: randSha(),
+      at: fmtNow(), commits: 1 + Math.floor(Math.random()*3) });
+    p.status = plan.ok;
+    if(p.conflicts) p.conflicts[stage] = false;
+    p.conflictFiles = [];
+    p.resolveViaTemp = null;
+    p.rework = null;
+    save(); render();
+    var msg = {
+      qa: '已合入 '+branchName(p,'qa')+'，打包成功后自测',
+      uat: '已合入 '+branchName(p,'uat')+'，测试进行中',
+      release: '已合入 '+branchName(p,'release')+'，打包后做 Release 验证',
+      master: 'release 已合入 master，流水结束'
+    }[stage];
+    toast(msg,'success');
+    if(location.hash.indexOf('#/task') < 0) {}
+  }, 1100);
+}
+function resolveConflict(pid){
+  var p = pipeOf(pid);
+  if(!p) return;
+  if(!/conflict/.test(p.status)){ toast('当前流水没有待解决的冲突','warn'); return; }
+  var stage = currentStage(p);
+  var temp = tempBranchName(p, stage);
+  p.conflicts[stage] = { at: fmtNow(), temp: temp, files: (p.conflictFiles||[]).slice(), resolved:true };
+  p.conflictFiles = [];
+  p.resolveViaTemp = temp;
+  save(); render();
+  toast('已确认冲突已在临时分支上解决，正在把 '+temp+' 合入 '+branchName(p,stage),'warn');
+  doMerge(pid, stage);
+}
+
+/* ---------- 提测 / 自测 / 验证 ---------- */
+function submitTest(pid){
+  var p = pipeOf(pid);
+  if(!p) return;
+  if(!canRole('dev')){ toast(roleLockReason('dev'),'warn'); return; }
+  if(p.status !== 'dev_passed'){ toast('提测被拒绝：需先打包 QA 并点「自测通过」','error'); return; }
+  if(!freshBuild(p,'qa')){ toast('提测被拒绝：QA 包已失效，请重新打包','error'); return; }
+  p.status = 'ready_test';
+  p.submittedAt = fmtNow();
+  save(); render();
+  toast('已提测，交给测试同学开始测试','success');
+}
+function qaPass(pid){
+  var p = pipeOf(pid);
+  if(!p) return;
+  if(!canRole('dev')){ toast(roleLockReason('dev'),'warn'); return; }
+  if(p.status !== 'dev_built' && !(p.status === 'dev_merged' && buildOf(p))){ toast('当前状态不需要自测确认','warn'); return; }
+  if(!freshBuild(p,'qa')){ toast('QA 包不存在或已失效，请先重新打包','error'); return; }
+  p.status = 'dev_passed';
+  save(); render();
+  toast('自测通过，可以提测了','success');
+}
+function qaReject(pid){
+  var p = pipeOf(pid);
+  if(!p) return;
+  if(!canRole('dev')){ toast(roleLockReason('dev'),'warn'); return; }
+  if(!freshBuild(p,'qa')){ toast('还没有可拒绝的 QA 包','warn'); return; }
+  p.status = 'dev_merged';
+  p.rework = { from:'qa', label:'QA 自测不通过', reason:'开发自测未通过，需要修改代码后重新合并', by: (me()?me().name:'开发'), at: fmtNow() };
+  p.submittedAt = null;
+  save(); render();
+  toast('已拒绝：回到代码合并，改完重新合并 QA 并重打包','warn');
+}
+function verifyPass(pid){
+  var p = pipeOf(pid);
+  if(!p) return;
+  if(!canRole('qa')){ toast(roleLockReason('qa'),'warn'); return; }
+  if(!freshBuild(p,'release')){ toast('还没有成功的 Release 包，无法验收','error'); return; }
+  p.status = 'release_verified';
+  save(); render();
+  toast('Release 验证通过，可下载产物并把 release 合回 master','success');
+}
+function rejectPipe(pid, kind){
+  var p = pipeOf(pid);
+  if(!p) return;
+  if(!canRole('qa')){ toast(roleLockReason('qa'),'warn'); return; }
+  if(kind === 'test'){
+    if(p.status !== 'testing' && !/^test_/.test(p.status)){ toast('当前状态不能执行该操作','warn'); return; }
+    p.merges = (p.merges||[]).filter(function(m){ return m.stage === 'qa'; });
+    p.status = 'dev_merged';
+    p.rework = { from:'uat', label:'测试不通过', reason:'测试发现缺陷，需要开发修复后重新合并打包', by:(me()?me().name:'测试'), at: fmtNow() };
+    p.submittedAt = null;
+  } else {
+    if(p.status !== 'release_check'){ toast('当前状态不能执行该操作','warn'); return; }
+    p.merges = (p.merges||[]).filter(function(m){ return m.stage === 'qa' || m.stage === 'uat'; });
+    p.status = 'testing';
+    p.rework = { from:'release', label:'Release 验证不通过', reason:'Release 环境验证未通过，退回测试重建 UAT 包', by:(me()?me().name:'测试'), at: fmtNow() };
+  }
+  save(); render();
+  toast('已退回上一节点，需要重新打包后再流转','warn');
+}
+
+/* ---------- 打包 ---------- */
+function buildAllowed(p){
+  if(p.status === 'dev_merged' || p.status === 'dev_built') return 'qa';
+  if(p.status === 'testing') return 'uat';
+  if(p.status === 'release_check') return 'release';
+  return null;
+}
+function runBuild(pid){
+  var p = pipeOf(pid);
+  if(!p){ return; }
+  var stage = buildAllowed(p);
+  if(!stage){ toast('当前状态不能打包','warn'); return; }
+  var needRole = stage === 'qa' ? 'dev' : 'qa';
+  if(!canRole(needRole)){ toast(roleLockReason(needRole),'warn'); return; }
+  if(runtime.busy || isQueued(p)){ toast('该流水已在打包队列中','warn'); return; }
+  if(runtime.busy || runtime.queue.length){ runtime.queue.push({ pipelineId:p.id, stage:stage }); save(); render(); toast('已加入打包队列（第 '+runtime.queue.length+' 位）','info'); }
+  else startBuild(p, stage);
+}
+function startBuild(p, stage){
+  var app = appOf(p);
+  var mergeSha = ((p.merges||[]).filter(function(m){ return m.stage === stage; }).slice(-1)[0]||{}).sha || 'unknown';
+  var b = {
+    id: uid('b'), pipelineId:p.id, stage:stage, mergeSha:mergeSha, status:'running',
+    startedAt: fmtNow(), duration:'—', progress:0,
+    artifact:null, log:[ '$ git fetch origin', '$ git checkout '+branchName(p,stage), '$ ./build_app --flavor '+stage+'' ]
+  };
+  state.builds.push(b);
+  p.buildId = b.id;
+  p.building = true;
+  runtime.busy = { buildId:b.id, pipelineId:p.id };
+  save(); render();
+  var steps = [
+    ['Switched to branch '+branchName(p,stage), 300],
+    ['Building '+ (p.artifactType || (app?app.artifactType:'apk')) +' …', 900],
+    ['Gradle task assemble' + (stage==='release'?'Release':'Debug'), 1800],
+    ['BUILD SUCCESSFUL in 2m 46s', 2600],
+    ['artifact -> '+(app?app.code:'app')+'_'+stage+'_'+String(fmtNow()).replace(/[-: ]/g,'').slice(0,12)+'.'+(p.artifactType||'apk'), 3200]
+  ];
+  steps.forEach(function(s){
+    setTimeout(function(){
+      if(b.status !== 'running') return;
+      b.log.push(s[0]); b.progress = Math.min(96, Math.round(s[1]/3400*100));
+      updateLive();
+    }, s[1]);
+  });
+  setTimeout(function(){
+    if(b.status !== 'running') return;
+    var type = p.artifactType || (app?app.artifactType:'apk');
+    var name = (app?app.code:'app') + '_' + stage + '_' + String(fmtNow()).replace(/[-: ]/g,'').slice(0,12) + '.' + type;
+    b.status = 'success';
+    b.progress = 100;
+    b.duration = '2m 51s';
+    b.artifact = { name:name, size:(12 + Math.random()*20).toFixed(1)+'MB', type:type, url:'/artifacts/'+b.id };
+    b.log.push('upload -> /artifacts/'+b.id);
+    p.building = false;
+    p.buildId = b.id;
+    if(stage === 'qa' && p.status === 'dev_merged') p.status = 'dev_built';
+    runtime.busy = null;
+    save(); drainQueue(); render();
+    toast('打包成功：'+name,'success');
+  }, 3600);
+}
+function drainQueue(){
+  if(runtime.busy) return;
+  while(runtime.queue.length){
+    var q = runtime.queue.shift();
+    var p = pipeOf(q.pipelineId);
+    if(!p) continue;
+    if(buildAllowed(p) !== q.stage) continue;
+    startBuild(p, q.stage);
+    return;
+  }
+  save(); render();
+}
+function updateLive(){
+  var box = byId('logRoot');
+  var b = runtime.busy ? state.builds.find(function(x){ return x.id === runtime.busy.buildId; }) : null;
+  if(!b || !box) return;
+  var pbox = box.querySelector('[data-live-progress]');
+  if(pbox) pbox.style.width = (b.progress||0)+'%';
+  var lbox = box.querySelector('[data-live-log]');
+  if(lbox) lbox.innerHTML = logHTML(b) + '<div class="ll ll-dim">▍</div>';
+  lbox && (lbox.scrollTop = lbox.scrollHeight);
+}
+
+/* ---------- 冲突通知 ---------- */
+function conflictGuideBody(p){
+  var app = appOf(p), t = taskOf(p.taskId), r = t ? reqOf(t) : null;
+  var stage = currentStage(p);
+  var temp = tempBranchName(p, stage), target = branchName(p, stage);
+  function step(n, title, cmd){
+    return '<div class="ci-step"><div class="ci-num">'+n+'</div><div class="ci-step-main">'+
+      '<div class="t">'+title+'</div>'+
+      (cmd ? '<div class="cmd"><code>'+esc(cmd)+'</code><button type="button" class="cp" data-act="copy" data-copy="'+esc(cmd)+'">复制</button></div>' : '')+
+    '</div></div>';
+  }
+  return '<div class="ci-facts">'+
+      '<span class="k">需求</span><span class="v">#'+esc(r?r.code:'')+' '+esc(r?r.title:'')+'</span>'+
+      '<span class="k">任务</span><span class="v">'+esc(t?t.title:'')+'</span>'+
+      '<span class="k">流水线</span><span class="v">'+esc(p.name)+' · '+esc(t?t.title:'')+'--'+esc(app?app.code:'')+'</span>'+
+      '<span class="k">Git 项目</span><span class="v">'+esc(app?app.repo:'')+'</span>'+
+      '<span class="k">项目标识</span><span class="v">'+esc(app?app.code:'')+'</span>'+
+      '<span class="k">冲突分支</span><span class="v">'+esc(temp)+'</span>'+
+      '<span class="k">目标分支</span><span class="v">'+esc(target)+'</span>'+
+    '</div>'+
+    '<div style="font-size:12.5px;font-weight:700;margin:0 0 10px">操作步骤</div>'+
+    step(1,'拉取远程分支，确保本地无修改代码或修改的代码已暂存','git fetch')+
+    step(2,'切换至冲突分支（系统已基于 Feature 分支 '+esc(p.branch)+' 创建）','git checkout '+temp)+
+    step(3,'拉取远程目标分支（也可使用 git merge 指令）','git pull origin '+target+' --no-rebase')+
+    step(4,'会提示冲突（CONFLICT），请 Diff 后一个一个解决冲突，最好同互相冲突的研发沟通','')+
+    step(5,'重新推送本地冲突分支至远程 Git 仓库','git push -u origin '+temp)+
+    '<div class="ci-tip">冲突文件：'+esc((p.conflictFiles||[]).join('、')||'—')+
+    '<br>解决并推送完成后，回到本页面点「已解决冲突 · 合并」，系统把这条临时分支合入 '+esc(target)+'，Feature 分支 '+esc(p.branch)+' 不做改动。</div>';
+}
+
+/* ---------- 流水操作按钮 ---------- */
+function pipeActions(p){
+  var acts = [];
+  var st = p.status;
+  var qaBuild = freshBuild(p,'qa'), uatBuild = freshBuild(p,'uat'), relBuild = freshBuild(p,'release');
+  if(st === 'none'){
+    acts = [{act:'startDev', label:'开始开发 · 合并 QA', role:'dev'}];
+  } else if(st === 'dev_conflict'){
+    acts = [{act:'resolve', label:'已解决冲突 · 合并', role:'dev'}];
+  } else if(st === 'dev_merging' || st === 'test_merging' || st === 'release_merging' || st === 'accept_merging'){
+    acts = [];
+  } else if(st === 'dev_merged'){
+    if(p.rework){
+      acts = [{act:'startDev', label:'重新合并 QA', role:'dev'}, {act:'build', label:'打包 QA', kind:'build', role:'dev', dis:true, reason:'需要先重新合并 QA'}];
+    } else if(qaBuild){
+      acts = [{act:'qaPass', label:'自测通过', role:'dev'}, {act:'qaReject', label:'拒绝', kind:'danger', role:'dev'}];
+    } else {
+      acts = [{act:'build', label:'打包 QA', kind:'build', role:'dev'}, {act:'startDev', label:'重新合并 QA', role:'dev', dis:true, reason:'先打包'}];
+    }
+  } else if(st === 'dev_built'){
+    acts = [{act:'qaPass', label:'自测通过 · 去提测', role:'dev'}, {act:'qaReject', label:'拒绝 · 回到合并', kind:'danger', role:'dev'}, {act:'build', label:'重新打包 QA', kind:'build', role:'dev'}];
+  } else if(st === 'dev_passed'){
+    acts = [{act:'submitTest', label:'提测', role:'dev'}];
+  } else if(st === 'ready_test'){
+    acts = [{act:'startTest', label:'开始测试 · 合并 UAT', role:'qa'}];
+  } else if(st === 'test_conflict'){
+    acts = [{act:'resolve', label:'已解决冲突 · 合并', role:'qa'}];
+  } else if(st === 'testing'){
+    acts = [{act:'build', label:'打包 UAT', kind:'build', role:'qa', dis:!!uatBuild, reason: uatBuild?'UAT 包已就绪':'先合并 UAT'}];
+    if(uatBuild) acts.push({act:'prepareRelease', label:'合并 Release', role:'qa'});
+    acts.push({act:'rejectTest', label:'测试不通过', kind:'danger', role:'qa'});
+  } else if(st === 'release_conflict'){
+    acts = [{act:'resolve', label:'已解决冲突 · 合并', role:'qa'}];
+  } else if(st === 'release_check'){
+    acts = [{act:'build', label: relBuild?'重新打包 Release':'打包 Release', kind:'build', role:'qa'}];
+    if(relBuild){
+      acts.push({act:'verifyPass', label:'验证通过', role:'qa'});
+      acts.push({act:'rejectRelease', label:'验证不通过', kind:'danger', role:'qa'});
+    }
+  } else if(st === 'release_verified'){
+    var b = buildOf(p);
+    acts = [];
+    if(b) acts.push({act:'download', label:'下载产物', kind:'build', role:null, id:b.id});
+    acts.push({act:'accept', label:'合回 master', role:'qa'});
+  } else if(st === 'accept_conflict'){
+    acts = [{act:'resolve', label:'已解决冲突 · 合并', role:'qa'}];
+  } else if(st === 'done'){
+    var b2 = buildOf(p);
+    acts = b2 ? [{act:'download', label:'下载产物', kind:'ghost', role:null, id:b2.id}] : [];
+  }
+  return acts;
+}
+function actionBtn(a, pid){
+  var locked = a.role ? !canRole(a.role) : false;
+  var dis = a.dis || locked;
+  var cls = 'btn btn-sm' + (a.kind === 'build' ? ' btn-build' : (a.kind === 'danger' ? ' btn-danger-line' : (a.kind === 'ghost' ? '' : ' btn-primary')));
+  var title = dis ? (locked ? roleLockReason(a.role) : (a.reason || '')) : '';
+  return '<button type="button" class="'+cls+'" data-act="'+a.act+'" data-id="'+(a.id || pid)+'"'+
+    (dis ? ' disabled' : '')+(title ? ' title="'+esc(title)+'"' : '')+'>'+esc(a.label)+'</button>';
+}
+function roleTag(role){
+  return '<span class="rtag">'+esc(roleLabel(role))+' 操作</span>';
+}
+
+/* ---------- 视图：登录 ---------- */
+function viewLogin(){
+  var cards = accounts().filter(function(a){ return a.active !== false; }).map(function(a){
+    return '<button type="button" class="login-user" data-act="login" data-id="'+a.id+'">'+
+      '<span class="lu-avatar" style="background:'+a.color+'">'+esc(a.name.slice(0,1))+'</span>'+
+      '<span class="lu-main"><b>'+esc(a.name)+'</b><span class="lu-role">'+esc(roleLabel(a.role))+(a.role!=='admin'&&a.level ? ' · '+esc(levelLabel(a.role,a.level)) : '')+' · '+esc(a.team)+'</span>'+
+      '<span class="lu-desc">'+esc(ROLES[a.role].desc)+'</span></span>'+
+      '<span class="lu-arrow">进入 →</span></button>';
+  }).join('');
+  return '<div class="login-wrap">'+
+    '<div class="login-card">'+
+      '<div class="login-brand"><div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 12h6M14 12h6M12 4v6M12 14v6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></div>'+
+        '<div><div class="login-title">ShipFlow</div><div class="login-sub">代码合并 · CI 打包 · 发布归档</div></div></div>'+
+      '<div class="login-lead">选择账号进入（原型模拟登录，不同角色可执行的动作不同）</div>'+
+      '<div class="login-grid">'+cards+'</div>'+
+      '<div class="login-foot">开发：建流水 / 合并 / 打包 / 提测　·　测试：合并 UAT / 发布验证 / 归档　·　管理员：全量　·　产品：只读</div>'+
+    '</div></div>';
+}
+
+/* ---------- 侧栏 ---------- */
+var NAV = [
+  { key:'home',      hash:'#/home',      label:'首页 · 我的任务', icon:'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5' },
+  { key:'board',     hash:'#/board',     label:'任务看板',       icon:'M4 5h6v6H4zM14 5h6v4h-6zM4 15h6v4H4zM14 13h6v6h-6z' },
+  { key:'reqs',      hash:'#/reqs',      label:'需求管理',       icon:'M6 3h9l5 5v13H6zM14 3v6h6' },
+  { key:'apps',      hash:'#/apps',      label:'应用配置',       icon:'M4 7h16M4 12h16M4 17h10' },
+  { key:'artifacts', hash:'#/artifacts', label:'打包产物',       icon:'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14' },
+  { key:'roles',     hash:'#/roles',     label:'角色权限',       icon:'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z' },
+  { key:'staff',     hash:'#/staff',     label:'人员管理',       icon:'M8 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 2-5 5-5s5 2 5 5M16 8h5M16 12h5M16 16h3' },
+  { key:'spec',      hash:'#/spec',      label:'需求说明',       icon:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h4' }
+];
+function navBadge(hash){
+  if(hash === '#/home'){
+    var n = myTasks().filter(function(t){ return taskNeedsMe(t); }).length;
+    return n ? '<span class="nav-badge">'+n+'</span>' : '';
+  }
+  return '';
+}
+function renderSidebar(){
+  var m = me();
+  if(!m) return;
+  var cur = location.hash || '#/home';
+  var items = NAV.filter(function(n){ return canMenu(n.key); }).map(function(n){
+    var on = cur.indexOf(n.hash) === 0;
+    return '<a class="nav-item'+(on?' on':'')+'" href="'+n.hash+'">'+
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="'+n.icon+'" stroke="'+(on?'#eaf1ff':'#8ea3bb')+'" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+      '<span>'+esc(n.label)+'</span>'+navBadge(n.hash)+'</a>';
+  }).join('');
+  byId('sidebar').innerHTML =
+    '<div class="brand"><div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 12h6M14 12h6M12 4v6M12 14v6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></div>'+
+      '<div><div class="brand-name">ShipFlow</div><div class="brand-sub">代码合并 · 打包发布</div></div></div>'+
+    '<div class="nav-label">工作台</div>'+items+
+    '<div class="side-foot">'+
+      '<div class="side-user">'+
+        '<span class="su-avatar" style="background:'+m.color+'">'+esc(m.name.slice(0,1))+'</span>'+
+        '<div class="su-main"><b>'+esc(m.name)+'</b><span>'+esc(roleLabel(m.role))+' · '+esc(m.team)+'</span></div>'+
+      '</div>'+
+      '<div class="side-acts"><button type="button" class="btn btn-sm" data-act="switch-user">切换账号</button>'+
+      '<button type="button" class="btn btn-sm" data-act="logout">退出</button></div>'+
+    '</div>'+
+    '<div class="built-card"><div class="bc-top"><span class="dot-idle"></span>打包机 '+(runtime.busy?'构建中':'空闲')+'</div>'+
+      '<div class="bc-row"><span>builder-01</span><span class="bc-tag">'+(runtime.busy?'占用':'空闲')+'</span></div>'+
+      '<div class="bc-row"><span>排队流水</span><span class="bc-tag">'+runtime.queue.length+' 条</span></div>'+
+      '<div class="bc-hint">单机单 clone · 构建期间禁止合并</div></div>';
+}
+
+/* ---------- 我的任务 ---------- */
+function myTasks(){
+  var m = me();
+  if(!m) return [];
+  if(m.role === 'admin') return state.tasks.slice();
+  return state.tasks.filter(function(t){
+    if(m.role === 'dev') return t.ownerId === m.id;
+    var r = reqOf(t);
+    if(!r) return false;
+    return m.role === 'qa' ? r.qaOwner === m.id : r.pmOwner === m.id;
+  });
+}
+function taskNeedsMe(t){
+  var ps = pipesOf(t.id);
+  return ps.some(function(p){
+    var acts = pipeActions(p);
+    return acts.some(function(a){ return a.role && canRole(a.role) && !a.dis; });
+  });
+}
+function taskStatusPill(t){
+  var s = taskState(t);
+  return '<span class="pill pill-'+s.cls+'">'+esc(s.label)+'</span>';
+}
+function progressBar(t){
+  var w = taskProgress(t);
+  return '<div class="pbar"><span style="width:'+w+'%"></span></div><div class="pbar-t">'+w+'%</div>';
+}
+function pipeMini(p){
+  var meta = STATUS_META[p.status] || STATUS_META.none;
+  return '<span class="pmini pill-'+meta.cls+'" title="'+esc(p.name+' · '+meta.label)+'">'+esc(p.name)+' <b>'+esc(meta.label)+'</b></span>';
+}
+
+/* ---------- Git 提交（模拟 git log） ---------- */
+var COMMIT_MSGS = [
+  'feat: 乘换方案返回 transferCount 字段',
+  'fix: 无换乘方案下直达标签误判',
+  'refactor: 抽取 transfer_card 公共组件',
+  'feat: 结果页支持仅看直达筛选',
+  'test: 补充换乘次数解析单测',
+  'style: 统一直达标签字号与间距',
+  'fix: 旧版本字段缺失时兜底展示',
+  'chore: 升级 flutter 依赖至 3.24.2',
+  'feat: 详情页展示换乘段数',
+  'docs: 补充接口字段说明',
+  'perf: 列表首屏渲染优化',
+  'fix: 筛选条件与排序联动异常',
+  'feat: 增加空结果引导文案',
+  'refactor: 清理废弃的 transfer_util',
+  'fix: 深色模式下标签对比度不足',
+  'test: 补充筛选组合的 UI 用例',
+  'chore: 同步 l10n 文案',
+  'feat: 支持按到达时间排序',
+  'fix: 切换语言后标签未刷新',
+  'docs: 更新需求说明中的字段定义'
+];
+function fmtDateTime(ts){
+  var d = new Date(ts);
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+function taskBranch(t){
+  var ps = pipesOf(t.id);
+  return ps.length ? ps[0].branch : 'feature/'+String(t.id).toLowerCase().replace(/[^a-z0-9-]+/g,'-');
+}
+function commitsOfTask(t){
+  var branch = taskBranch(t), s = 0;
+  for(var i=0;i<branch.length;i++) s = (s*131 + branch.charCodeAt(i)) % 99991;
+  for(var j=0;j<String(t.id).length;j++) s = (s*137 + String(t.id).charCodeAt(j)) % 99991;
+  var authors = [];
+  authors.push(ownerName(t));
+  authors.push('林舟','周然','许一鸣');
+  var base = new Date(2026,10,19,19,10).getTime();
+  var out = [];
+  for(var k=0;k<20;k++){
+    s = Math.abs((s*1103515245 + 12345) % 2147483648);
+    var hex = s.toString(16); while(hex.length<7) hex = '0'+hex;
+    out.push({
+      sha: hex.slice(0,7),
+      msg: COMMIT_MSGS[(s + k) % COMMIT_MSGS.length],
+      author: authors[(k + (s % authors.length)) % authors.length],
+      at: fmtDateTime(base - k*7.2*3600*1000 - (s%5)*60000)
+    });
+  }
+  return out;
+}
+
+
+function levelOptions(role, cur){
+  var ls = ROLE_LEVELS[role] || [];
+  if(!ls.length) return '<select name="level" disabled><option value="">管理员不设级别</option></select>';
+  return '<select name="level">'+ls.map(function(v){
+    return '<option value="'+v.key+'"'+(v.key===cur?' selected':'')+'>'+esc(v.label)+'</option>';
+  }).join('')+'</select>';
+}
+function deniedView(){
+  var m = me();
+  var who = m ? esc(m.name)+'（'+esc(roleLabel(m.role))+(m.role!=='admin' ? ' · '+esc(levelLabel(m.role,m.level)) : '')+'）' : '';
+  return '<div class="card" style="margin-top:20px"><div style="padding:64px 24px;text-align:center">'+
+    '<div style="font-size:15px;font-weight:700;color:#16202e">当前账号没有该菜单的访问权限</div>'+
+    '<p class="sub" style="margin:8px auto 0;max-width:520px">'+who+' 未被授予此菜单，请联系管理员在「角色权限」中为其角色级别勾选对应菜单</p>'+
+    '</div></div>';
+}
+
+/* ---------- 视图：角色权限 ---------- */
+function ownerSelect(name, roles, cur){
+  var opts = accounts().filter(function(x){
+    return x.active !== false && (roles.indexOf(x.role) >= 0 || x.role === 'admin');
+  }).map(function(x){
+    return '<option value="'+x.id+'"'+(cur === x.id ? ' selected' : '')+'>'+esc(x.name)+'（'+esc(roleLabel(x.role))+'）</option>';
+  }).join('');
+  return '<select name="'+name+'">'+opts+'</select>';
+}
+function permRowHTML(p){
+  var cells = roleLevelKeys().map(function(rk){
+    var parts = rk.split('/'), role = parts[0], lv = parts[1];
+    if(p.adminOnly) return '<td class="pm-cell"><span class="chk lock" title="该权限仅管理员可用">✓</span></td>';
+    var on = permsFor(role, lv).indexOf(p.key) >= 0;
+    return '<td class="pm-cell"><button type="button" class="chk'+(on?' on':'')+'" data-act="perm" data-id="'+esc(rk)+'" data-menu="'+esc(p.key)+'"'+
+      ' title="'+esc(roleLabel(role)+' · '+levelLabel(role,lv)+' · '+p.label)+'">'+(on?'✓':'')+'</button></td>';
+  }).join('');
+  return '<tr class="pm-row"><td class="pm-namecell">'+
+      '<span class="pm-label">'+esc(p.label)+'</span>'+
+      '<span class="pm-krow"><code>'+esc(p.key)+'</code>'+
+        (p.menu ? '<span class="pm-badge menu">菜单</span>' : '<span class="pm-badge op">操作</span>')+
+        (p.adminOnly ? '<span class="pm-badge sys">仅管理员</span>' : '')+
+      '</span></td>'+cells+
+      '<td class="pm-cell"><span class="chk lock" title="管理员固定拥有全部权限">✓</span></td></tr>';
+}
+function viewRoles(){
+  var groups = permGroups();
+  var all = allPerms();
+  var q = (ui.permQ || '').trim().toLowerCase();
+  var folded = ui.permCollapsed || {};
+  var rows = '', shown = 0, foldCount = 0;
+  groups.forEach(function(g){
+    var items = (g.perms || []).filter(function(p){
+      if(!q) return true;
+      return String(p.label||'').toLowerCase().indexOf(q) >= 0 || String(p.key||'').toLowerCase().indexOf(q) >= 0;
+    });
+    if(q && !items.length) return;
+    shown += items.length;
+    var isFold = !q && !!folded[g.key];
+    if(isFold) foldCount++;
+    rows += '<tr class="pm-group" data-act="perm-group" data-id="'+esc(g.key)+'"><td colspan="11">'+
+      '<span class="pm-caret">'+(isFold?'▸':'▾')+'</span><span class="pm-glabel">'+esc(g.label)+'</span>'+
+      '<span class="pm-gdesc">'+esc(g.desc||'')+'</span>'+
+      '<span class="pm-gcount">'+items.length+' 项</span></td></tr>';
+    if(isFold) return;
+    items.forEach(function(p){ rows += permRowHTML(p); });
+  });
+  var head1 = '<th rowspan="2" class="pm-name-head">权限项</th>'+
+    ['dev','qa','pm'].map(function(r){ return '<th colspan="3" class="pm-role-head">'+esc(roleLabel(r))+'</th>'; }).join('')+
+    '<th rowspan="2" class="pm-admin-head">管理员</th>';
+  var head2 = ['dev','qa','pm'].map(function(r){
+    return ROLE_LEVELS[r].map(function(lv){
+      var rk = r+'/'+lv.key, on = colAllOn(rk);
+      return '<th class="pm-lv-head"><span class="pm-lv">'+esc(lv.key.toUpperCase())+'</span>'+
+        '<button type="button" class="pm-colall'+(on?' on':'')+'" data-act="perm-col" data-id="'+esc(rk)+'"'+
+        ' title="'+esc((on?'清空该列':'全选该列')+'：'+roleLabel(r)+' · '+levelLabel(r,lv.key))+'">'+(on?'清空':'全选')+'</button></th>';
+    }).join('');
+  }).join('');
+  var allFolded = groups.length && foldCount === groups.length;
+  return '<div class="page-head"><div><h1>角色权限</h1>'+
+      '<p class="sub">权限项由配置文件 perm-config 提供（当前 '+all.length+' 项 / '+groups.length+' 组）· 开发 / 测试 / 产品分 L1~L3，管理员固定全部</p></div>'+
+      '<div class="head-actions"><button type="button" class="btn" data-act="perm-import">导入配置</button>'+
+        '<button type="button" class="btn" data-act="perm-export">导出配置</button>'+
+        '<button type="button" class="btn" data-act="perm-reset">恢复默认</button></div></div>'+
+    '<div class="perm-tools">'+
+      '<input class="perm-search" data-role="perm-q" placeholder="搜索权限名称 / key" value="'+esc(ui.permQ||'')+'">'+
+      '<span class="pm-total">显示 '+shown+' / '+all.length+' 项</span>'+
+      '<span class="grow"></span>'+
+      '<button type="button" class="btn btn-sm" style="margin-left:auto" data-act="perm-toggle-all">'+(allFolded?'全部展开':'全部折叠')+'</button>'+
+    '</div>'+
+    '<div class="card" style="padding:0;overflow:hidden">'+
+      '<table class="pm-table"><thead><tr>'+head1+'</tr><tr>'+head2+'</tr></thead>'+
+      '<tbody>'+(rows || '<tr><td colspan="11" class="pm-empty">没有匹配的权限</td></tr>')+'</tbody></table></div>'+
+    '<p class="hint" style="margin-top:12px">点格子即保存；列头「全选 / 清空」可整列批量授权（已全选时按钮变「清空」，再点即撤销该列全部非管理员权限）。「菜单」类权限同时控制左侧导航与直接访问拦截；「操作」类权限已存入权限数据，待接入流水动作校验。仅管理员可用的权限对开发 / 测试 / 产品固定锁定。新增权限只需在配置里加一项，表格会自动多一行。</p>';
+}
+
+/* ---------- 视图：人员管理 ---------- */
+function viewStaff(){
+  var list = accounts().slice().sort(function(a,b){
+    var order = { admin:0, dev:1, qa:2, pm:3 };
+    return (order[a.role]||9) - (order[b.role]||9);
+  });
+  var rows = list.map(function(a){
+    return '<tr>'+
+      '<td><div class="user-cell"><span class="u-av" style="background:'+esc(a.color||'#475569')+'">'+esc(String(a.name).slice(0,1))+'</span>'+
+        '<div><div class="u-name">'+esc(a.name)+'</div><div class="t-sub mono">'+esc(a.account||'—')+'</div></div></div></td>'+
+      '<td><span class="rtag">'+esc(roleLabel(a.role))+'</span></td>'+
+      '<td class="muted">'+esc(a.role==='admin' ? '—' : levelLabel(a.role, a.level))+'</td>'+
+      '<td class="muted">'+esc(a.team||'—')+'</td>'+
+      '<td><span class="pill '+(a.active===false?'pill-none':'pill-done')+'">'+(a.active===false?'已停用':'正常')+'</span></td>'+
+      '<td style="text-align:right;white-space:nowrap">'+
+        '<button type="button" class="btn btn-sm" data-act="edit-staff" data-id="'+esc(a.id)+'">编辑</button> '+
+        '<button type="button" class="btn btn-sm btn-ghost" data-act="reset-pwd" data-id="'+esc(a.id)+'">重置密码</button>'+
+      '</td></tr>';
+  }).join('');
+  return '<div class="page-head"><div><h1>人员管理</h1>'+
+      '<p class="sub">只有管理员可见 · 新增人员时分配账号与初始密码，并设定角色和级别（决定他能看到哪些菜单）</p></div>'+
+      '<div class="head-actions"><button type="button" class="btn btn-primary" data-act="new-staff">+ 新增人员</button></div></div>'+
+    '<div class="card" style="padding:0;overflow:hidden">'+
+      '<table class="grid"><thead><tr><th style="width:28%">成员</th><th style="width:14%">角色</th><th style="width:12%">级别</th>'+
+        '<th style="width:18%">团队</th><th style="width:10%">状态</th><th style="width:18%"></th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table></div>'+
+    '<p class="hint" style="margin-top:12px">初始密码仅用于首次登录（原型为明文展示）；账号与级别改动保存后，左侧菜单立即按新权限刷新。</p>';
+}
+
+/* ---------- 视图：首页 ---------- */
+var HOME_TABS = [
+  { key:'active', label:'进行中',  hint:'只看当前阶段归我处理的任务' },
+  { key:'other',  label:'跟我有关 · 其他状态', hint:'已交接 / 超时 / 已结束，仍可跟踪' }
+];
+function roleStageKeys(role){
+  if(role === 'dev') return ['none','dev'];
+  if(role === 'qa')  return ['ready','testing','release'];
+  return ['none','dev','ready','testing','release'];
+}
+function stageKeysLabel(role){
+  if(role === 'dev') return '未开始 + 开发中';
+  if(role === 'qa')  return '已提测 + 测试中 + 待发布';
+  return '全部未结束（未开始 ~ 待发布）';
+}
+function taskRowHTML(t, showOwner){
+  var r = reqOf(t), st = taskState(t), late = st.key === 'overdue';
+  return '<tr>'+
+    '<td><span class="t-title" data-act="open-task" data-id="'+t.id+'">'+esc(t.title)+'</span>'+
+      '<div class="t-sub">'+esc(r?r.code:'')+(showOwner?' · '+esc(ownerName(t)):'')+'</div></td>'+
+    '<td>'+taskStatusPill(t)+'</td>'+
+    '<td class="t-range mono">'+esc(t.start||'—')+' ~ '+(late ? '<span class="late">'+esc(t.due||'—')+'</span>' : esc(t.due||'—'))+'</td>'+
+    '<td>'+progressBar(t)+'</td>'+
+    '<td style="text-align:right;white-space:nowrap">'+
+      '<button type="button" class="btn btn-sm" data-act="open-task" data-id="'+t.id+'">任务详情</button> '+
+      '<button type="button" class="btn btn-sm btn-primary" data-act="new-pipe" data-id="'+t.id+'">+ CI 流水</button>'+
+    '</td></tr>';
+}
+function viewHome(){
+  var m = me();
+  var list = myTasks();
+  var stageKeys = roleStageKeys(m.role);
+  var activeList = list.filter(function(t){ return stageKeys.indexOf(taskState(t).key) >= 0; });
+  var otherList  = list.filter(function(t){ return stageKeys.indexOf(taskState(t).key) < 0; });
+  var kpiOpen = list.filter(function(t){ var k = taskState(t).key; return k !== 'done' && k !== 'overdue'; }).length;
+  var kpiNeed = list.filter(taskNeedsMe).length;
+  var kpiDone = list.filter(function(t){ return taskState(t).key === 'done'; }).length;
+  var kpiOver = list.filter(function(t){ return taskState(t).key === 'overdue'; }).length;
+  var kpiOverDev = list.filter(function(t){ var s = taskState(t); return s.key === 'overdue' && s.over === 'dev'; }).length;
+  var kpiOverQa  = list.filter(function(t){ var s = taskState(t); return s.key === 'overdue' && s.over === 'qa'; }).length;
+  var tab = ui.homeTab === 'other' ? 'other' : 'active';
+  var cur = tab === 'other' ? otherList : activeList;
+  var rows = cur.map(function(t){ return taskRowHTML(t, m.role !== 'dev'); }).join('');
+  var tabs = HOME_TABS.map(function(tb){
+    var n = tb.key === 'active' ? activeList.length : otherList.length;
+    return '<button type="button" class="htab'+(tab===tb.key?' on':'')+'" data-act="home-tab" data-id="'+tb.key+'">'+
+      esc(tb.label)+'<span class="cnt">'+n+'</span></button>';
+  }).join('');
+  var tabHint = tab === 'active' ? ('当前阶段：'+stageKeysLabel(m.role)) : '这些任务已不在你的阶段，但仍在跟踪范围内';
+  return '<div class="page-head"><div><h1>你好，'+esc(m.name)+'</h1>'+
+      '<p class="sub">'+esc(roleLabel(m.role))+'视角 · '+esc(ROLES[m.role].desc)+'</p></div>'+
+      '<div class="head-actions"><span class="pill pill-role">'+esc(roleLabel(m.role))+'</span></div></div>'+
+    '<div class="stats">'+
+      '<div class="stat"><div class="stat-k">我的任务</div><div class="stat-v">'+list.length+'</div><div class="stat-n">按你的角色负责人归属</div></div>'+
+      '<div class="stat"><div class="stat-k">进行中</div><div class="stat-v">'+kpiOpen+'</div><div class="stat-n">未结束的任务</div></div>'+
+      '<div class="stat"><div class="stat-k">待我处理</div><div class="stat-v accent">'+kpiNeed+'</div><div class="stat-n">有流水轮到你的角色</div></div>'+
+      '<div class="stat"><div class="stat-k">超时</div><div class="stat-v over">'+kpiOver+'</div><div class="stat-n">开发超时 '+kpiOverDev+' · 测试超时 '+kpiOverQa+'</div></div>'+
+      '<div class="stat"><div class="stat-k">已结束</div><div class="stat-v">'+kpiDone+'</div><div class="stat-n">任务已发布并归档</div></div>'+
+    '</div>'+
+    '<div class="home-tabs">'+tabs+'<span class="htab-hint">'+esc(tabHint)+'</span></div>'+
+    '<div class="card" style="padding:0;overflow:hidden">'+
+      '<div class="card-head" style="padding:14px 16px 12px"><h2>'+(tab==='active'?'进行中':'其他状态')+' · '+cur.length+' 条</h2>'+
+        '<span class="muted">'+(tab==='active'?'按角色阶段过滤，未开始 / 超时不在此列':'已交接或已结束，供跟踪')+'</span></div>'+
+      (cur.length ?
+        '<table class="grid"><thead><tr><th style="width:34%">任务</th><th style="width:10%">状态</th><th style="width:24%">开始 - 结束</th><th style="width:16%">进度</th><th style="width:16%"></th></tr></thead>'+
+        '<tbody>'+rows+'</tbody></table>'
+        : '<div class="empty" style="padding:46px"><div class="big">'+(tab==='active'?'当前没有归你阶段的任务':'没有其他状态的任务')+'</div>'+
+          (tab==='active'?'换个 tab 看看已交接或已结束的任务':'这个账号的任务都在当前阶段内')+'</div>')+
+    '</div>';
+}
+
+/* ---------- 视图：看板 ---------- */
+var BOARD_COLS = [
+  { key:'none',    label:'未开始', hint:'还没建 CI 流水', cls:'c-none', pick:function(t){ return taskState(t).key === 'none'; } },
+  { key:'dev',     label:'开发中', hint:'QA 合并 / 打包 / 自测', cls:'c-dev', pick:function(t){ return taskState(t).key === 'dev'; } },
+  { key:'ready',   label:'已提测', hint:'自测通过，等测试开始', cls:'c-ready', pick:function(t){ return taskState(t).key === 'ready'; } },
+  { key:'testing', label:'测试中', hint:'UAT 合并 / 打包 / 测试', cls:'c-testing', pick:function(t){ return taskState(t).key === 'testing'; } },
+  { key:'release', label:'待发布', hint:'Release 验证 / 合回 master', cls:'c-release', pick:function(t){ return taskState(t).key === 'release'; } },
+  { key:'overdue', label:'超时',   hint:'开发超时 / 测试超时', cls:'c-overdue', pick:function(t){ return taskState(t).key === 'overdue'; } },
+  { key:'done',    label:'已结束', hint:'任务已发布并归档', cls:'c-done', pick:function(t){ return taskState(t).key === 'done'; } }
+];
+function viewBoard(){
+  var role = me() ? me().role : 'dev';
+  var list = state.tasks;
+  var cols = BOARD_COLS.map(function(c){
+    var items = list.filter(c.pick);
+    var cards = items.map(function(t){
+      var r = reqOf(t), ps = pipesOf(t.id), st = taskState(t);
+      return '<div class="tcard" data-act="open-task" data-id="'+t.id+'">'+
+        '<div class="tcard-top"><span class="req-mini">'+esc(r?r.code:'')+'</span><span class="rtag-t">'+esc(ownerName(t))+'</span></div>'+
+        '<div class="tcard-title">'+esc(t.title)+'</div>'+
+        stageDots(t)+
+        '<div class="tcard-foot"><span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span><span class="muted">'+ps.length+' 条流水</span></div>'+
+        '</div>';
+    }).join('');
+    return '<div class="col '+c.cls+'"><div class="col-head"><span>'+c.label+'</span><span class="cnt">'+items.length+'</span></div>'+
+      '<div class="col-sub">'+c.hint+'</div>'+ (cards || '<div class="col-empty">暂无任务</div>') +'</div>';
+  }).join('');
+  var counts = BOARD_COLS.map(function(c){ return state.tasks.filter(c.pick).length; });
+  return '<div class="page-head"><div><h1>任务看板</h1>'+
+      '<p class="sub">看板只看任务状态（未开始 / 开发中 / 已提测 / 测试中 / 待发布 / 超时 / 已结束） · 合并 / 打包 / 下载都在「任务详情 → CI 流水」里操作</p></div></div>'+
+    '<div class="board-stats">'+
+      '<div class="bs"><span>任务总数</span><b>'+state.tasks.length+'</b></div>'+
+      '<div class="bs"><span>未开始</span><b>'+counts[0]+'</b></div>'+
+      '<div class="bs"><span>开发中</span><b>'+counts[1]+'</b></div>'+
+      '<div class="bs"><span>已提测</span><b>'+counts[2]+'</b></div>'+
+      '<div class="bs"><span>测试中</span><b>'+counts[3]+'</b></div>'+
+      '<div class="bs"><span>待发布</span><b>'+counts[4]+'</b></div>'+
+      '<div class="bs"><span>超时（开发 / 测试）</span><b class="over">'+counts[5]+'</b></div>'+
+      '<div class="bs"><span>已结束</span><b>'+counts[6]+'</b></div>'+
+    '</div>'+
+    '<div class="board">'+cols+'</div>';
+}
+function stageDots(t){
+  var ps = pipesOf(t.id);
+  var filled = 0;
+  if(ps.length){
+    var sum = 0;
+    ps.forEach(function(p){ sum += mergedCount(p); });
+    filled = Math.round(sum / ps.length);
+  }
+  var out = '';
+  for(var i=0;i<4;i++) out += '<span class="sd'+(i<filled?' on':'')+'"></span>';
+  return '<div class="stage-dots-in">'+out+'</div>';
+}
+
+/* ---------- 视图：应用配置 ---------- */
+function viewApps(){
+  var cards = state.apps.map(function(a){
+    var reqCount = state.pipelines.filter(function(p){ return p.appId === a.id; }).length;
+    return '<div class="app-card">'+
+      '<div class="ac-top"><div><div class="ac-name">'+esc(a.name)+' '+platformPill(a)+'</div><div class="ac-code mono">'+esc(a.code)+'</div></div>'+
+        '<span class="pill pill-soft">'+esc(a.artifactType)+'</span></div>'+
+      '<div class="ac-repo mono">'+esc(a.repo)+'</div>'+
+      '<div class="ac-meta"><span>'+esc(a.stack)+'</span><span>'+esc(a.machine)+'</span><span>'+reqCount+' 条流水</span></div>'+
+      '<div class="ac-facts"><span>产物 <b>'+esc(a.artifactType)+'</b></span><span>脚本 <b>'+esc(a.buildScript)+'</b></span><span>路径 <b>'+esc(a.artifactPattern||'—')+'</b></span></div>'+
+      '<div class="branchline"><div class="tg-line"><span class="bl-k">分支</span>'+['qa','uat','release','master'].map(function(k){
+          return '<span class="bchip '+k+'">'+esc(a.branches[k])+'</span>';
+        }).join('')+'</div></div>'+
+      '<div class="ac-foot"><button type="button" class="btn btn-sm" data-act="edit-app" data-id="'+a.id+'">编辑配置</button></div>'+
+    '</div>';
+  }).join('');
+  return '<div class="page-head"><div><h1>应用配置</h1><p class="sub">应用按平台分开建（Android / iOS 各一个），仓库、分支、产物类型与构建脚本都在这配置；流水只选应用</p></div>'+
+      '<div class="head-actions"><button class="btn btn-primary" data-act="new-app">+ 新建应用</button></div></div>'+
+    '<div class="app-grid">'+cards+'</div>';
+}
+
+/* ---------- 视图：需求列表 ---------- */
+function reqStatus(r){
+  var ts = tasksOf(r.id);
+  if(!ts.length) return { label:'待拆任务', cls:'none' };
+  var states = ts.map(taskState);
+  if(states.every(function(s){ return s.key === 'done'; })) return { label:'已完成', cls:'done' };
+  if(states.some(function(s){ return s.key === 'overdue'; })) return { label:'有超时', cls:'overdue' };
+  if(states.some(function(s){ return ['dev','ready','testing','release'].indexOf(s.key) >= 0; })) return { label:'进行中', cls:'dev' };
+  return { label:'待开始', cls:'none' };
+}
+function viewReqs(){
+  var q = (ui.reqQ||'').trim().toLowerCase();
+  var list = state.reqs.filter(function(r){
+    if(!q) return true;
+    return (r.code+' '+r.title+' '+reqPeopleText(r)).toLowerCase().indexOf(q) >= 0;
+  });
+  var cards = list.map(function(r){
+    var ts = tasksOf(r.id), st = reqStatus(r);
+    return '<div class="req-card" data-act="open-req" data-id="'+r.id+'">'+
+      '<div class="rc-top"><span class="req-code">'+esc(r.code)+'</span><span class="pri pri-'+esc(r.priority)+'">'+esc(r.priority)+'</span></div>'+
+      '<div class="rc-title">'+esc(r.title)+'</div>'+
+      '<div class="rc-desc">'+esc(r.desc)+'</div>'+
+      '<div class="rc-foot"><span class="rc-people">'+esc(reqPeopleText(r))+'</span><span>'+ts.length+' 个任务</span>'+
+        '<span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span></div>'+
+    '</div>';
+  }).join('');
+  return '<div class="page-head"><div><h1>需求管理</h1><p class="sub">需求不再绑定应用；应用在任务的 CI 流水里选择，同一任务可以打出多种产物</p></div>'+
+      '<div class="head-actions"><button class="btn btn-primary" data-act="new-req">+ 新建需求</button></div></div>'+
+    '<div class="req-toolbar"><span class="search">'+
+      '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="#7d8a9b" stroke-width="1.4"/><path d="M8.6 8.6l2.6 2.6" stroke="#7d8a9b" stroke-width="1.4"/></svg>'+
+      '<input type="text" data-role="req-q" placeholder="搜索需求编号 / 标题 / 负责人" value="'+esc(ui.reqQ)+'"></span>'+
+      '<span class="muted">'+list.length+' 条需求</span></div>'+
+    (list.length ? '<div class="req-grid">'+cards+'</div>'
+      : '<div class="card"><div class="empty"><div class="big">没有匹配的需求</div>换个筛选条件，或新建一条需求</div></div>');
+}
+
+/* ---------- 视图：需求详情 ---------- */
+function viewReqDetail(reqId){
+  var r = state.reqs.find(function(x){ return x.id === reqId; });
+  if(!r) return '<div class="card"><div class="empty"><div class="big">需求不存在</div></div></div>';
+  var ts = tasksOf(r.id);
+  var st = reqStatus(r);
+  var rows = ts.map(function(t){
+    var ps = pipesOf(t.id);
+    return '<tr>'+
+      '<td><span class="t-title" data-act="open-task" data-id="'+t.id+'">'+esc(t.title)+'</span>'+
+        '<div class="t-sub">'+esc(t.desc).slice(0,42)+'</div></td>'+
+      '<td>'+ (ps.length ? ps.map(pipeMini).join('') : '<span class="muted">暂无流水</span>') +'</td>'+
+      '<td>'+taskStatusPill(t)+'</td>'+
+      '<td>'+progressBar(t)+'</td>'+
+      '<td style="text-align:right;white-space:nowrap">'+
+        '<button type="button" class="btn btn-sm" data-act="open-task" data-id="'+t.id+'">详情</button>'+
+      '</td></tr>';
+  }).join('');
+  return '<div class="crumb"><a href="#/reqs">需求管理</a><span>/</span><span>'+esc(r.code)+'</span></div>'+
+    '<div class="detail-head"><div class="detail-top"><div>'+
+        '<div class="req-code">'+esc(r.code)+'</div><div class="detail-title">'+esc(r.title)+'</div>'+
+        '<div class="detail-desc">'+esc(r.desc)+'</div></div>'+
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+          '<span class="pri pri-'+esc(r.priority)+'">'+esc(r.priority)+'优先级</span>'+
+          '<span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span></div></div>'+
+      '<div class="detail-meta"><span>开发 <b>'+esc(personName(r.devOwner))+'</b></span><span>测试 <b>'+esc(personName(r.qaOwner))+'</b></span>'+
+        '<span>产品 <b>'+esc(personName(r.pmOwner))+'</b></span>'+
+        '<span>创建 <b>'+esc(r.createdAt)+'</b></span><span>期望完成 <b>'+esc(r.due)+'</b></span>'+
+        '<span>任务 <b>'+ts.length+'</b></span><span>CI 流水 <b>'+state.pipelines.filter(function(p){ return pipesOf.call(null,p.taskId) && taskOf(p.taskId) && taskOf(p.taskId).reqId===r.id; }).length+'</b></span>'+
+      '</div></div>'+
+    '<div class="card" style="padding:0;overflow:hidden">'+
+      '<div class="card-head" style="padding:14px 16px 12px"><h2>任务拆分</h2><span class="muted">'+ts.length+' 个任务 · 任务下可再挂多条 CI 流水</span>'+
+        '<div class="head-actions"><button type="button" class="btn btn-primary" data-act="new-task" data-id="'+r.id+'">+ 新建任务</button></div></div>'+
+      (ts.length ? '<table class="grid"><thead><tr><th style="width:30%">任务</th><th>CI 流水</th><th style="width:15%">状态</th><th style="width:15%">进度</th><th style="width:8%"></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty" style="padding:40px"><div class="big">还没有任务</div>把需求拆成可交付的任务</div>')+
+    '</div>';
+}
+
+/* ---------- 视图：产物 ---------- */
+function viewArtifacts(){
+  var list = state.builds.filter(function(b){ return b.status === 'success' && b.artifact; });
+  if(ui.artifactApp !== 'all') list = list.filter(function(b){
+    var p = pipeOf(b.pipelineId); return p && p.appId === ui.artifactApp;
+  });
+  var rows = list.slice().reverse().map(function(b){
+    var p = pipeOf(b.pipelineId), t = p ? taskOf(p.taskId) : null, app = p ? appOf(p) : null;
+    return '<tr><td class="mono" style="font-size:11.5px;word-break:break-all">'+esc(b.artifact.name)+'</td>'+
+      '<td>'+esc(app?app.name:'—')+'<div class="t-sub">'+esc(p?p.name:'')+'</div></td>'+
+      '<td>'+esc(t?t.title:'—')+'</td>'+
+      '<td><span class="stage-tag">'+esc(stageLabel(b.stage))+'</span><div class="t-sub mono">'+esc(b.mergeSha)+'</div></td>'+
+      '<td>'+esc(b.artifact.size)+'</td><td class="mono" style="font-size:11px">'+esc(b.startedAt)+'</td>'+
+      '<td style="text-align:right"><button type="button" class="btn btn-sm btn-primary" data-act="download" data-id="'+b.id+'">下载</button></td></tr>';
+  }).join('');
+  return '<div class="page-head"><div><h1>打包产物</h1><p class="sub">产物长期保留，下载链接不需要鉴权，可直接分享给测试与产品</p></div></div>'+
+    '<div class="req-toolbar"><select data-role="artifact-app">'+
+      '<option value="all"'+(ui.artifactApp==='all'?' selected':'')+'>全部应用</option>'+
+      state.apps.map(function(a){ return '<option value="'+a.id+'"'+(ui.artifactApp===a.id?' selected':'')+'>'+esc(a.name)+'</option>'; }).join('')+
+    '</select><span class="muted">'+list.length+' 个产物</span></div>'+
+    (list.length ? '<div class="card" style="padding:0;overflow:hidden"><table class="grid">'+
+      '<thead><tr><th>产物</th><th style="width:14%">应用</th><th style="width:20%">任务</th><th style="width:12%">阶段</th><th style="width:9%">大小</th><th style="width:14%">构建时间</th><th style="width:8%"></th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table></div>'
+      : '<div class="card"><div class="empty"><div class="big">还没有产物</div>流水打包成功后，产物会自动入库</div></div>');
+}
+
+/* ---------- 视图：需求说明 ---------- */
+function viewSpec(){
+  return '<div class="page-head"><div><h1>需求说明</h1>'+
+      '<p class="sub">一期：登录与角色 → 需求 → 任务 → 多条 CI 流水 → 合并 / 打包 / 产物入库</p></div></div>'+
+    '<div class="spec">'+
+      '<h2><span class="n">01</span>一期目标与范围</h2>'+
+      '<ul class="bullets">'+
+        '<li>把「应用 → 需求 → 任务 → CI 流水 → 合并 → 打包 → 产物」串成流水线；应用配置与需求解耦，应用在流水里选择。</li>'+
+        '<li>任务只表达交付单元与负责人；建任务时填计划开始时间与结束时间，一个任务可以挂多条 CI 流水（Flutter 任务可同时打 Android apk 与 iOS ipa）。</li>'+
+        '<li>每条流水独立保存 Feature 分支、目标分支映射、合并记录、构建记录与产物。</li>'+
+        '<li>提交记录按任务一份：一个任务对应一个代码仓库、一条 Feature 分支，多条流水共用它，只是产出不同产物（apk / ipa / jar 等）。</li>'+
+        '<li>登录按账号区分角色：开发 / 测试 / 管理员 / 产品；除管理员外每个角色分 L1~L3，级别不同可见菜单不同。</li>'+
+        '<li>菜单权限由管理员在「角色权限」里按「角色 × 级别」勾选维护；人员由管理员在「人员管理」里新增并分配账号、初始密码、角色与级别。</li>'+
+        '<li>首页只放「我的任务」，任务卡不提供操作按钮，所有操作都进任务详情 → CI 流水；列表按角色分两个 tab：进行中 / 跟我有关 · 其他状态。</li>'+
+        '<li>任务状态按流水进展分四段：开发中 → 已提测 → 测试中 → 待发布，另有未开始 / 超时 / 已结束；任务看板按状态分七列，只看状态不做操作。</li>'+
+        '<li>建需求时同时指定开发负责人、测试负责人、产品负责人；任务负责人默认由开发负责人承接。</li>'+
+        '<li>不做：Jenkins 接入、审批流、镜像构建、蓝绿发布、自动回滚（二期）。</li>'+
+      '</ul>'+
+      '<h2><span class="n">02</span>数据模型</h2>'+
+      '<table><tr><th style="width:16%">实体</th><th style="width:34%">关键字段</th><th>说明</th></tr>'+
+        '<tr><td>账号 Account</td><td class="mono">id / name / role / level / account / password / team / active</td><td>角色 dev / qa / admin / pm；admin 不设 level；active=false 不出现在登录页</td></tr>'+
+        '<tr><td>角色权限 Perm</td><td class="mono">perms[\'role/level\'] = [menuKey]</td><td>以「角色/级别」为键存菜单 key 数组；admin 固定全量、不可编辑</td></tr>'+
+        '<tr><td>应用 App</td><td class="mono">name / platform(android|ios|server|web) / code / repo / buildScript / artifactType / artifactPattern / branches{qa,uat,release,master} / machine</td><td>按平台拆分：Android 与 iOS 是两个应用，产物类型与构建脚本在应用里固定，流水不再自选</td></tr>'+
+        '<tr><td>需求 Requirement</td><td class="mono">code / title / desc / devOwner / qaOwner / pmOwner / priority / start / due</td><td>不再关联应用；三个负责人分别对应开发、测试、产品，任务列表与抽屉按此展示</td></tr>'+
+        '<tr><td>任务 Task</td><td class="mono">reqId / title / desc / ownerId / priority / start / due</td><td>计划开始 start / 结束 due；状态由流水与时间聚合，见 04</td></tr>'+
+        '<tr><td>CI 流水 Pipeline</td><td class="mono">taskId / appId / name / branch / status / merges[] / conflicts{} / rework{} / buildId</td><td>真正执行合并与打包的单元；产物类型与构建脚本来自所关联的应用</td></tr>'+
+        '<tr><td>构建 Build</td><td class="mono">pipelineId / stage / mergeSha / status / startedAt / duration / artifact{name,size,type,url}</td><td>mergeSha 判断包是否对应最新合并；队列串行执行</td></tr>'+
+      '</table>'+
+      '<h2><span class="n">03</span>流水状态机</h2>'+
+      '<div class="flow">'+
+        '<div class="fnode">未开始</div><span class="farr">→</span>'+
+        '<div class="fnode acc">合并 QA</div><span class="farr">→</span>'+
+        '<div class="fnode ok">已合入 QA</div><span class="farr">→</span>'+
+        '<div class="fnode warn">打包 QA</div><span class="farr">→</span>'+
+        '<div class="fnode ok">QA 包就绪 · 待自测确认</div>'+
+      '</div>'+
+      '<div class="flow" style="margin-top:8px">'+
+        '<div class="fnode ok">自测通过 → 已提测</div><span class="farr">→</span>'+
+        '<div class="fnode acc">合并 UAT</div><span class="farr">→</span>'+
+        '<div class="fnode ok">测试中</div><span class="farr">→</span>'+
+        '<div class="fnode warn">打包 UAT</div><span class="farr">→</span>'+
+        '<div class="fnode acc">合并 Release</div>'+
+      '</div>'+
+      '<div class="flow" style="margin-top:8px">'+
+        '<div class="fnode warn">Release 验证中</div><span class="farr">→</span>'+
+        '<div class="fnode warn">打包 Release</div><span class="farr">→</span>'+
+        '<div class="fnode ok">验证通过 · 待合回 master</div><span class="farr">→</span>'+
+        '<div class="fnode acc">合回 master</div><span class="farr">→</span>'+
+        '<div class="fnode ok">结束</div>'+
+      '</div>'+
+      '<div class="flow" style="margin-top:8px">'+
+        '<div class="fnode err">合并冲突</div><span class="farr">↺</span>'+
+        '<span class="fnote-inline">停在当前阶段 → 基于 Feature 建临时分支 → 本地解冲突 → 已解决冲突 · 合并</span>'+
+      '</div>'+
+      '<div class="fnote">三处硬门禁：① 提测前必须有 QA 包并自测通过；② 合并 Release 前必须有 UAT 包；③ 验收前必须有 Release 包并验证通过。</div>'+
+      '<h2><span class="n">04</span>任务状态（由流水与时间聚合）</h2>'+
+      '<table><tr><th style="width:16%">状态</th><th style="width:30%">触发条件</th><th>说明</th></tr>'+
+        '<tr><td>未开始</td><td>还没有 CI 流水</td><td>任务刚建，等待开发建流水</td></tr>'+
+        '<tr><td>开发中</td><td>流水最小阶段在开发段（未开始 / 合并 QA / 冲突 / 已合 QA / QA 包就绪 / 自测通过）</td><td>开发自己推进，提测前全部动作归开发</td></tr>'+
+        '<tr><td>已提测</td><td>最小阶段为「已提测 · 待开始测试」</td><td>开发已交付，等测试接手</td></tr>'+
+        '<tr><td>测试中</td><td>最小阶段在测试段（合并 UAT / 冲突 / 测试中 / UAT 包就绪）</td><td>测试推进、验证</td></tr>'+
+        '<tr><td>待发布</td><td>最小阶段在发布段（合并 Release / 冲突 / Release 验证 / Release 包就绪）</td><td>Release 验证与合回 master</td></tr>'+
+        '<tr><td>开发超时</td><td>已超过结束时间且未结束，任务仍未提测（当前阶段在开发段 / 还没有流水）</td><td>红色 pill；归开发侧，要开发补时间或赶进度</td></tr>'+
+        '<tr><td>测试超时</td><td>已超过结束时间且未结束，任务已提测（测试 / 发布阶段）</td><td>橙色 pill；归测试侧，开发已交付，不再算开发拖延</td></tr>'+
+        '<tr><td>已结束</td><td>任务下全部流水都已发布归档（done）</td><td>优先级最高；只看状态，不再有「冲突」态，冲突体现在流水里</td></tr>'+
+      '</table>'+
+      '<div class="fnote">聚合规则：取该任务所有流水所处阶段的最小值（最落后的那条决定任务进度）；状态优先级 已结束 &gt; 超时 &gt; 四段进展 &gt; 未开始。</div>'+
+      '<div class="fnote">超时按当前阶段归属：尚未提测算开发超时（红），已提测及之后算测试超时（橙）。看板超时列仍是一列，但卡片、我的任务列表、任务详情（「超时归属」一行含超期天数与所处阶段）都显示具体类型；首页「超时」KPI 小字给出开发 / 测试各自数量。</div>'+
+      '<h2><span class="n">04B</span>首页「我的任务」tab 规则</h2>'+
+      '<table><tr><th style="width:18%">tab</th><th style="width:26%">开发 dev</th><th style="width:26%">测试 qa</th><th>产品 / 管理员</th></tr>'+
+        '<tr><td>进行中</td><td>未开始 + 开发中</td><td>已提测 + 测试中 + 待发布</td><td>全部未结束任务</td></tr>'+
+        '<tr><td>跟我有关 · 其他状态</td><td colspan="3">本人负责但不属于当前角色阶段的任务（含已结束、超时、已交接给下游），用于即使不在自己手上也能跟踪</td></tr>'+
+      '</table>'+
+      '<div class="fnote">「我的任务」按需求负责人归属计算：开发取需求开发负责人、测试取测试负责人、产品取产品负责人；列表不显示负责人，只显示开始-结束时间区间。</div>'+
+      '<h2><span class="n">05</span>角色与可执行动作</h2>'+
+      '<table><tr><th style="width:18%">角色</th><th style="width:26%">能看到的</th><th>能操作的</th></tr>'+
+        '<tr><td>开发 dev</td><td>我的任务 + 自己的流水</td><td>建流水、合并 QA、打包 QA、自测通过/拒绝、提测</td></tr>'+
+        '<tr><td>测试 qa</td><td>全部任务的流水</td><td>开始测试（合并 UAT）、打包 UAT、合并 Release、打包 Release、验证通过/不通过、合回 master</td></tr>'+
+        '<tr><td>管理员 admin</td><td>全部数据</td><td>任意阶段动作，维护应用配置与账号</td></tr>'+
+        '<tr><td>产品 pm</td><td>需求与任务进度</td><td>只读：提需求、看进度，不操作代码与打包</td></tr>'+
+      '</table>'+
+      '<div class="fnote">角色级别：开发 / 测试 / 产品各分 L1 初级、L2 中级、L3 高级；级别只决定菜单可见范围，具体可执行动作仍由角色决定。管理员不设级别，固定拥有全部菜单。</div>'+
+      '<div class="fnote">权限配置：权限项定义在页面内 perm-config JSON 文件块里（当前 5 组 22 项），每项含 key / label / menu / hash。menu=true 的 8 项同时控制左侧菜单；其余为操作类权限（新建流水、合并、打包、验证等）。新增权限只改配置或在「角色权限」页导入 JSON，矩阵自动多一行，无需改代码。</div>'+
+      '<div class="fnote">「角色权限」「人员管理」只有管理员可见；非管理员直接访问未授权地址会显示无权限提示。操作类权限已落库，动作级校验待接入。</div>'+
+      '<h2><span class="n">06</span>接口草案</h2>'+
+      '<table><tr><th style="width:8%">方法</th><th style="width:34%">路径</th><th>说明</th></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/me</td><td>当前账号与角色</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/my-tasks</td><td>首页「我的任务」，按账号负责人过滤</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/requirements</td><td>需求列表（不返回应用）</td></tr>'+
+        '<tr><td>POST</td><td class="mono">/api/tasks/:id/pipelines</td><td>body appId / name / branch / artifactType，创建 CI 流水</td></tr>'+
+        '<tr><td>POST</td><td class="mono">/api/pipelines/:id/merge</td><td>body stage，建临时分支或直接合入目标分支</td></tr>'+
+        '<tr><td>POST</td><td class="mono">/api/pipelines/:id/build</td><td>执行 ./build_app，进入单机队列</td></tr>'+
+        '<tr><td>POST</td><td class="mono">/api/pipelines/:id/qa-verdict</td><td>自测通过 / 拒绝</td></tr>'+
+        '<tr><td>POST</td><td class="mono">/api/pipelines/:id/test | verify | accept</td><td>提测 / 验证通过 / 合回 master</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/artifacts</td><td>产物列表，下载直链不鉴权</td></tr>'+
+        '<tr><td>GET/PUT</td><td class="mono">/api/roles/perms</td><td>读取 / 保存「角色 × 级别」菜单权限（仅管理员）</td></tr>'+
+        '<tr><td>GET/POST/PUT</td><td class="mono">/api/staff</td><td>人员列表 / 新增（账号 + 初始密码 + 角色 + 级别）/ 编辑（仅管理员）</td></tr>'+
+      '</table>'+
+      '<h2><span class="n">07</span>已确认规则</h2>'+
+      '<div class="todo"><span class="num">01</span><div><span class="q">提测、合并 Release、验收都要先打包成功</span><span class="a">提测要 QA 包且自测通过，合并 Release 要 UAT 包，验收要 Release 包；包必须对应最新一次该阶段合并。</span></div></div>'+
+      '<div class="todo"><span class="num">02</span><div><span class="q">不通过就回到上一节点</span><span class="a">自测拒绝 / 测试不通过退回「已合入 QA」，Release 验证不通过退回「测试中」，都要重打包再流转。</span></div></div>'+
+      '<div class="todo"><span class="num">03</span><div><span class="q">验证通过后由测试点「合回 master」</span><span class="a">release 直接合入 master，不额外走 MR；合入完成流水结束，不再提供重新打包。</span></div></div>'+
+      '<div class="todo"><span class="num">04</span><div><span class="q">合并无需排队，打包必须排队</span><span class="a">打包机只有一份 clone，构建期间任何流水都禁止切分支合并；产物长期保留、下载不鉴权。</span></div></div>'+
+    '</div>';
+}
+
+
+/* ---------- 任务详情：可扩展的按钮与 tab ---------- */
+var TASK_ACTIONS = [
+  { act:'new-pipe',   label:'+ CI 流水', primary:true, role:'dev',  always:true },
+  { act:'open-req',   label:'打开需求',  role:null },
+  { act:'del-task',   label:'删除任务',  role:'admin', danger:true }
+];
+var TASK_TABS = [
+  { key:'overview', label:'概览' },
+  { key:'pipes',    label:'CI 流水' },
+  { key:'commits',  label:'提交记录' },
+  { key:'builds',   label:'构建记录' }
+];
+function tabCount(t, key){
+  if(key === 'pipes') return pipesOf(t.id).length;
+  if(key === 'commits'){ return 20; }
+  if(key === 'builds'){
+    var b = 0; pipesOf(t.id).forEach(function(p){ b += buildsOf(p).length; }); return b;
+  }
+  return null;
+}
+function taskActionBar(t){
+  return TASK_ACTIONS.map(function(a){
+    var locked = a.role ? !canRole(a.role) : false;
+    var cls = 'btn btn-sm' + (a.primary ? ' btn-primary' : '') + (a.danger ? ' btn-danger-line' : '');
+    return '<button type="button" class="'+cls+'" data-act="'+a.act+'" data-id="'+t.id+'"' +
+      (locked ? ' disabled title="'+esc(roleLockReason(a.role))+'"' : '') + '>'+esc(a.label)+'</button>';
+  }).join('') + '<span class="tb-gap"></span>';
+}
+function taskTabs(t){
+  return TASK_TABS.map(function(tb){
+    var c = tabCount(t, tb.key);
+    return '<button type="button" class="tab'+(ui.tab===tb.key?' on':'')+'" data-act="tab" data-id="'+tb.key+'">'+
+      esc(tb.label)+(c!=null?'<span class="tab-n">'+c+'</span>':'')+'</button>';
+  }).join('');
+}
+
+/* ---------- 流水卡片（任务详情内） ---------- */
+function pipeCard(p){
+  var app = appOf(p), meta = STATUS_META[p.status] || STATUS_META.none;
+  var stage = currentStage(p), target = branchName(p, stage);
+  var b = buildOf(p);
+  var acts = pipeActions(p);
+  var actHTML = acts.length ? acts.map(function(a){ return actionBtn(a, p.id); }).join('')
+    : '<span class="muted">'+ (p.status==='done' ? '流水已结束' : '处理中…') +'</span>';
+  return '<div class="pipe-card">'+
+    '<div class="pc-top"><div class="pc-title"><b>'+esc(p.name)+'</b>'+
+      '<span class="pc-app">'+esc(app?app.name:'—')+' · '+esc(app?platformLabel(app.platform):'')+' · '+esc(p.artifactType||'')+'</span></div>'+
+      '<span class="pill pill-'+meta.cls+'">'+esc(meta.label)+'</span></div>'+
+    '<div class="pc-branch"><span class="mono">'+esc(p.branch)+'</span><span class="pc-arrow">→</span>'+
+      '<span class="bchip '+stage+'">'+esc(target)+'</span>'+
+      '<span class="pc-stage">'+esc(stageLabel(stage))+' 阶段</span></div>'+
+    '<div class="pc-dots">'+pipeDots(p)+'</div>'+
+    '<div class="pc-meta">'+
+      '<span>最近合并 '+(function(){ var m=(p.merges||[]).slice(-1)[0]; return m? '<b class="mono">'+esc(m.sha)+'</b> '+esc(String(m.at).slice(5)) : '<span class="muted">—</span>'; })()+'</span>'+
+      '<span>产物 '+(b? '<b class="mono">'+esc(shortArtifact(b))+'</b>' : '<span class="muted">—</span>')+'</span>'+
+    '</div>'+
+    (/conflict/.test(p.status)? '<div class="pc-conflict">存在冲突 · 临时分支 '+esc(tempBranchName(p,stage))+' 解决后点「已解决冲突 · 合并」</div>' : '')+
+    (p.rework? '<div class="pc-rework">'+esc(p.rework.label)+'：'+esc(p.rework.reason)+'</div>' : '')+
+    '<div class="pc-acts">'+actHTML+
+      '<button type="button" class="btn btn-sm btn-ghost" data-act="open-pipe" data-id="'+p.id+'">流水详情</button></div>'+
+  '</div>';
+}
+function pipeDots(p){
+  var filled = mergedCount(p);
+  var out = '';
+  for(var i=0;i<4;i++){
+    var cls = i < filled ? 'on' : (i === filled ? 'cur' : '');
+    out += '<span class="sd '+cls+'"></span>';
+  }
+  return '<div class="stage-dots-in">'+out+'</div>';
+}
+
+/* ---------- 抽屉 ---------- */
+function renderDrawer(){
+  var root = byId('drawerRoot');
+  if(!root) return;
+  if(ui.logBuildId){ root.innerHTML = logDrawer(); return; }
+  if(ui.pipeId){ root.innerHTML = pipeDrawer(); return; }
+  if(ui.taskId){ root.innerHTML = taskDrawer(); return; }
+  if(ui.reqId){ root.innerHTML = reqDrawer(); return; }
+  root.innerHTML = '';
+}
+
+function reqDrawer(){
+  var r = state.reqs.find(function(x){ return x.id === ui.reqId; });
+  if(!r){ ui.reqId = null; return ''; }
+  var ts = tasksOf(r.id), st = reqStatus(r);
+  var pipeCount = 0;
+  ts.forEach(function(t){ pipeCount += pipesOf(t.id).length; });
+  var rows = ts.length ? ts.map(function(t){
+    return '<tr>'+
+      '<td><span class="t-title" data-act="open-task" data-id="'+t.id+'">'+esc(t.title)+'</span>'+
+        '<div class="t-sub">'+esc(t.desc||'').slice(0,40)+'</div></td>'+
+      '<td class="muted">'+esc(ownerName(t))+'</td>'+
+      '<td>'+taskStatusPill(t)+'</td>'+
+      '<td>'+progressBar(t)+'</td>'+
+      '<td style="text-align:right"><button type="button" class="btn btn-sm" data-act="open-task" data-id="'+t.id+'">详情</button></td>'+
+    '</tr>';
+  }).join('') : '<tr><td colspan="5" style="padding:26px 0;text-align:center" class="muted">还没有任务，点上方「+ 新建任务」拆一个</td></tr>';
+  return '<div class="drawer-mask" data-act="close-req"></div><aside class="drawer wide">'+
+    '<div class="drawer-head"><div><div class="mini" style="color:#7d8a9b">'+esc(r.code)+' · '+esc(reqPeopleText(r))+'</div>'+
+      '<h3>'+esc(r.title)+'</h3></div><button type="button" class="icon-btn" data-act="close-req" title="关闭">×</button></div>'+
+    '<div class="tbar"><span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span>'+
+      '<span class="tb-role">优先级 '+esc(r.priority)+' · 期望 '+esc(r.due)+'</span><span class="tb-gap"></span>'+
+      '<span class="muted">'+ts.length+' 个任务 · '+pipeCount+' 条 CI 流水</span></div>'+
+    '<div class="drawer-body">'+
+      '<div class="task-actions"><button type="button" class="btn btn-sm btn-primary" data-act="new-task" data-id="'+r.id+'">+ 新建任务</button></div>'+
+      '<div class="blk-title">需求描述</div><p class="hint">'+esc(r.desc||'—')+'</p>'+
+      '<div class="meta-grid" style="margin-top:12px">'+
+        '<div class="mrow"><span class="mk">开发负责人</span><span class="mv">'+esc(personName(r.devOwner))+'</span></div>'+
+        '<div class="mrow"><span class="mk">测试负责人</span><span class="mv">'+esc(personName(r.qaOwner))+'</span></div>'+
+        '<div class="mrow"><span class="mk">产品负责人</span><span class="mv">'+esc(personName(r.pmOwner))+'</span></div>'+
+        '<div class="mrow"><span class="mk">创建时间</span><span class="mv">'+esc(r.createdAt)+'</span></div>'+
+        '<div class="mrow"><span class="mk">期望完成</span><span class="mv">'+esc(r.due)+'</span></div>'+
+      '</div>'+
+      '<div class="blk-title">任务列表（'+ts.length+'）</div>'+
+      '<table class="grid" style="border:1px solid var(--line2);border-radius:8px;overflow:hidden">'+
+        '<thead><tr><th>任务</th><th style="width:14%">负责人</th><th style="width:14%">状态</th><th style="width:18%">进度</th><th style="width:12%"></th></tr></thead>'+
+        '<tbody>'+rows+'</tbody></table>'+
+    '</div></aside>';
+}
+
+function taskDrawer(){
+  var t = taskOf(ui.taskId);
+  if(!t){ ui.taskId = null; return ''; }
+  var r = reqOf(t), ps = pipesOf(t.id), st = taskState(t), m = me();
+  var body;
+  if(ui.tab === 'pipes'){
+    body = ps.length ? ps.map(pipeCard).join('')
+      : '<div class="empty" style="padding:34px 12px"><div class="big">还没有 CI 流水</div>一条流水对应一次合并 + 打包链，例如「Android 包」「iOS 包」</div>'+
+        '<button type="button" class="btn btn-primary" style="width:100%" data-act="new-pipe" data-id="'+t.id+'">+ 新建 CI 流水</button>';
+  } else if(ui.tab === 'commits'){
+    var branch = taskBranch(t), cs = commitsOfTask(t);
+    var crows = cs.map(function(c){
+      return '<tr><td class="mono">'+esc(c.sha)+'</td><td>'+esc(c.msg)+'</td>'+
+        '<td class="muted">'+esc(c.author)+'</td><td class="mono" style="font-size:11px;white-space:nowrap">'+esc(c.at)+'</td></tr>';
+    }).join('');
+    body = '<div class="blk-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+      '<span class="mono" style="font-size:11px">'+esc(branch)+'</span>'+
+      '<span class="muted" style="font-weight:400">最近 20 条提交 · 该任务所有流水共用同一仓库与 Feature 分支</span></div>'+
+      '<table class="grid" style="border:1px solid var(--line2);border-radius:8px;overflow:hidden;margin-bottom:14px">'+
+      '<thead><tr><th style="width:15%">SHA</th><th>提交信息</th><th style="width:14%">提交人</th><th style="width:24%">提交时间</th></tr></thead>'+
+      '<tbody>'+crows+'</tbody></table>'+
+      (ps.length ? '' : '<div class="hint">该任务还没有 CI 流水，上面的分支名为建议命名；新建流水时会用实际 Feature 分支。</div>');
+  } else if(ui.tab === 'builds'){
+    var bs = [];
+    ps.forEach(function(p){ buildsOf(p).forEach(function(b){ bs.push({p:p,b:b}); }); });
+    bs.sort(function(a,b){ return String(a.b.startedAt) < String(b.b.startedAt) ? 1 : -1; });
+    body = bs.length ? bs.map(function(x){
+      return '<div class="build-item"><div class="bi-top"><span class="bi-name">'+esc(x.b.artifact?x.b.artifact.name:'构建 #'+x.b.id)+'</span>'+
+        '<span class="pill pill-'+(x.b.status==='success'?'done':'merging')+'">'+(x.b.status==='success'?'成功':'进行中')+'</span></div>'+
+        '<div class="muted">'+esc(x.p.name)+' · '+esc(stageLabel(x.b.stage))+' · '+esc(x.b.startedAt)+' · '+esc(x.b.duration)+'</div>'+
+        (x.b.artifact?'<div><button type="button" class="btn btn-sm" data-act="download" data-id="'+x.b.id+'">下载</button> <button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+x.b.id+'">查看日志</button></div>':'')+
+      '</div>';
+    }).join('') : '<div class="muted" style="padding:20px 0">还没有构建记录</div>';
+  } else {
+    body = '<div class="meta-grid">'+
+      '<div class="mrow"><span class="mk">所属需求</span><span class="mv">'+esc(r?r.code+' · '+r.title:'—')+'</span></div>'+
+      '<div class="mrow"><span class="mk">开发负责人</span><span class="mv">'+esc(ownerName(t))+'</span></div>'+
+      '<div class="mrow"><span class="mk">测试负责人</span><span class="mv">'+esc(r?personName(r.qaOwner):'—')+'</span></div>'+
+      '<div class="mrow"><span class="mk">产品负责人</span><span class="mv">'+esc(r?personName(r.pmOwner):'—')+'</span></div>'+
+      '<div class="mrow"><span class="mk">优先级</span><span class="mv">'+esc(t.priority)+'</span></div>'+
+      '<div class="mrow"><span class="mk">开始时间</span><span class="mv mono">'+esc(t.start||'—')+'</span></div>'+
+      '<div class="mrow"><span class="mk">结束时间</span><span class="mv mono">'+esc(t.due||'—')+'</span></div>'+
+      '<div class="mrow"><span class="mk">任务状态</span><span class="mv">'+taskStatusPill(t)+'</span></div>'+
+      (st.key === 'overdue' ? '<div class="mrow"><span class="mk">超时归属</span><span class="mv">'+esc(st.label+' · 超期 '+st.days+' 天 · 当前阶段：'+st.phase)+'</span></div>' : '')+
+      '<div class="mrow"><span class="mk">团队</span><span class="mv">'+esc(accountById(t.ownerId)?accountById(t.ownerId).team:'—')+'</span></div>'+
+      '</div>'+
+      '<div class="blk-title">任务描述</div><p class="hint">'+esc(t.desc||'—')+'</p>'+
+      '<div class="blk-title">CI 流水（'+ps.length+' 条）</div>'+
+      (ps.length? ps.map(function(p){
+        var meta = STATUS_META[p.status]||STATUS_META.none;
+        return '<div class="ov-pipe"><span class="mono">'+esc(p.name)+'</span><span class="muted">'+esc(appOf(p)?appOf(p).name:'')+' · '+esc(p.artifactType||'')+'</span>'+
+          '<span class="pill pill-'+meta.cls+'">'+esc(meta.label)+'</span></div>';
+      }).join('') : '<p class="hint">还没有流水，点上方「+ CI 流水」创建</p>')+
+      '<div class="blk-title">任务状态</div><p class="hint">'+esc(st.hint)+'</p>';
+  }
+  return '<div class="drawer-mask" data-act="close-task"></div><aside class="drawer wide">'+
+    '<div class="drawer-head"><div><div class="mini mono" style="color:#7d8a9b">'+esc(r?r.code:'')+' · '+esc(ownerName(t))+'</div>'+
+      '<h3>'+esc(t.title)+'</h3></div><button class="icon-btn" data-act="close-task" title="关闭">×</button></div>'+
+    '<div class="tbar">'+ '<span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span>'+
+      '<span class="tb-role">'+esc(roleLabel(m?m.role:'dev'))+'视角</span>'+
+      '<span class="tb-gap"></span>'+
+      '<span class="muted">'+ps.length+' 条 CI 流水</span></div>'+
+    '<div class="drawer-body">'+
+      '<div class="task-actions">'+taskActionBar(t)+'</div>'+
+      '<div class="tabs">'+taskTabs(t)+'</div>'+
+      body+
+    '</div></aside>';
+}
+
+function pipeDrawer(){
+  var p = pipeOf(ui.pipeId);
+  if(!p){ ui.pipeId = null; return ''; }
+  var t = taskOf(p.taskId), app = appOf(p), stage = currentStage(p), b = buildOf(p);
+  var meta = STATUS_META[p.status] || STATUS_META.none;
+  var conflictBox = '';
+  if(/conflict/.test(p.status)){
+    conflictBox = '<div class="conflict-box"><b>合并中止 · 存在冲突</b>'+
+      'Feature 分支 <span class="mono">'+esc(p.branch)+'</span> 直接合入 <span class="mono">'+esc(branchName(p,stage))+'</span> 时冲突，已创建临时分支：'+
+      '<br><span class="mono" style="font-size:11px;background:#f6f7f9;border:1px solid #e5e8ee;border-radius:6px;padding:2px 6px;display:inline-block;margin:4px 0">'+esc(tempBranchName(p,stage))+'</span>'+
+      '<br>在该临时分支解决以下文件并提交：<br>'+
+      (p.conflictFiles||[]).map(function(f){ return '<span class="mono" style="font-size:11px">· '+esc(f)+'</span>'; }).join('<br>')+
+      '<div style="margin-top:9px"><button type="button" class="btn btn-sm" data-act="conflict-guide" data-id="'+p.id+'">查看冲突处理指令</button></div></div>';
+  }
+  if(p.rework){
+    conflictBox += '<div class="conflict-box" style="border-color:#f3d9b6;background:#fffaef;color:#8a5209">'+
+      '<b style="color:#a16207">'+esc(p.rework.label)+' · '+esc(p.rework.from==='qa'?'回到代码合并':(p.rework.from==='uat'?'退回开发提测':'退回测试'))+'</b>'+
+      '原因：'+esc(p.rework.reason)+'<br>'+esc(p.rework.at)+' · 由 '+esc(p.rework.by)+' 驳回</div>';
+  }
+  var timeline = STAGES.map(function(s){
+    var mm = (p.merges||[]).filter(function(x){ return x.stage === s.key; }).slice(-1)[0];
+    var isCur = !mm && s.key === stage && p.status !== 'done';
+    var cls = mm ? 'on' : (isCur ? (/conflict/.test(p.status)?'fail':'cur') : '');
+    return '<div class="tl '+cls+'"><div class="tl-dot"></div><div style="flex:1;min-width:0">'+
+      '<div class="tl-t">'+esc(s.label)+'<span class="muted" style="font-weight:400">'+esc(s.hint)+'</span></div>'+
+      '<div class="tl-s">'+(mm? esc(mm.sha+' · '+mm.at) : (isCur? '待合入 '+branchName(p,s.key) : '未开始'))+'</div></div></div>';
+  }).join('');
+  var bs = buildsOf(p).slice().reverse().map(function(x){
+    return '<div class="build-item"><div class="bi-top"><span class="bi-name">'+esc(x.artifact?x.artifact.name:'构建 #'+x.id)+'</span>'+
+      '<span class="pill pill-'+(x.status==='success'?'done':'merging')+'">'+(x.status==='success'?'成功':'进行中')+'</span></div>'+
+      '<div class="muted">'+esc(stageLabel(x.stage))+' · '+esc(x.mergeSha)+' · '+esc(x.startedAt)+' · '+esc(x.duration)+'</div>'+
+      '<div style="display:flex;gap:6px;margin-top:2px">'+
+        (x.artifact?'<button type="button" class="btn btn-sm" data-act="download" data-id="'+x.id+'">下载</button>':'')+
+        '<button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+x.id+'">日志</button></div></div>';
+  }).join('');
+  var acts = pipeActions(p);
+  var signed = me() ? roleLabel(me().role) : '';
+  return '<div class="drawer-mask" data-act="close-pipe"></div><aside class="drawer wide">'+
+    '<div class="drawer-head"><div><div class="mini mono" style="color:#7d8a9b">'+esc(t?t.title:'')+' · '+esc(app?app.name:'')+'</div>'+
+      '<h3>'+esc(p.name)+'</h3></div><button class="icon-btn" data-act="close-pipe" title="关闭">×</button></div>'+
+    '<div class="drawer-body">'+
+      '<div class="statusline"><span class="pill pill-'+meta.cls+'">'+esc(meta.label)+'</span><span class="rtag">'+esc(signed)+'</span></div>'+
+      '<div class="stage-dots big">'+pipeDots(p)+'</div>'+
+      conflictBox+
+      '<div class="meta-grid">'+
+        '<div class="mrow"><span class="mk">Feature 分支</span><span class="mv">'+esc(p.branch)+'</span></div>'+
+        '<div class="mrow"><span class="mk">当前目标</span><span class="mv"><span class="mono">'+esc(branchName(p,stage))+'</span> · '+esc(stageLabel(stage))+' 阶段</span></div>'+
+        '<div class="mrow"><span class="mk">产物类型</span><span class="mv">'+esc(p.artifactType||(app?app.artifactType:'—'))+'</span></div>'+
+        '<div class="mrow"><span class="mk">构建脚本</span><span class="mv">'+esc(app?app.buildScript:'')+'</span></div>'+
+        '<div class="mrow"><span class="mk">最近产物</span><span class="mv">'+(b&&b.artifact?esc(b.artifact.name):'—')+'</span></div>'+
+      '</div>'+
+      '<div class="drawer-actions">'+(acts.length? acts.map(function(a){ return actionBtn(a, p.id); }).join('') : '<span class="muted">当前无需操作</span>')+'</div>'+
+      '<div class="blk-title">流转进度</div><div class="timeline">'+timeline+'</div>'+
+      '<div class="blk-title">构建记录</div>'+(bs || '<p class="hint">还没有构建</p>')+
+      '<p class="hint" style="margin-top:14px">冲突时系统会基于 Feature 分支建一条临时分支，开发在临时分支上解冲突并推送，再点「已解决冲突 · 合并」。</p>'+
+    '</div></aside>';
+}
+
+function logHTML(b){
+  if(!b) return '';
+  if(!b.log || !b.log.length) return '<div class="log-empty">历史构建日志已归档</div>';
+  return b.log.map(function(l){
+    var cls = 'll ll-out';
+    if(/^\$/.test(l)) cls = 'll ll-cmd';
+    else if(/SUCCESS|成功|upload/.test(l)) cls = 'll ll-ok';
+    else if(/error|FAILED|冲突/.test(l)) cls = 'll ll-err';
+    else if(/Building|Gradle/.test(l)) cls = 'll ll-warn';
+    return '<div class="'+cls+'">'+esc(l)+'</div>';
+  }).join('');
+}
+function logDrawer(){
+  var b = state.builds.find(function(x){ return x.id === ui.logBuildId; });
+  if(!b){ ui.logBuildId = null; return ''; }
+  var p = pipeOf(b.pipelineId), app = p ? appOf(p) : null;
+  var running = b.status === 'running';
+  return '<div class="log-drawer" id="logRoot">'+
+    '<div class="log-head"><div><div class="log-title">'+esc(app?app.name:'构建')+' · '+esc(stageLabel(b.stage))+' 构建</div>'+
+      '<div class="log-sub">'+esc(p?p.name:'')+' · '+esc(b.start!==undefined?b.start:b.startedAt)+' · '+esc(p?p.branch:'')+'</div></div>'+
+      '<div style="display:flex;gap:8px"><button class="icon-btn" data-act="close-log" title="关闭">×</button></div></div>'+
+    '<div class="log-panel-head"><span>'+(running?'正在执行 ./build_app':'构建结束')+'</span><span>'+(b.artifact?esc(b.artifact.size):'—')+'</span></div>'+
+    '<div style="padding:0 18px 10px"><div class="progress-track"><span data-live-progress style="width:'+(b.progress||(b.status==='success'?100:0))+'%"></span></div></div>'+
+    '<div class="logbox" data-live-log>'+logHTML(b)+(running?'<div class="ll ll-dim">▍</div>':'')+'</div>'+
+    '<div class="log-foot"><span>'+esc(b.duration||'')+'</span><div style="display:flex;gap:8px">'+
+      (p?'<button type="button" class="btn" data-act="back-pipe" data-id="'+p.id+'">返回流水</button>':'')+
+      '<button type="button" class="btn" data-act="close-log">关闭</button></div></div></div>';
+}
+
+/* ---------- 弹框 ---------- */
+function renderModal(){
+  var root = byId('modalRoot');
+  if(!ui.modal){ root.innerHTML = ''; return; }
+  var type = ui.modal.type;
+
+  if(type === 'permcfg'){
+    var pcJson = JSON.stringify(permConfig(), null, 2);
+    var isExport = ui.modal.mode === 'export';
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:800px">'+
+      '<form data-form="permcfg">'+
+        '<div class="modal-head"><div><h3>'+(isExport ? '导出权限配置' : '导入权限配置')+'</h3><p>'+
+          '结构：groups[].perms[]，每项 key / label / menu / hash；保存后立即生效</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body">'+
+          '<textarea name="json" class="perm-json" spellcheck="false">'+esc(pcJson)+'</textarea>'+
+          '<p class="hint" style="margin-top:9px">保存前会校验：groups 与 perms 结构、key 唯一、'+MENUS.length+' 个菜单权限必须存在且 menu=true（否则对应菜单会从导航消失）。新增权限直接加一项，角色权限页会自动多一行。</p>'+
+        '</div>'+
+        '<div class="modal-foot">'+
+          '<button type="button" class="btn" data-act="perm-copy">复制 JSON</button>'+
+          '<button type="button" class="btn" data-act="close-modal">'+(isExport ? '关闭' : '取消')+'</button>'+
+          (isExport ? '' : '<button type="submit" class="btn btn-primary">校验并保存</button>')+
+        '</div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'staff'){
+    var st = ui.modal.id ? accountById(ui.modal.id) : null;
+    var stRole = st ? st.role : 'dev';
+    var stLv = st ? (st.level || 'l1') : 'l1';
+    var roleOpts = ['dev','qa','pm','admin'].map(function(r){
+      return '<option value="'+r+'"'+(stRole===r?' selected':'')+'>'+esc(roleLabel(r))+'</option>';
+    }).join('');
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:600px">'+
+      '<form data-form="staff" data-id="'+(st?st.id:'')+'">'+
+        '<div class="modal-head"><div><h3>'+(st?'编辑人员':'新增人员')+'</h3><p>'+
+          (st?'调整角色与级别会立即改变该成员的可见菜单':'分配登录账号与初始密码，并设定角色和级别')+'</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field"><label>姓名<span class="req-star">*</span></label><input name="name" value="'+esc(st?st.name:'')+'" placeholder="例如 陈默"></div>'+
+          '<div class="field"><label>登录账号<span class="req-star">*</span></label><input name="account" value="'+esc(st?st.account:'')+'" placeholder="小写字母开头，如 chenmo"></div>'+
+          '<div class="field"><label>角色<span class="req-star">*</span></label><select name="role" data-role="staff-role">'+roleOpts+'</select></div>'+
+          '<div class="field"><label>级别</label><div data-role="staff-level-wrap">'+levelOptions(stRole, stLv)+'</div><span class="fx">管理员不设级别，默认拥有全部菜单</span></div>'+
+          '<div class="field"><label>团队</label><input name="team" value="'+esc(st?st.team:'')+'" placeholder="出行 App 组"></div>'+
+          '<div class="field"><label>状态</label><select name="active">'+
+            '<option value="1"'+(st&&st.active===false?'':' selected')+'>正常</option>'+
+            '<option value="0"'+(st&&st.active===false?' selected':'')+'>停用（不可登录）</option></select></div>'+
+          '<div class="field" style="grid-column:1/-1"><label>'+(st?'新密码（留空则保持不变）':'初始密码')+(st?'':'<span class="req-star">*</span>')+'</label>'+
+            '<input name="password" placeholder="Init@123"><span class="fx">原型为明文保存与展示；正式环境应改为加密存储 + 首次登录强制改密</span></div>'+
+        '</div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button class="btn btn-primary">'+(st?'保存修改':'创建人员')+'</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'app'){
+    var a = ui.modal.id ? appById(ui.modal.id) : null;
+    var br = (a && a.branches) || { qa:'qa', uat:'uat', release:'release', master:'master' };
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal">'+
+      '<form data-form="app" data-id="'+(a?a.id:'')+'">'+
+        '<div class="modal-head"><div><h3>'+(a?'编辑应用配置':'新建应用')+'</h3><p>应用只描述仓库、构建脚本与产物，被流水引用</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field"><label>应用名称<span class="req-star">*</span></label><input name="name" value="'+esc(a?a.name:'')+'" placeholder="例如 出行 App"></div>'+
+          '<div class="field"><label>平台<span class="req-star">*</span></label><select name="platform" data-role="app-platform">'+
+            ['android','ios','server','web'].map(function(x){ return '<option value="'+x+'"'+((a?a.platform:'android')===x?' selected':'')+'>'+esc(platformLabel(x))+'</option>'; }).join('')+
+            '</select><span class="fx">Android 与 iOS 分别建一个应用，产物类型 / 构建脚本 / 构建机各不相同</span></div>'+
+          '<div class="field"><label>项目标识<span class="req-star">*</span></label><input name="code" value="'+esc(a?a.code:'')+'" placeholder="virtual_com.travel.overseas.app"></div>'+
+          '<div class="field"><label>默认分支</label><input name="defaultBranch" value="'+esc(a?a.defaultBranch:'main')+'"></div>'+
+          '<div class="field full"><label>Git 仓库地址<span class="req-star">*</span></label><input name="repo" value="'+esc(a?a.repo:'')+'" placeholder="git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git"></div>'+
+          '<div class="field"><label>构建脚本</label><input name="buildScript" value="'+esc(a?a.buildScript:'./build_app')+'"></div>'+
+          '<div class="field"><label>产物类型</label><select name="artifactType">'+
+            ['apk','ipa','jar','war'].map(function(x){ return '<option'+(a&&a.artifactType===x?' selected':'')+'>'+x+'</option>'; }).join('')+'</select></div>'+
+          '<div class="field"><label>构建机</label><input name="machine" value="'+esc(a?a.machine:'builder-01')+'"></div>'+
+          '<div class="field"><label>产物路径</label><input name="artifactPattern" value="'+esc(a?a.artifactPattern:'')+'" placeholder="例如 build/app/outputs/**/*.apk"></div>'+
+          '<div class="field full"><div class="inline4">'+
+            ['qa','uat','release','master'].map(function(k){
+              return '<div><span class="lb">'+k.toUpperCase()+'</span><input name="'+k+'" value="'+esc(br[k]||k)+'"></div>';
+            }).join('')+'</div><span class="fx">流水按阶段合并到这里配置的真实分支</span></div>'+
+        '</div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button type="submit" class="btn btn-primary">'+(a?'保存配置':'创建应用')+'</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'req'){
+    var nextNo = 1044 + state.reqs.length;
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal">'+
+      '<form data-form="req">'+
+        '<div class="modal-head"><div><h3>新建需求</h3><p>需求不绑定应用，应用在任务的流水里选择</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field"><label>需求编号</label><input name="code" value="REQ-'+nextNo+'"></div>'+
+          '<div class="field"><label>开发负责人<span class="req-star">*</span></label>'+ownerSelect('devOwner', ['dev'], 'u1')+'</div>'+
+          '<div class="field"><label>测试负责人<span class="req-star">*</span></label>'+ownerSelect('qaOwner', ['qa'], 'u2')+'</div>'+
+          '<div class="field"><label>产品负责人<span class="req-star">*</span></label>'+ownerSelect('pmOwner', ['pm'], 'u4')+'</div>'+
+          '<div class="field full"><label>需求标题<span class="req-star">*</span></label><input name="title" placeholder="一句话说清要交付什么"></div>'+
+          '<div class="field full"><label>需求描述</label><textarea name="desc" placeholder="背景、验收标准、涉及端…"></textarea></div>'+
+          '<div class="field"><label>优先级</label><select name="priority"><option>高</option><option selected>中</option><option>低</option></select></div>'+
+          '<div class="field"><label>开始时间<span class="req-star">*</span></label><input type="date" name="start" value="'+todayStr()+'"></div>'+
+          '<div class="field"><label>结束时间<span class="req-star">*</span></label><input type="date" name="due" value="2026-11-30"></div>'+
+        '</div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button type="submit" class="btn btn-primary">创建需求</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'task'){
+    var rr = state.reqs.find(function(x){ return x.id === ui.modal.reqId; });
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal">'+
+      '<form data-form="task" data-req="'+esc(ui.modal.reqId)+'">'+
+        '<div class="modal-head"><div><h3>新建任务</h3><p>'+esc(rr?rr.code+' · '+rr.title:'')+'</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field full"><label>任务标题<span class="req-star">*</span></label><input name="title" placeholder="例如 登录页交互改版"></div>'+
+          '<div class="field full"><label>任务描述</label><textarea name="desc" placeholder="交付内容、验收点（可选）"></textarea></div>'+
+          '<div class="field"><label>负责人<span class="req-star">*</span></label><select name="ownerId">'+
+            accounts().filter(function(x){ return x.role==='dev' || x.role==='admin'; }).map(function(x){
+              return '<option value="'+x.id+'"'+(x.id==='u1'?' selected':'')+'>'+esc(x.name)+'（'+esc(roleLabel(x.role))+'）</option>';
+            }).join('')+'</select></div>'+
+          '<div class="field"><label>优先级</label><select name="priority"><option>高</option><option selected>中</option><option>低</option></select></div>'+
+          '<div class="field"><label>开始时间<span class="req-star">*</span></label><input type="date" name="start" value="'+todayStr()+'"></div>'+
+          '<div class="field"><label>结束时间<span class="req-star">*</span></label><input type="date" name="due" value="2026-11-30"></div>'+
+          '<div class="field full"><span class="fx">建完任务后再到任务详情里加 CI 流水：一条流水对应一个应用 + 一条 Feature 分支 + 一种产物。</span></div>'+
+        '</div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button type="submit" class="btn btn-primary">创建任务</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'pipe'){
+    var tk = taskOf(ui.modal.taskId);
+    var appOpts = state.apps.map(function(a){ return '<option value="'+a.id+'">'+esc(a.name)+'（'+esc(platformLabel(a.platform))+' · '+esc(a.artifactType)+'）</option>'; }).join('');
+    var firstApp = state.apps[0] || {};
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal">'+
+      '<form data-form="pipe" data-task="'+esc(ui.modal.taskId)+'">'+
+        '<div class="modal-head"><div><h3>新建 CI 流水</h3><p>'+esc(tk?tk.title:'')+' · 一条流水打一种产物</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field"><label>流水名称<span class="req-star">*</span></label><input name="name" value="Android 包" placeholder="例如 Android 包 / iOS 包"></div>'+
+          '<div class="field"><label>关联应用<span class="req-star">*</span></label><select name="appId" data-role="pipe-app">'+appOpts+'</select></div>'+
+          '<div class="field full"><label>Feature 分支<span class="req-star">*</span></label><input name="branch" placeholder="feature/transfer-direct-label"><span class="fx">开发实际提交的分支；一条流水一条分支，合并到各阶段后仍然保留</span></div>'+
+          '<div class="field full"><label>产物与构建（由应用配置决定）</label>'+
+            '<div class="app-facts" data-role="pipe-app-facts">'+appFacts(firstApp)+'</div>'+
+            '<span class="fx">产物类型与构建脚本只在「应用配置」维护，流水只选应用和 Feature 分支</span></div>'+
+          '<div class="field full"><span class="fx">一个任务可以建多条流水（Flutter 任务可同时打 Android apk 与 iOS ipa），Apple 端要在应用配置里单独建一个 iOS 应用。</span></div>'+
+        '</div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button type="submit" class="btn btn-primary">创建流水</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'reject'){
+    var pt = pipeOf(ui.modal.pipeId);
+    var isTest = ui.modal.kind === 'test';
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:520px">'+
+      '<form data-form="reject" data-pipe="'+esc(ui.modal.pipeId)+'" data-kind="'+esc(ui.modal.kind)+'">'+
+        '<div class="modal-head"><div><h3>'+(isTest?'测试不通过':'Release 验证不通过')+'</h3>'+
+          '<p>'+esc(pt?pt.name+' · '+STATUS_META[pt.status].label:'')+'</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field full"><label>不通过原因<span class="req-star">*</span></label><textarea name="reason" placeholder="例如：切换门店后 KPI 卡片数值未刷新"></textarea></div>'+
+          '<div class="field full"><span class="fx">'+(isTest?'退回「已合入 QA」：开发修复后重新合并、打包、自测通过、再提测。':'退回「测试中」：重新打包 UAT 后才能再次合并 Release。')+'</span></div>'+
+        '</div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button type="submit" class="btn btn-primary">确认退回</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'conflict'){
+    var pc = pipeOf(ui.modal.pipeId);
+    if(!pc){ ui.modal = null; root.innerHTML = ''; return; }
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:720px">'+
+      '<div class="modal-head"><div><h3>代码合并冲突通知</h3>'+
+        '<p>'+esc(pc.name)+' · 目标分支 '+esc(branchName(pc,currentStage(pc)))+'</p></div>'+
+        '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+      '<div class="modal-body">'+conflictGuideBody(pc)+'</div>'+
+      '<div class="modal-foot">'+
+        '<button type="button" class="btn" data-act="close-modal">稍后处理</button>'+
+        '<button type="button" class="btn btn-primary" data-act="resolve" data-id="'+pc.id+'">已解决冲突 · 合并</button>'+
+      '</div></div></div>';
+    return;
+  }
+  root.innerHTML = '';
+}
+
+/* ---------- Toast / 下载 ---------- */
+function toast(msg, type){
+  var root = byId('toastRoot');
+  var el = document.createElement('div');
+  el.className = 'toast toast-' + (type || 'info');
+  el.innerHTML = '<span class="toast-dot"></span><span>' + esc(msg) + '</span>';
+  root.appendChild(el);
+  setTimeout(function(){ el.classList.add('out'); setTimeout(function(){ el.remove(); }, 280); }, 3400);
+}
+function downloadArtifact(buildId){
+  var b = state.builds.find(function(x){ return x.id === buildId; });
+  if(!b || !b.artifact){ toast('产物不存在','error'); return; }
+  var content = 'ShipFlow 原型模拟产物\n' + b.artifact.name + '\n构建 ' + b.id + '\nmerge ' + b.mergeSha + '\n';
+  var blob = new Blob([content], { type:'application/octet-stream' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = b.artifact.name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 800);
+  toast('开始下载 ' + b.artifact.name, 'info');
+}
+
+/* ---------- 事件 ---------- */
+/* Esc 逐层关闭：弹框 → 日志 → 流水 → 任务 */
+document.addEventListener('keydown', function(e){
+  if(e.key !== 'Escape' && e.keyCode !== 27) return;
+  if(ui.modal){ ui.modal = null; renderModal(); return; }
+  if(ui.logBuildId){ ui.logBuildId = null; renderDrawer(); return; }
+  if(ui.pipeId){ ui.pipeId = null; renderDrawer(); return; }
+  if(ui.taskId){ ui.taskId = null; renderDrawer(); return; }
+  if(ui.reqId){ ui.reqId = null; renderDrawer(); return; }
+});
+
+document.addEventListener('click', function(e){
+  var el = e.target.closest('[data-act]');
+  if(!el) return;
+  var act = el.dataset.act, id = el.dataset.id;
+
+  if(act === 'overlay'){
+    if(e.target.closest('.modal')) return;
+    ui.modal = null; renderModal(); return;
+  }
+  if(act === 'close-modal'){ ui.modal = null; renderModal(); return; }
+  if(act === 'home-tab'){ ui.homeTab = id; render(); return; }
+  if(act === 'perm-col'){
+    var rk = id, pr = rk.split('/'), role = pr[0], lv = pr[1];
+    var cols = permColKeys(), have = permsFor(role, lv);
+    var allOn = cols.length && cols.every(function(k){ return have.indexOf(k) >= 0; });
+    var keep = have.filter(function(k){ return cols.indexOf(k) < 0; });
+    state.perms[rk] = allOn ? keep : keep.concat(cols);
+    save(); render();
+    toast(roleLabel(role)+' '+levelLabel(role,lv)+'：'+(allOn?'已清空 ':'已全选 ')+cols.length+' 项权限');
+    return;
+  }
+  if(act === 'perm'){
+    var mk = el.dataset.menu, pk = id;
+    var pl = (state.perms[pk] || DEFAULT_PERMS[pk] || []).slice();
+    var pi = pl.indexOf(mk);
+    if(pi >= 0) pl.splice(pi, 1); else pl.push(mk);
+    state.perms[pk] = pl; save(); render();
+    return;
+  }
+  if(act === 'perm-reset'){
+    state.permCfg = JSON.parse(JSON.stringify(PERM_CONFIG));
+    state.perms = JSON.parse(JSON.stringify(DEFAULT_PERMS));
+    save(); render(); toast('已恢复默认：权限配置回到 perm-config，分配回到默认');
+    return;
+  }
+  if(act === 'perm-group'){
+    ui.permCollapsed = ui.permCollapsed || {};
+    if(ui.permCollapsed[id]) delete ui.permCollapsed[id]; else ui.permCollapsed[id] = true;
+    render();
+    return;
+  }
+  if(act === 'perm-toggle-all'){
+    var gs = permGroups(), foldedNow = ui.permCollapsed || {};
+    var allF = gs.every(function(g){ return foldedNow[g.key]; });
+    ui.permCollapsed = {};
+    if(!allF) gs.forEach(function(g){ ui.permCollapsed[g.key] = true; });
+    render();
+    return;
+  }
+  if(act === 'perm-import'){ ui.modal = { type:'permcfg', mode:'import' }; renderModal(); return; }
+  if(act === 'perm-export'){ ui.modal = { type:'permcfg', mode:'export' }; renderModal(); return; }
+  if(act === 'perm-copy'){
+    var pta = document.querySelector('.perm-json');
+    if(!pta) return;
+    pta.select();
+    var okc = false;
+    try{ okc = document.execCommand('copy'); }catch(ec){}
+    if(!okc && navigator.clipboard && navigator.clipboard.writeText){
+      try{ navigator.clipboard.writeText(pta.value); okc = true; }catch(ec2){}
+    }
+    toast(okc ? 'JSON 已复制到剪贴板' : '复制失败，请手动全选复制');
+    return;
+  }
+  if(act === 'new-staff'){ ui.modal = { type:'staff' }; renderModal(); return; }
+  if(act === 'edit-staff'){ ui.modal = { type:'staff', id:id }; renderModal(); return; }
+  if(act === 'reset-pwd'){
+    var ra = accountById(id);
+    if(!ra) return;
+    var cs = 'abcdefghjkmnpqrstuvwxyz23456789', np = '', qi;
+    for(qi = 0; qi < 8; qi++) np += cs[Math.floor(Math.random()*cs.length)];
+    ra.password = np; save();
+    toast('已重置 ' + ra.name + ' 的密码：' + np + '（仅本次显示）');
+    return;
+  }
+  if(act === 'login'){
+    ui.userId = id;
+    localStorage.setItem(USER_KEY, id);
+    ui.taskId = null; ui.pipeId = null; ui.logBuildId = null; ui.reqId = null; ui.tab = 'overview';
+    if(location.hash === '#/login' || !location.hash) location.hash = '#/home';
+    render();
+    toast('已登录：' + accountById(id).name + ' · ' + roleLabel(accountById(id).role), 'success');
+    return;
+  }
+  if(act === 'logout'){
+    ui.userId = null; localStorage.removeItem(USER_KEY);
+    ui.taskId = null; ui.pipeId = null; ui.logBuildId = null;
+    render();
+    return;
+  }
+  if(act === 'switch-user'){
+    ui.userId = null; localStorage.removeItem(USER_KEY);
+    ui.taskId = null; ui.pipeId = null;
+    render();
+    return;
+  }
+  if(act === 'open-task'){ ui.taskId = id; ui.pipeId = null; ui.logBuildId = null; ui.tab = 'overview'; render(); return; }
+  if(act === 'close-task'){ ui.taskId = null; render(); return; }
+  if(act === 'open-pipe'){ ui.pipeId = id; ui.logBuildId = null; render(); return; }
+  if(act === 'close-pipe'){ ui.pipeId = null; render(); return; }
+  if(act === 'tab'){
+    ui.tab = id; renderDrawer(); return;
+  }
+  if(act === 'open-req'){
+    var rid = state.reqs.some(function(x){ return x.id === id; }) ? id : null;
+    if(!rid){ var t0 = taskOf(id), r0 = t0 ? reqOf(t0) : null; rid = r0 ? r0.id : null; }
+    if(rid){
+      ui.reqId = rid; ui.taskId = null; ui.pipeId = null; ui.logBuildId = null;
+      history.replaceState(null, '', '#/reqs');
+      render();
+    }
+    return;
+  }
+  if(act === 'close-req'){ ui.reqId = null; render(); return; }
+  if(act === 'open-log'){ ui.logBuildId = id; ui.pipeId = null; render(); return; }
+  if(act === 'close-log'){ ui.logBuildId = null; render(); return; }
+  if(act === 'back-pipe'){ ui.logBuildId = null; ui.pipeId = id; render(); return; }
+  if(act === 'new-pipe'){ ui.modal = { type:'pipe', taskId:id }; renderModal(); return; }
+  if(act === 'new-task'){ ui.modal = { type:'task', reqId:id }; renderModal(); return; }
+  if(act === 'new-req'){ ui.modal = { type:'req' }; renderModal(); return; }
+  if(act === 'new-app'){ ui.modal = { type:'app' }; renderModal(); return; }
+  if(act === 'edit-app'){ ui.modal = { type:'app', id:id }; renderModal(); return; }
+  if(act === 'copy'){
+    var txt = el.dataset.copy || '';
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ toast('已复制：'+txt,'success'); }, function(){ toast('复制失败，请手动选中命令','warn'); });
+    } else { toast('复制失败，请手动选中命令','warn'); }
+    return;
+  }
+  if(act === 'conflict-guide'){
+    ui.modal = { type:'conflict', pipeId:id }; renderModal(); return;
+  }
+  if(act === 'resolve'){
+    if(ui.modal){ ui.modal = null; renderModal(); }
+    resolveConflict(id); return;
+  }
+  if(act === 'startDev'){ doMerge(id, 'qa'); return; }
+  if(act === 'startTest'){ doMerge(id, 'uat'); return; }
+  if(act === 'prepareRelease'){ doMerge(id, 'release'); return; }
+  if(act === 'accept'){ doMerge(id, 'master'); return; }
+  if(act === 'build'){ runBuild(id); return; }
+  if(act === 'qaPass'){ qaPass(id); return; }
+  if(act === 'qaReject'){ qaReject(id); return; }
+  if(act === 'submitTest'){ submitTest(id); return; }
+  if(act === 'verifyPass'){ verifyPass(id); return; }
+  if(act === 'rejectTest'){ ui.modal = { type:'reject', pipeId:id, kind:'test' }; renderModal(); return; }
+  if(act === 'rejectRelease'){ ui.modal = { type:'reject', pipeId:id, kind:'release' }; renderModal(); return; }
+  if(act === 'download'){ downloadArtifact(id); return; }
+  if(act === 'dequeue'){
+    runtime.queue = runtime.queue.filter(function(q){ return q.pipelineId !== id; });
+    save(); render(); toast('已取消排队','info'); return;
+  }
+  if(act === 'del-task'){
+    if(confirm('删除任务会同时删除它下面的 CI 流水，确定吗？')){
+      state.tasks = state.tasks.filter(function(x){ return x.id !== id; });
+      state.pipelines = state.pipelines.filter(function(x){ return x.taskId !== id; });
+      ui.taskId = null; ui.pipeId = null; save(); render();
+      toast('任务已删除','info');
+    }
+    return;
+  }
+});
+
+document.addEventListener('input', function(e){
+  var role = e.target.dataset.role;
+  if(role === 'req-q'){ ui.reqQ = e.target.value; render(); }
+});
+
+document.addEventListener('input', function(e){
+  if(e.target.dataset.role === 'perm-q'){
+    ui.permQ = e.target.value;
+    render();
+    var box = document.querySelector('[data-role="perm-q"]');
+    if(box){ box.focus(); try{ box.setSelectionRange(box.value.length, box.value.length); }catch(err){} }
+  }
+});
+document.addEventListener('change', function(e){
+  var role = e.target.dataset.role;
+  if(role === 'artifact-app'){ ui.artifactApp = e.target.value; render(); }
+  if(role === 'staff-role'){
+    var sf = e.target.closest('form');
+    var sw = sf && sf.querySelector('[data-role="staff-level-wrap"]');
+    if(sw) sw.innerHTML = levelOptions(e.target.value, 'l1');
+  }
+  if(role === 'app-platform'){
+    var pf = e.target.value, form0 = e.target.closest('form');
+    var DEF = { android:'apk', ios:'ipa', server:'jar', web:'war' };
+    if(form0){
+      var typeSel = form0.querySelector('[name="artifactType"]');
+      if(typeSel && DEF[pf]) typeSel.value = DEF[pf];
+    }
+  }
+  if(role === 'pipe-app'){
+    var app = appById(e.target.value);
+    var form = e.target.closest('form');
+    if(app && form){
+      var facts = form.querySelector('[data-role="pipe-app-facts"]');
+      if(facts) facts.innerHTML = appFacts(app);
+      var nameInput = form.querySelector('[name="name"]');
+      var nm = nameInput ? nameInput.value.trim() : '';
+      if(nameInput && (!nm || nm === 'Android 包' || nm === 'iOS 包' || nm === 'Web 包' || nm === '服务端 包')){
+        nameInput.value = platformLabel(app.platform) + ' 包';
+      }
+    }
+  }
+});
+
+document.addEventListener('submit', function(e){
+  var form = e.target.closest('[data-form]');
+  if(!form) return;
+  e.preventDefault();
+  var kind = form.dataset.form;
+  var fd = new FormData(form);
+
+  if(kind === 'permcfg'){
+    var rawJson = fd.get('json') || '';
+    var cfgNew;
+    try{ cfgNew = JSON.parse(rawJson); }catch(err){ toast('JSON 解析失败：' + err.message,'error'); return; }
+    if(!cfgNew || !Array.isArray(cfgNew.groups) || !cfgNew.groups.length){ toast('配置必须有 groups 数组且至少一组','error'); return; }
+    var seenKeys = {}, problem = '';
+    cfgNew.groups.forEach(function(g){
+      if(!g.key || !g.label){ problem = problem || '分组缺少 key / label'; }
+      (g.perms || []).forEach(function(pp){
+        if(!pp.key || !pp.label){ problem = problem || '权限缺少 key / label'; }
+        if(seenKeys[pp.key]){ problem = problem || ('权限 key 重复：' + pp.key); }
+        seenKeys[pp.key] = true;
+      });
+    });
+    var missing = MENUS.filter(function(m){ return !seenKeys[m.key]; });
+    if(missing.length){
+      toast('缺少菜单权限：' + missing.map(function(m){ return m.key; }).join('、') + '，对应菜单会不可用','error');
+      return;
+    }
+    if(problem){ toast(problem,'error'); return; }
+    cfgNew.version = cfgNew.version || 1;
+    state.permCfg = cfgNew;
+    var okKeys = allPermKeys();
+    Object.keys(state.perms || {}).forEach(function(k){
+      state.perms[k] = (state.perms[k] || []).filter(function(x){ return okKeys.indexOf(x) >= 0; });
+    });
+    ui.modal = null; save(); render();
+    toast('权限配置已更新，共 ' + okKeys.length + ' 项','success');
+    return;
+  }
+
+  if(kind === 'staff'){
+    var sName = (fd.get('name')||'').trim();
+    var sAcc = (fd.get('account')||'').trim().toLowerCase();
+    var sRole = fd.get('role')||'dev';
+    var sLv = sRole === 'admin' ? '' : (fd.get('level')||'l1');
+    var sPwd = (fd.get('password')||'').trim();
+    var sTeam = (fd.get('team')||'').trim() || '—';
+    var sId = form.dataset.id;
+    if(!sName){ toast('请填写姓名','error'); return; }
+    if(!/^[a-z][a-z0-9._-]{2,}$/.test(sAcc)){ toast('账号需小写字母开头、至少 3 位，可含数字与 . _ -','error'); return; }
+    var dup = accounts().filter(function(x){ return x.account === sAcc && x.id !== sId; })[0];
+    if(dup){ toast('账号已被占用：' + dup.name,'error'); return; }
+    if(!sId && !sPwd){ toast('请填写初始密码','error'); return; }
+    var acc = sId ? accountById(sId) : null;
+    var COLORS = ['#3b6fd4','#0f8a5f','#b4520e','#7c3aed','#0e7490','#b91c1c','#475569'];
+    if(!acc){
+      var maxN = accounts().reduce(function(n,x){ return Math.max(n, parseInt(String(x.id).replace('u',''),10)||0); }, 0);
+      acc = { id:'u'+(maxN+1), name:sName, role:sRole, level:sLv, account:sAcc, password:sPwd,
+              active:true, team:sTeam, color:COLORS[maxN % COLORS.length] };
+      state.accounts.push(acc);
+    } else {
+      acc.name = sName; acc.role = sRole; acc.level = sLv; acc.account = sAcc; acc.team = sTeam;
+      if(sPwd) acc.password = sPwd;
+    }
+    acc.active = fd.get('active') !== '0';
+    save(); ui.modal = null; renderModal(); render();
+    toast(sId ? '已保存 ' + sName + ' 的角色与权限' : '已新增人员 ' + sName + '，账号 ' + sAcc + ' / 密码 ' + sPwd);
+    return;
+  }
+
+  if(kind === 'app'){
+    var name = (fd.get('name')||'').trim(), code = (fd.get('code')||'').trim(), repo = (fd.get('repo')||'').trim();
+    if(!name || !code || !repo){ toast('应用名称、项目标识、仓库地址都要填','error'); return; }
+    var payload = {
+      name:name, code:code, repo:repo,
+      platform:(fd.get('platform')||'android'),
+      defaultBranch:(fd.get('defaultBranch')||'main').trim(),
+      buildScript:(fd.get('buildScript')||'./build_app').trim(),
+      artifactType:fd.get('artifactType')||'apk',
+      artifactPattern:(fd.get('artifactPattern')||'').trim() || ('build/**/*.'+(fd.get('artifactType')||'apk')),
+      stack:'—', machine:(fd.get('machine')||'builder-01').trim(),
+      branches:{ qa:fd.get('qa')||'qa', uat:fd.get('uat')||'uat', release:fd.get('release')||'release', master:fd.get('master')||'master' }
+    };
+    var id = form.dataset.id;
+    if(id){
+      var a = appById(id);
+      Object.keys(payload).forEach(function(k){ a[k] = payload[k]; });
+      toast('应用配置已保存','success');
+    } else {
+      payload.id = uid('a'); payload.createdAt = fmtNow();
+      state.apps.push(payload);
+      toast('应用已创建','success');
+    }
+    ui.modal = null; save(); render(); return;
+  }
+
+  if(kind === 'req'){
+    var title = (fd.get('title')||'').trim();
+    if(!title){ toast('需求标题要填','error'); return; }
+    var rStart = fd.get('start') || todayStr(), rDue = fd.get('due') || '';
+    if(rDue && rDue < rStart){ toast('结束时间不能早于开始时间','error'); return; }
+    state.reqs.push({ id:uid('r'), code:(fd.get('code')||'').trim()||('REQ-'+Math.floor(Math.random()*1000)),
+      title:title, desc:(fd.get('desc')||'').trim(),
+      devOwner:fd.get('devOwner'), qaOwner:fd.get('qaOwner'), pmOwner:fd.get('pmOwner'),
+      priority:fd.get('priority')||'中', start:rStart, createdAt:fmtNow().slice(0,10), due:rDue||'2026-12-31' });
+    ui.modal = null; save(); render(); toast('需求已创建，接下来拆任务','success'); return;
+  }
+
+  if(kind === 'task'){
+    var tt = (fd.get('title')||'').trim();
+    if(!tt){ toast('任务标题要填','error'); return; }
+    var tStart = fd.get('start') || todayStr(), tDue = fd.get('due') || '';
+    if(!tDue){ toast('请选择结束时间','error'); return; }
+    if(tDue < tStart){ toast('结束时间不能早于开始时间','error'); return; }
+    state.tasks.push({ id:uid('t'), reqId:form.dataset.req, title:tt, desc:(fd.get('desc')||'').trim(),
+      ownerId:fd.get('ownerId'), priority:fd.get('priority')||'中',
+      start:tStart, createdAt:fmtNow().slice(0,10), due:tDue });
+    ui.modal = null; save(); render(); toast('任务已创建，可以给它加 CI 流水了','success'); return;
+  }
+
+  if(kind === 'pipe'){
+    var pname = (fd.get('name')||'').trim(), branch = (fd.get('branch')||'').trim();
+    if(!pname){ toast('流水名称要填','error'); return; }
+    if(!branch){ toast('Feature 分支要填','error'); return; }
+    var app = appById(fd.get('appId'));
+    if(app && [app.branches.qa, app.branches.uat, app.branches.release, app.branches.master].indexOf(branch) >= 0){
+      toast('Feature 分支不能与目标分支同名','error'); return;
+    }
+    state.pipelines.push({ id:uid('p'), taskId:form.dataset.task, appId:fd.get('appId'), name:pname,
+      branch:branch, artifactType:app?app.artifactType:'apk',
+      status:'none', createdAt:fmtNow(),
+      conflicts:{ qa:false, uat:false, release:false, master:false }, merges:[] });
+    ui.modal = null; save(); render();
+    toast('CI 流水已创建：'+pname,'success'); return;
+  }
+
+  if(kind === 'reject'){
+    var reason = (fd.get('reason')||'').trim();
+    if(!reason){ toast('请填写不通过原因','error'); return; }
+    var pid = form.dataset.pipe, k = form.dataset.kind;
+    var pf = pipeOf(pid);
+    if(!pf){ ui.modal = null; renderModal(); return; }
+    if(k === 'test'){
+      pf.merges = (pf.merges||[]).filter(function(m){ return m.stage === 'qa'; });
+      pf.status = 'dev_merged';
+      pf.rework = { from:'uat', label:'测试不通过', reason:reason, by:(me()?me().name:'测试'), at:fmtNow() };
+      pf.submittedAt = null;
+    } else {
+      pf.merges = (pf.merges||[]).filter(function(m){ return m.stage === 'qa' || m.stage === 'uat'; });
+      pf.status = 'testing';
+      pf.rework = { from:'release', label:'Release 验证不通过', reason:reason, by:(me()?me().name:'测试'), at:fmtNow() };
+    }
+    ui.modal = null; save(); render();
+    toast('已退回上一节点，需重新打包后再流转','warn');
+    return;
+  }
+});
+
+/* ---------- 渲染与路由 ---------- */
+function render(){
+  var m = me();
+  if(!m){
+    document.body.classList.add('logged-out');
+    byId('sidebar').innerHTML = '';
+    byId('view').innerHTML = viewLogin();
+    renderDrawer(); renderModal();
+    return;
+  }
+  document.body.classList.remove('logged-out');
+  renderSidebar();
+  var h = location.hash || '#/home';
+  var content;
+  if(/^#\/req\//.test(h)){
+    var rid0 = h.replace('#/req/', '');
+    if(state.reqs.some(function(x){ return x.id === rid0; })) ui.reqId = rid0;
+    content = viewReqs();
+  } else if(h.indexOf('#/board') === 0){
+    content = viewBoard();
+  } else if(h.indexOf('#/apps') === 0){
+    content = viewApps();
+  } else if(h.indexOf('#/reqs') === 0){
+    content = viewReqs();
+  } else if(h.indexOf('#/artifacts') === 0){
+    content = viewArtifacts();
+  } else if(h.indexOf('#/roles') === 0){
+    content = viewRoles();
+  } else if(h.indexOf('#/staff') === 0){
+    content = viewStaff();
+  } else if(h.indexOf('#/spec') === 0){
+    content = viewSpec();
+  } else {
+    content = viewHome();
+  }
+  if(!canMenu(routeKey(h))) content = deniedView();
+  byId('view').innerHTML = content;
+  renderDrawer();
+  renderModal();
+}
+window.addEventListener('hashchange', function(){ ui.taskId = null; ui.pipeId = null; ui.reqId = null; render(); });
+
+/* ---------- 启动 ---------- */
+state = loadState();
+if(!state.pipelines) state = seed();
+if(ui.userId && !me()) ui.userId = null;
+if(!location.hash) location.hash = me() ? '#/home' : '#/login';
+render();
+
+</script>
+</body>
+</html>
