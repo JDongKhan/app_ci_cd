@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>ShipFlow · 代码合并与打包平台</title>
+<meta name="description" content="ShipFlow 代码合并与打包平台的技术方案、详细设计与交互原型。">
+<link rel="stylesheet" href="./assets/docs.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./index.html">
+    <span class="brand-mark">SF</span>
+    <span><b>ShipFlow</b><small>代码合并与打包平台</small></span>
+  </a>
+  <nav class="topnav">
+    <a href="./index.html" class="active">首页</a>
+    <a href="./需求说明.html">需求说明</a>
+    <a href="./技术方案.html">技术方案</a>
+    <a href="./设计文档.html">详细设计</a>
+    <a href="./代码合并与打包平台-原型.html">交互原型</a>
+  </nav>
+</header>
+
+<main class="home">
+  <section class="home-hero">
+    <div class="home-eyebrow">ShipFlow · Internal Delivery</div>
+    <h1>代码合并与打包平台</h1>
+    <p>
+      把需求、任务、CI 流水、代码合并、打包和产物串成一条可追踪的交付链路。
+      一期以本地可运行为先，使用 SQLite 文件数据库，真实执行 Git 合并与构建脚本，
+      同时保留迁移到 PostgreSQL 的仓储抽象。
+    </p>
+    <div class="home-actions">
+      <a class="btn btn-primary" href="./需求说明.html">阅读需求说明</a>
+      <a class="btn" href="./技术方案.html">技术方案</a>
+      <a class="btn" href="./设计文档.html">详细设计</a>
+      <a class="btn" href="./代码合并与打包平台-原型.html">交互原型</a>
+    </div>
+  </section>
+
+  <section class="doc-grid" aria-label="文档入口">
+    <a class="doc-card" href="./需求说明.html">
+      <div class="kicker">Requirements</div>
+      <h2>需求说明</h2>
+      <p>一期范围与数据模型、需求 / 任务 / 流水三类状态、超时与结束规则、首页 tab、角色权限与接口草案。</p>
+    </a>
+    <a class="doc-card" href="./技术方案.html">
+      <div class="kicker">Solution</div>
+      <h2>技术方案</h2>
+      <p>总体架构、前后端选型、本地运行形态、SQLite 存储设计，以及未来切换 PostgreSQL 的迁移路径。</p>
+    </a>
+    <a class="doc-card" href="./设计文档.html">
+      <div class="kicker">Design</div>
+      <h2>详细设计</h2>
+      <p>账号角色、权限矩阵、需求任务、流水状态机、构建队列与产物设计，附完整建表 SQL。</p>
+    </a>
+    <a class="doc-card" href="./代码合并与打包平台-原型.html">
+      <div class="kicker">Prototype</div>
+      <h2>交互原型</h2>
+      <p>可直接打开的 HTML 原型，覆盖首页、看板、需求、应用、产物、角色权限和任务流水详情。</p>
+    </a>
+  </section>
+
+  <section class="home-strip" aria-label="技术要点">
+    <div class="home-stat">
+      <b>Vue 3 + Element Plus</b>
+      <span>前端技术栈</span>
+    </div>
+    <div class="home-stat">
+      <b>NestJS + Prisma</b>
+      <span>API 与数据访问</span>
+    </div>
+    <div class="home-stat">
+      <b>SQLite → PostgreSQL</b>
+      <span>一期零安装，保留迁移边界</span>
+    </div>
+    <div class="home-stat">
+      <b>真实 Git + 打包</b>
+      <span>单机串行构建与产物入库</span>
+    </div>
+  </section>
+</main>
+
+<footer class="doc-footer" style="max-width:1180px;margin:0 auto;padding:0 32px 40px;">
+  <span>ShipFlow · 内部研发交付平台</span>
+  <span>需求说明 · 技术方案 · 详细设计 · 交互原型</span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>需求说明 · ShipFlow</title>
+<meta name="description" content="ShipFlow 需求说明：一期范围、数据模型、需求 / 任务 / 流水三类状态、超时规则、角色权限与接口草案。">
+<link rel="stylesheet" href="./assets/docs.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./index.html">
+    <span class="brand-mark">SF</span>
+    <span><b>ShipFlow</b><small>代码合并与打包平台</small></span>
+  </a>
+  <nav class="topnav">
+    <a href="./index.html">首页</a>
+    <a href="./需求说明.html" class="active">需求说明</a>
+    <a href="./技术方案.html">技术方案</a>
+    <a href="./设计文档.html">详细设计</a>
+    <a href="./代码合并与打包平台-原型.html">交互原型</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="toc-title">目录</div>
+    <nav class="toc"><a class="toc-link toc-h2" href="#sec-1">1. 一期目标与范围</a>
+<a class="toc-link toc-h2" href="#sec-2">2. 数据模型</a>
+<a class="toc-link toc-h2" href="#sec-3">3. 三类状态：需求 / 任务 / 流水</a>
+<a class="toc-link toc-h3" href="#sec-4">3.1 需求状态</a>
+<a class="toc-link toc-h3" href="#sec-5">3.2 任务状态</a>
+<a class="toc-link toc-h3" href="#sec-6">3.3 流水状态</a>
+<a class="toc-link toc-h3" href="#sec-7">3.4 合并阶段与目标分支</a>
+<a class="toc-link toc-h3" href="#sec-8">3.5 冲突处理</a>
+<a class="toc-link toc-h3" href="#sec-9">3.6 三处硬门禁</a>
+<a class="toc-link toc-h2" href="#sec-10">4. 超时与结束规则</a>
+<a class="toc-link toc-h2" href="#sec-10b">4A. 工作流程：谁在哪一步做什么</a>
+<a class="toc-link toc-h2" href="#sec-11">5. 首页「我的任务」tab 规则</a>
+<a class="toc-link toc-h2" href="#sec-12">6. 角色、级别与权限</a>
+<a class="toc-link toc-h2" href="#sec-13">7. 接口草案</a>
+<a class="toc-link toc-h2" href="#sec-14">8. 已确认规则</a>
+<a class="toc-link toc-h2" href="#sec-15">9. 原型操作路径</a></nav>
+  </aside>
+  <main class="content">
+    <div class="doc-header">
+      <div class="doc-eyebrow">需求说明</div>
+      <h1>ShipFlow 需求说明</h1>
+      <p class="doc-sub">一期范围、三类状态、超时规则与角色权限</p>
+    </div>
+    <details class="mobile-toc">
+      <summary>目录</summary>
+      <nav class="toc"><a class="toc-link toc-h2" href="#sec-1">1. 一期目标与范围</a>
+<a class="toc-link toc-h2" href="#sec-2">2. 数据模型</a>
+<a class="toc-link toc-h2" href="#sec-3">3. 三类状态：需求 / 任务 / 流水</a>
+<a class="toc-link toc-h3" href="#sec-4">3.1 需求状态</a>
+<a class="toc-link toc-h3" href="#sec-5">3.2 任务状态</a>
+<a class="toc-link toc-h3" href="#sec-6">3.3 流水状态</a>
+<a class="toc-link toc-h3" href="#sec-7">3.4 合并阶段与目标分支</a>
+<a class="toc-link toc-h3" href="#sec-8">3.5 冲突处理</a>
+<a class="toc-link toc-h3" href="#sec-9">3.6 三处硬门禁</a>
+<a class="toc-link toc-h2" href="#sec-10">4. 超时与结束规则</a>
+<a class="toc-link toc-h2" href="#sec-10b">4A. 工作流程：谁在哪一步做什么</a>
+<a class="toc-link toc-h2" href="#sec-11">5. 首页「我的任务」tab 规则</a>
+<a class="toc-link toc-h2" href="#sec-12">6. 角色、级别与权限</a>
+<a class="toc-link toc-h2" href="#sec-13">7. 接口草案</a>
+<a class="toc-link toc-h2" href="#sec-14">8. 已确认规则</a>
+<a class="toc-link toc-h2" href="#sec-15">9. 原型操作路径</a></nav>
+    </details>
+    <article class="markdown-body">
+<blockquote>
+<p>状态：一期需求说明（2026-11-20）<br>关联原型：<a href="./%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%E4%B8%8E%E6%89%93%E5%8C%85%E5%B9%B3%E5%8F%B0-%E5%8E%9F%E5%9E%8B.html">代码合并与打包平台-原型.html</a><br>技术方案：<a href="./%E6%8A%80%E6%9C%AF%E6%96%B9%E6%A1%88.html">技术方案.html</a> · 详细设计：<a href="./%E8%AE%BE%E8%AE%A1%E6%96%87%E6%A1%A3.html">设计文档.html</a></p>
+</blockquote>
+
+<h2 id="sec-1">1. 一期目标与范围</h2>
+<p>把「应用 → 需求 → 任务 → CI 流水 → 合并 → 打包 → 产物」串成一条可追踪的流水线。一期范围是登录与角色、需求、任务、多条 CI 流水、合并与打包、产物入库。</p>
+<ul>
+<li>应用配置与需求解耦：需求不关联应用，应用在新建流水时选择。</li>
+<li>一个任务可以挂多条 CI 流水，例如 Flutter 任务同时打 Android APK 与 iOS IPA；产物类型与构建脚本在应用里固定，应用按平台分 Android / iOS。</li>
+<li>每条流水独立保存 Feature 分支、目标分支映射、合并记录、构建记录与产物。</li>
+<li>提交记录按任务一份：一个任务对应一个代码仓库、一条 Feature 分支，多条流水共用它，只是产出不同产物（apk / ipa / jar 等）。</li>
+<li>登录按账号区分角色：开发 / 测试 / 管理员 / 产品；除管理员外每个角色分 L1~L3。</li>
+<li>首页只放「我的任务」，列表不提供操作按钮，所有操作都进任务详情；分三个 tab：进行中 / 跟我有关 · 其他状态 / 我的需求。</li>
+<li>任务状态由任务详情的按钮推进：开始开发 → 提测 → 开始测试 → 进入待发布 → 完成发布。</li>
+<li>流水只负责代码合并与打包：合并、冲突待解决、已解决冲突、打包 QA/UAT/Release、通过、拒绝。</li>
+<li>建需求时同时指定开发负责人、测试负责人、产品负责人。</li>
+<li>一期不做：Jenkins 接入、审批流、镜像构建、蓝绿发布、自动回滚。</li>
+</ul>
+
+<h2 id="sec-2">2. 数据模型</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>实体</th><th>关键字段</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>账号 Account</td><td><code>id / name / role / level / account / password / team / active</code></td><td>角色 dev / qa / admin / pm；admin 不设 level；<code>active=false</code> 不出现在登录页</td></tr>
+<tr><td>角色权限 Perm</td><td><code>perms['role/level'] = [menuKey]</code></td><td>以「角色/级别」为键存菜单 key 数组；admin 固定全量、不可编辑</td></tr>
+<tr><td>应用 App</td><td><code>name / platform(android|ios|server|web) / code / repo / buildScript / artifactType / artifactPattern / branches{qa,uat,release,master} / machine</code></td><td>按平台拆分：Android 与 iOS 是两个应用；产物类型与构建脚本在应用里固定，流水不单独选择</td></tr>
+<tr><td>需求 Requirement</td><td><code>code / title / desc / devOwner / qaOwner / qaMembers[] / pmOwner / priority / start / due</code></td><td>不关联应用；三个负责人分别对应开发、测试、产品；qaMembers 是测试负责人登记的测试人员，同样参与「我的需求」可见范围；priority 取 P0 / P1 / P2（P0 最高）</td></tr>
+<tr><td>任务 Task</td><td><code>reqId / title / desc / ownerId / priority / start / due / status(none|dev|ready|testing|release|done)</code></td><td>计划开始 <code>start</code> / 结束 <code>due</code>；<code>status</code> 由任务详情的推进按钮修改，超时按 <code>due</code> 与 <code>status</code> 派生</td></tr>
+<tr><td>CI 流水 Pipeline</td><td><code>taskId / appId / name / branch / status / merges[] / conflicts{} / rework{} / buildId</code></td><td>真正执行合并与打包的单元；产物类型与构建脚本来自所关联的应用</td></tr>
+<tr><td>构建 Build</td><td><code>pipelineId / stage / mergeSha / status(success|running|failed) / progress / startedAt / duration / failReason / artifact{name,size,type,url}</code></td><td><code>mergeSha</code> 判断包是否对应最新合并；队列串行执行；打包中带实时进度，失败记 <code>failReason</code>、产物为空</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="sec-3">3. 三类状态：需求 / 任务 / 流水</h2>
+<p>需求管交付范围，任务管人与时间，流水管代码合并与打包。任务状态由任务详情上的按钮推进；流水只负责合并、冲突、打包、通过 / 拒绝。<strong>流水没有「开始开发」按钮</strong>，一个任务可以有多条流水（Android / iOS）。</p>
+
+<h3 id="sec-4">3.1 需求状态</h3>
+<p>由任务聚合，只读，不支持手动改。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>状态</th><th>触发条件</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>待拆任务</td><td>需求下还没有任务</td><td>需求刚建，等开发拆任务</td></tr>
+<tr><td>待开始</td><td>有任务，但全部任务都是「未开始」</td><td>还没有人点开始开发</td></tr>
+<tr><td>进行中</td><td>至少一个任务进入开发中 / 已提测 / 测试中 / 待发布</td><td>需求在推进中，点需求卡片看各任务状态</td></tr>
+<tr><td>有超时</td><td>任一任务已超时（开发超时或测试超时）</td><td>只是提示，点进任务看具体是哪种超时</td></tr>
+<tr><td>已完成</td><td>全部任务都已结束（已发布）</td><td>需求交付完成</td></tr>
+</tbody>
+</table></div>
+
+<h3 id="sec-5">3.2 任务状态</h3>
+<p>任务状态是任务自己的字段，由任务详情的推进按钮修改，共 8 种（含两种超时）。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>状态</th><th>推进按钮</th><th>谁点</th><th>进入条件与说明</th></tr></thead>
+<tbody>
+<tr><td>未开始</td><td>开始开发</td><td>开发</td><td>任务刚建、还没人开始；点「开始开发」后开发才能在该任务的流水上合并 QA</td></tr>
+<tr><td>开发中</td><td>提测</td><td>开发</td><td>流水里合并 QA、打包、自测；至少一条流水「自测通过」且有成功的 QA 包才能提测</td></tr>
+<tr><td>已提测</td><td>开始测试</td><td>测试</td><td>开发已交付；测试点「开始测试」后任务进入测试中，流水的「合并 UAT」才可用</td></tr>
+<tr><td>测试中</td><td>进入待发布</td><td>测试</td><td>流水里合并 UAT、打包 UAT、跑测试；有成功的 UAT 包才能进入待发布</td></tr>
+<tr><td>待发布</td><td>完成发布 · 已结束</td><td>测试</td><td>流水里合并 Release、打包 Release、验证；至少一条流水验证通过并合回 master 才能结束任务</td></tr>
+<tr><td>开发超时</td><td>—</td><td>—</td><td>超过结束时间且任务还停在未开始 / 开发中（红色 pill）</td></tr>
+<tr><td>测试超时</td><td>—</td><td>—</td><td>超过结束时间且任务已在已提测 / 测试中 / 待发布（橙色 pill）</td></tr>
+<tr><td>已结束</td><td>—</td><td>—</td><td>任务发布完成；状态不可再推进，产物仍可下载</td></tr>
+</tbody>
+</table></div>
+<p>任务状态与流水解耦：任务状态由按钮改，流水状态记录代码走到哪一步。流水动作会校验任务状态——任务还没「开始开发」时「合并 QA」置灰并提示；没「开始测试」时「合并 UAT」置灰；没「进入待发布」时「合并 Release」置灰。</p>
+
+<h3 id="sec-6">3.3 流水状态</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>流水状态</th><th>怎么进来</th><th>说明与可用动作</th></tr></thead>
+<tbody>
+<tr><td>未开始</td><td>新建流水</td><td>只有「合并 QA」；任务未开始开发时该按钮置灰</td></tr>
+<tr><td>合并中</td><td>点合并</td><td>QA / UAT / Release / master 各有合并中，等待结果（合并期间禁止打包）</td></tr>
+<tr><td>冲突待解决</td><td>合并出现冲突</td><td>停在当前阶段，弹出冲突通知与 git 命令；流水卡片只有「已解决冲突 · 合并」一个按钮</td></tr>
+<tr><td>已合入 QA / 已合入 UAT</td><td>冲突解决后合并成功</td><td>代码已进目标分支，可以打包</td></tr>
+<tr><td>QA 包就绪 · 待自测</td><td>打包 QA 成功</td><td>可「自测通过」（通过）或「拒绝」（回到合并），也可重新打包</td></tr>
+<tr><td>自测通过</td><td>点自测通过</td><td>流水停在「已通过」，等任务「提测」后再点「合并 UAT」；不点提测则该按钮置灰</td></tr>
+<tr><td>测试中</td><td>合并 UAT 成功</td><td>可打包 UAT；UAT 包就绪后可「合并 Release」（任务需已进入待发布）</td></tr>
+<tr><td>Release 验证中</td><td>合并 Release 成功</td><td>打包 Release，成功后可「验证通过」或「验证不通过」</td></tr>
+<tr><td>已验证 · 待合回 master</td><td>验证通过</td><td>可下载产物并「合回 master」</td></tr>
+<tr><td>已合入 master</td><td>合回 master 成功</td><td>流水结束，只剩下载产物</td></tr>
+</tbody>
+</table></div>
+
+<h3 id="sec-7">3.4 合并阶段与目标分支</h3>
+<p>四段固定：QA → UAT → Release → master。目标分支由阶段锁定，分支名取自应用配置的 <code>branches</code>（例如出行 App 为 qa / uat / Release / master）。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>阶段</th><th>目标分支</th><th>由谁操作</th></tr></thead>
+<tbody>
+<tr><td>QA</td><td><code>qa</code></td><td>开发</td></tr>
+<tr><td>UAT</td><td><code>uat</code></td><td>测试</td></tr>
+<tr><td>Release</td><td><code>Release</code></td><td>测试</td></tr>
+<tr><td>master</td><td><code>master</code></td><td>测试（验证通过后合回）</td></tr>
+</tbody>
+</table></div>
+
+<h3 id="sec-8">3.5 冲突处理</h3>
+<ul>
+<li>冲突时流水停在当前阶段，弹出「代码合并冲突通知」：需求编号 + 标题、流水线名（<code>&lt;需求标题&gt;--&lt;项目标识&gt;</code>）、Git 项目地址、项目标识、冲突分支、目标分支，附 5 条 git 命令（每行带复制按钮）。</li>
+<li>冲突分支是任务里配的 <strong>Feature 分支</strong>，不叫「临时分支」。</li>
+<li>需要基于 Feature 分支创建临时分支，让开发自己解决冲突，命名规则：</li>
+</ul>
+<pre><code class="language-bash">temp/Conflict_&lt;目标分支&gt;_feature/&lt;feature&gt;_&lt;yy.MMDD.HHmm.ss&gt;
+例：temp/Conflict_qa_feature/transfer-direct-filter_26.1119.0942.31</code></pre>
+<ul>
+<li>开发在临时分支上解决并推送完成后，回到平台点「已解决冲突 · 合并」，系统把临时分支合入目标分支，Feature 分支不做改动。</li>
+<li>冲突态流水卡片只有「已解决冲突 · 合并」一个按钮，没有「重试合并」。</li>
+</ul>
+
+<h3 id="sec-9">3.6 三处硬门禁</h3>
+<ol>
+<li>提测前必须有 QA 包并自测通过，包要对应当前最新一次 QA 合并。</li>
+<li>合并 Release 前必须有成功的 UAT 包。</li>
+<li>验收（合回 master）前必须有成功的 Release 包并验证通过。</li>
+</ol>
+
+<h2 id="sec-10">4. 超时与结束规则</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>判定</th><th>条件</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>开发超时</td><td>已超过结束时间，且任务状态为未开始 / 开发中（还没提测）</td><td>红色 pill；归开发侧，要开发补时间或赶进度</td></tr>
+<tr><td>测试超时</td><td>已超过结束时间，且任务状态为已提测 / 测试中 / 待发布</td><td>橙色 pill；归测试侧，开发已交付，不归属开发拖延</td></tr>
+<tr><td>已结束</td><td>任务点了「完成发布 · 已结束」</td><td>优先级最高，超时不覆盖；任务没有「冲突」态，冲突体现在流水里</td></tr>
+</tbody>
+</table></div>
+<p>超时按当前状态归属，展示上必须区分具体类型：</p>
+<ul>
+<li>看板「超时」列仍是一列，但卡片 pill 显示「开发超时」或「测试超时」；</li>
+<li>首页「超时」KPI 下方小字给出「开发超时 X · 测试超时 Y」；</li>
+<li>我的任务列表状态列同样区分两种超时；</li>
+<li>任务详情有「超时归属」一行，含超期天数与所处阶段。</li>
+</ul>
+
+<h2 id="sec-10b">4A. 工作流程：谁在哪一步做什么</h2>
+<p>一条需求从提出到结束固定走四步，角色分工不重叠：产品建需求 → 开发负责人拆任务并指定任务负责人、测试负责人只登记测试人员 → 任务负责人领任务开发 → 测试接住提测后的任务直到发布结束。测试不建任务，任务全部来自开发负责人。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>角色</th><th>在哪操作</th><th>做什么</th><th>权限边界</th></tr></thead>
+<tbody>
+<tr><td>产品负责人</td><td>需求管理 → 新建需求</td><td>填需求，指定开发 / 测试 / 产品负责人</td><td>首页「我的需求」只看得到自己是产品负责人的需求</td></tr>
+<tr><td>开发负责人</td><td>需求详情 →「+ 新建任务」</td><td>拆任务，指定任务负责人与计划开始 / 结束时间</td><td>只有该需求的开发负责人或管理员可建任务，其余角色按钮置灰；任务全部由开发创建</td></tr>
+<tr><td>测试负责人</td><td>需求详情 →「+ 测试人员」</td><td>登记参与测试的测试人员（负责人默认在内）</td><td>不建任务、不改任务；被登记的测试人员也进入该需求的可见范围</td></tr>
+<tr><td>任务负责人（开发）</td><td>首页 → 进行中 → 任务详情</td><td>开始开发 → 流水合并 QA / 打包 / 自测 → 提测</td><td>只看得到负责人是自己的任务</td></tr>
+<tr><td>测试</td><td>首页 → 进行中 → 任务详情</td><td>开始测试 → 合并 UAT / 打包 / 测试 → 待发布 → 验证并合回 master → 已结束</td><td>接住已提测 / 测试中 / 待发布的任务</td></tr>
+</tbody>
+</table></div>
+<p>角色的可见范围由「我是这个需求的哪个负责人」决定，不由角色统一决定；因此同一个测试可能同时是 A 需求的负责人、B 需求的测试人员，两条需求都会出现在他的「我的需求」里。</p>
+
+<h2 id="sec-11">5. 首页「我的任务」tab 规则</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>tab</th><th>开发 dev</th><th>测试 qa</th><th>产品 / 管理员</th></tr></thead>
+<tbody>
+<tr><td>进行中</td><td>未开始 + 开发中</td><td>已提测 + 测试中 + 待发布</td><td>全部未结束任务</td></tr>
+<tr><td>跟我有关 · 其他状态</td><td colspan="3">本人负责但不属于当前角色阶段的任务（含已结束、超时、已交接给下游），用于即使不在自己手上也能跟踪</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li>第三个 tab「我的需求」只列<strong>负责人是我自己</strong>的需求：开发取开发负责人、测试取测试负责人与登记的测试人员、产品取产品负责人、管理员看全量；卡片点开与「需求管理」完全一致。</li>
+<li>「我的任务」按需求负责人归属计算：开发取需求开发负责人、测试取测试负责人、产品取产品负责人。</li>
+<li>列表不显示负责人，只显示开始-结束时间区间；行尾提供「任务详情」「+ CI 流水」。</li>
+<li>点需求卡片在右侧打开需求详情，需求详情里列出任务与各自状态；任务详情的「打开需求」跳回该需求详情。</li>
+<li>任务详情按钮行与 tabs（概览 / CI 流水 / 提交记录 / 构建记录）支持继续扩展。</li>
+</ul>
+
+<h2 id="sec-12">6. 角色、级别与权限</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>角色</th><th>能看到的</th><th>能操作的</th></tr></thead>
+<tbody>
+<tr><td>开发 dev</td><td>我的任务 + 自己的流水</td><td>任务上：开始开发、提测；流水上：合并 QA、打包 QA、自测通过 / 拒绝</td></tr>
+<tr><td>测试 qa</td><td>全部任务的流水</td><td>任务上：开始测试、进入待发布、完成发布；流水上：合并 UAT、打包 UAT、合并 Release、打包 Release、验证通过 / 不通过、合回 master</td></tr>
+<tr><td>管理员 admin</td><td>全部数据</td><td>任意阶段动作，维护应用配置、角色权限与人员</td></tr>
+<tr><td>产品 pm</td><td>需求与任务进度</td><td>只读：提需求、看进度，不操作代码与打包</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li>级别：开发 / 测试 / 产品<strong>三个角色都分 L1 初级、L2 中级、L3 高级</strong>（测试与产品同样有 L3），共 9 个角色级别；级别只决定菜单可见范围，具体可执行动作仍由角色决定。管理员不设级别，固定拥有全部菜单。</li>
+<li>级别决定能力档位而非职责：例如测试 L2 可做合并 UAT / 验证 / 合回 master，测试 L3 额外可触发打包与下载产物；产品 L1 / L2 偏提需求与看进度，产品 L3 可下载产物做验收。</li>
+<li>权限配置由<strong>配置文件驱动</strong>（原型里是页面末尾的 <code>perm-config</code> JSON 块，当前 5 组 22 项）：每项含 <code>key / label / menu / hash</code>，<code>menu=true</code> 的 8 项同时控制左侧菜单，其余为操作类权限（新建流水、合并、打包、验证等）。新增权限只改配置或在「角色权限」页导入 JSON，授权矩阵自动多一行。</li>
+<li>授权矩阵按「权限为行、角色 × 级别为列」，列头支持<strong>全选 / 清空</strong>；管理员列为只读全选。</li>
+<li>「角色权限」「人员管理」只有管理员可见；非管理员访问未授权地址显示无权限提示。</li>
+</ul>
+
+<h2 id="sec-13">7. 接口草案</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td><code>/api/me</code></td><td>当前账号与角色</td></tr>
+<tr><td>GET</td><td><code>/api/my-tasks</code></td><td>首页「我的任务」，按账号负责人过滤</td></tr>
+<tr><td>GET</td><td><code>/api/requirements</code></td><td>需求列表（不返回应用）</td></tr>
+<tr><td>POST</td><td><code>/api/tasks/:id/pipelines</code></td><td>body <code>appId / name / branch / artifactType</code>，创建 CI 流水</td></tr>
+<tr><td>POST</td><td><code>/api/tasks/:id/status</code></td><td>body <code>status</code>，推进任务状态（开始开发 / 提测 / 开始测试 / 进入待发布 / 完成发布），服务端校验门禁</td></tr>
+<tr><td>POST</td><td><code>/api/pipelines/:id/merge</code></td><td>body <code>stage</code>，建临时分支或直接合入目标分支</td></tr>
+<tr><td>POST</td><td><code>/api/pipelines/:id/build</code></td><td>执行构建脚本，进入单机队列</td></tr>
+<tr><td>POST</td><td><code>/api/pipelines/:id/qa-verdict</code></td><td>自测通过 / 拒绝</td></tr>
+<tr><td>POST</td><td><code>/api/pipelines/:id/verify | accept</code></td><td>验证通过 / 合回 master</td></tr>
+<tr><td>GET</td><td><code>/api/artifacts</code></td><td>产物 / 构建列表（含打包中与失败），下载直链不鉴权</td></tr>
+<tr><td>GET</td><td><code>/api/builds/:id</code></td><td>单次构建详情（状态、进度、失败原因、产物）</td></tr>
+<tr><td>GET</td><td><code>/api/builds/:id/log</code></td><td>打包日志，运行中可轮询增量</td></tr>
+<tr><td>GET/PUT</td><td><code>/api/roles/perms</code></td><td>读取 / 保存「角色 × 级别」菜单权限（仅管理员）</td></tr>
+<tr><td>GET/POST/PUT</td><td><code>/api/staff</code></td><td>人员列表 / 新增（账号 + 初始密码 + 角色 + 级别）/ 编辑（仅管理员）</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="sec-14">8. 已确认规则</h2>
+<ol>
+<li><strong>提测、合并 Release、验收都要先打包成功</strong>：提测要 QA 包且自测通过，合并 Release 要 UAT 包，验收要 Release 包；包必须对应最新一次该阶段合并。</li>
+<li><strong>不通过就回到上一节点</strong>：自测拒绝 / 测试不通过退回「已合入 QA」，Release 验证不通过退回「测试中」，都要重打包再流转。</li>
+<li><strong>验证通过后由测试点「合回 master」</strong>：release 直接合入 master，不额外走 MR；合入完成后流水结束，不提供重新打包。</li>
+<li><strong>合并无需排队，打包必须排队</strong>：打包机只有一份 clone，构建期间任何流水都禁止切分支合并；产物长期保留、下载不鉴权。</li>
+<li><strong>打包日志随时可查</strong>：流水卡片有「打包日志」按钮，正在打包与失败也能看；产物页除已入库外还列打包中（带进度）与失败（带原因），点行看构建详情与完整日志；运行中的流水禁止再次点打包。</li>
+<li><strong>流水不管任务开始，任务状态由任务按钮推进</strong>：流水只有合并 / 冲突待解决 / 已解决冲突 / 打包 QA·UAT·Release / 通过 / 拒绝；开始开发、提测、开始测试、进入待发布、完成发布都在任务详情上点。</li>
+<li><strong>一个任务的提交记录只有一份</strong>：多条流水共用同一仓库与 Feature 分支，不分应用；任务详情「提交记录」显示该分支最近 20 条提交。</li>
+<li><strong>产物类型与构建脚本在应用里配置</strong>：应用按 Android / iOS 分开，流水只是选择应用 + 填 Feature 分支。</li>
+</ol>
+
+<h2 id="sec-15">9. 原型操作路径</h2>
+<ol>
+<li>登录页选账号（陈默 开发 / 林晓 测试 / 王强 管理员 / 苏晴 产品 / 周然 开发）。</li>
+<li>首页「我的任务」三个 tab（进行中 / 其他状态 / 我的需求）→ 行尾「任务详情」进入右侧抽屉。</li>
+<li>任务详情：状态推进按钮 + tabs（概览 / CI 流水 / 提交记录 / 构建记录）。</li>
+<li>CI 流水卡片：合并 QA → 打包 → 自测通过 →（任务提测）→ 合并 UAT → 打包 → 合并 Release → 打包 → 验证通过 → 合回 master。</li>
+<li>打包产物页：已入库 / 打包中 / 失败三态，点行看构建详情与打包日志。</li>
+</ol>
+<blockquote>
+<p>原型是本地模拟：数据存在 localStorage，不接真实 Git 与构建脚本，冲突与日志为演示数据。</p>
+</blockquote>
+    </article>
+  </main>
+</div>
+<script src="./assets/docs.js" defer></script>
+</body>
+</html>

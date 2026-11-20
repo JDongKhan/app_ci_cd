@@ -116,6 +116,26 @@ nav{display:flex;flex-direction:column;gap:2px}
 .pill-merged{background:var(--amber-bg);color:var(--amber)}
 .pill-packaged{background:var(--green-bg);color:var(--green)}
 .pill-done{background:var(--green-bg);color:var(--green)}
+.pill-building{background:#eff6ff;color:#1d4ed8}
+.pill-failed{background:#fdecec;color:#b3261e}
+.pill-overdue-qa{background:#fdf1e3;color:#b45309}
+.spin{display:inline-block;width:9px;height:9px;border-radius:50%;border:2px solid #c3d7f6;border-top-color:#1d4ed8;
+  animation:spin .8s linear infinite;vertical-align:-1px;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.build-running{display:flex;align-items:center;font-size:12px;font-weight:600;color:#1d4ed8}
+.build-failed{font-size:12px;font-weight:600;color:#b3261e}
+.log-preview{background:#0d1520;border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:11px;
+  line-height:1.7;max-height:150px;overflow:auto}
+.log-preview .lp{white-space:pre-wrap;word-break:break-all}
+.log-preview .ll-cmd{color:#7dd3fc}
+.log-preview .ll-ok{color:#6ee7b7}
+.log-preview .ll-err{color:#fca5a5}
+.log-preview .ll-out{color:#c7d3e0}
+tr.row-click{cursor:pointer}
+.t-sub.ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cell-clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+.stage-tag{white-space:nowrap}
+tr.row-click:hover td{background:#f8fafd}
 
 .bchip{display:inline-block;position:relative;font-family:var(--mono);font-size:11.5px;padding:1px 7px 1px 18px;
   border-radius:5px;background:#f8fafc;border:1px solid #e3e9f1;color:#3a4759;white-space:nowrap;
@@ -231,9 +251,9 @@ textarea{height:auto;min-height:74px;padding:9px 10px;resize:vertical;line-heigh
 .req-stats{display:flex;gap:6px;flex-wrap:wrap;font-size:10.5px;color:var(--ink3)}
 .req-stats .rs{background:#f6f8fb;border:1px solid #e9eff6;border-radius:5px;padding:1px 6px}
 .pri{font-size:10.5px;font-weight:600;border-radius:5px;padding:1px 6px}
-.pri-高{background:#fdeeee;color:#b91c1c}
-.pri-中{background:#fff5e6;color:#b45309}
-.pri-低{background:#f1f5f9;color:#5b6b80}
+.pri-P0,.pri-高{background:#fdeeee;color:#b91c1c}
+.pri-P1,.pri-中{background:#fff5e6;color:#b45309}
+.pri-P2,.pri-低{background:#f1f5f9;color:#5b6b80}
 
 /* table */
 table.grid{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);
@@ -313,6 +333,8 @@ table.grid tbody tr:hover{background:#fbfcfe}
 .log-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #1d2a3a;font-size:11px;color:#8ba0b6}
 .progress-track{height:5px;background:#172335;border-radius:3px;overflow:hidden}
 .progress-track span{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563eb,#22c55e);transition:width .3s}
+.progress-track.light{background:#eef2f7;height:6px;border-radius:4px}
+.progress-track.light span{background:linear-gradient(90deg,#2563eb,#22c55e);border-radius:4px}
 .logbox{flex:1;overflow-y:auto;padding:14px 18px 30px;font-family:var(--mono);font-size:11.8px;line-height:1.85;background:#0b131d}
 .ll{white-space:pre-wrap;word-break:break-all}
 .ll-cmd{color:#6eb6ff}
@@ -559,6 +581,15 @@ table.grid tbody tr:hover{background:#fbfcfe}
 .tb-role{font-size:10.5px;color:#7d8a9b}
 .tb-gap{flex:1}
 .task-actions{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:4px}
+.qa-pool{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.qa-ck{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:8px;padding:7px 10px;
+  background:#fbfcfe;font-size:12.5px;cursor:pointer}
+.qa-ck:hover{border-color:#bfd3f6;background:#f6f9ff}
+.qa-ck input{accent-color:#2563eb;cursor:pointer;width:auto!important;height:14px;flex:0 0 auto;margin:0}
+.qa-ck .u-av{flex:0 0 26px}
+.qa-ck .qa-ck-n{font-weight:600;color:#16202e;white-space:nowrap;flex:0 0 auto}
+.qa-ck .qa-ck-t{color:#6b7789;font-size:11.5px;margin-left:auto;white-space:nowrap;flex:0 0 auto}
+.qa-ck.locked{background:#f4f7fb;border-style:dashed;cursor:default}
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line2);margin:14px 0 14px}
 .tab{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;font-size:12.5px;color:var(--ink2);
   cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
@@ -576,6 +607,7 @@ table.grid tbody tr:hover{background:#fbfcfe}
 .pc-dots{margin:2px 0 4px}
 .pc-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:#7d8a9b;margin-bottom:8px}
 .pc-meta b{font-family:var(--mono);font-size:10.5px;color:#243044;font-weight:500}
+.pc-tip{font-size:10.8px;color:#8a5a00;background:#fff8e8;border:1px solid #f2e2bd;border-radius:7px;padding:6px 9px;margin-bottom:8px}
 .pc-rework{font-size:10.8px;color:#a16207;background:#fffaef;border:1px solid #f3d9b6;border-radius:7px;padding:6px 9px;margin-bottom:8px}
 .pc-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pc-acts .btn{flex:0 0 auto}
@@ -705,7 +737,7 @@ table.grid tbody tr:hover{background:#fbfcfe}
 
 <script type="application/json" id="perm-config">
 {
-  "version": 1,
+  "version": 2,
   "updatedAt": "2026-11-20",
   "note": "权限配置文件：新增权限只改这里，刷新页面即生效；也可在「角色权限」页导入 JSON 覆盖。menu=true 的项会同时控制左侧菜单可见性。",
   "groups": [
@@ -719,6 +751,7 @@ table.grid tbody tr:hover{background:#fbfcfe}
         { "key": "reqs",        "label": "需求管理", "menu": true, "hash": "#/reqs" },
         { "key": "req_create",  "label": "新建需求" },
         { "key": "task_create", "label": "新建任务" },
+        { "key": "req_member",  "label": "维护需求测试人员" },
         { "key": "task_delete", "label": "删除任务" }
       ] },
     { "key": "build", "label": "应用与产物", "desc": "应用配置与打包产物",
@@ -752,16 +785,16 @@ table.grid tbody tr:hover{background:#fbfcfe}
 
 <script>
 /* =========================================================
-   ShipFlow 原型 v7：登录 → 首页 → 需求 → 任务 → CI 流水
+   ShipFlow 一期原型（v1）：登录 → 首页 → 需求 → 任务 → CI 流水
    任务只表达“谁在做什么”，一条任务下可挂多条 CI 流水
    （例如 Flutter 任务同时打 Android apk 与 iOS ipa）
-   每条流水独立走：合并 QA → 打包自测 → 提测 → 合并 UAT
+   每条流水独立走：合并 QA → 打包自测 →（任务提测）→ 合并 UAT；开始与提测都在任务上点
    → 合并 Release → 打包验证 → 合回 master
    ========================================================= */
 
-var LS_KEY = 'shipflow_proto_v7a';
+var LS_KEY = 'shipflow_proto_v8a';
 var USER_KEY = 'shipflow_user_v7';
-var PROTO_V = 7;
+var PROTO_V = 8;
 
 /* ---------- 通用工具 ---------- */
 function byId(id){ return document.getElementById(id); }
@@ -799,10 +832,13 @@ var ACCOUNTS = [
   { id:'u2', name:'林晓', role:'qa',    level:'l2', account:'linxiao', password:'Init@123', active:true, team:'质量保障组',   color:'#0f766e' },
   { id:'u3', name:'王强', role:'admin', level:'',   account:'wangqiang', password:'Init@123', active:true, team:'研发效能',     color:'#7c3aed' },
   { id:'u4', name:'苏晴', role:'pm',    level:'l1', account:'suqing', password:'Init@123', active:true, team:'海外产品',     color:'#b45309' },
-  { id:'u5', name:'周然', role:'dev',   level:'l2', account:'zhouran', password:'Init@123', active:true, team:'商家工作台',   color:'#0891b2' }
+  { id:'u5', name:'周然', role:'dev',   level:'l2', account:'zhouran', password:'Init@123', active:true, team:'商家工作台',   color:'#0891b2' },
+  { id:'u6', name:'郑维', role:'qa',    level:'l3', account:'zhengwei', password:'Init@123', active:true, team:'质量保障组',   color:'#0e7490' }
 ];
 function accounts(){ return (state && state.accounts && state.accounts.length) ? state.accounts : ACCOUNTS; }
 /* ---------- 角色级别与菜单权限 ---------- */
+/* 开发 / 测试 / 产品都分 L1~L3；管理员不设级别。
+   新增级别只改这里，人员表单下拉与权限矩阵列会自动跟着变。 */
 var ROLE_LEVELS = {
   dev: [ {key:'l1', label:'L1 初级'}, {key:'l2', label:'L2 中级'}, {key:'l3', label:'L3 高级'} ],
   qa:  [ {key:'l1', label:'L1 初级'}, {key:'l2', label:'L2 中级'}, {key:'l3', label:'L3 高级'} ],
@@ -876,12 +912,12 @@ var DEFAULT_PERMS = {
   'dev/l1': ['home','board','spec'],
   'dev/l2': ['home','board','reqs','spec','pipe_create','merge_qa','build_run'],
   'dev/l3': ['home','board','reqs','apps','artifacts','spec','pipe_create','merge_qa','build_run','task_create','artifact_download'],
-  'qa/l1':  ['home','board','spec'],
-  'qa/l2':  ['home','board','artifacts','spec','test_run','merge_uat'],
-  'qa/l3':  ['home','board','reqs','artifacts','spec','test_run','merge_uat','verify','accept','merge_release','merge_master'],
-  'pm/l1':  ['home','reqs','spec'],
-  'pm/l2':  ['home','reqs','board','spec','req_create'],
-  'pm/l3':  ['home','reqs','board','artifacts','spec']
+  'qa/l1':  ['home','board','reqs','spec','req_member'],
+  'qa/l2':  ['home','board','reqs','artifacts','spec','req_member','test_run','merge_uat','verify','accept','merge_release','merge_master'],
+  'qa/l3':  ['home','board','reqs','artifacts','spec','req_member','test_run','merge_uat','verify','accept','merge_release','merge_master','build_run','artifact_download'],
+  'pm/l1':  ['home','reqs','spec','req_create'],
+  'pm/l2':  ['home','reqs','board','artifacts','spec','req_create'],
+  'pm/l3':  ['home','reqs','board','artifacts','spec','req_create','artifact_download']
 };
 function levelLabel(role, level){
   var ls = ROLE_LEVELS[role] || [];
@@ -916,9 +952,8 @@ var STATUS_META = {
   dev_merging:      { label:'QA 合并中',        cls:'merging' },
   dev_conflict:     { label:'QA 合并冲突',      cls:'conflict' },
   dev_merged:       { label:'已合入 QA',        cls:'merged' },
-  dev_built:        { label:'QA 包就绪 · 待自测确认', cls:'merged' },
-  dev_passed:       { label:'自测通过 · 待提测', cls:'packaged' },
-  ready_test:       { label:'已提测 · 待开始测试', cls:'ready' },
+  dev_built:        { label:'QA 包就绪 · 待自测', cls:'merged' },
+  dev_passed:       { label:'自测通过',          cls:'packaged' },
   test_merging:     { label:'UAT 合并中',       cls:'merging' },
   test_conflict:    { label:'UAT 合并冲突',     cls:'conflict' },
   testing:          { label:'测试中',           cls:'testing' },
@@ -941,7 +976,7 @@ var MERGE_PLAN = {
 var state = null;
 var ui = {
   userId: localStorage.getItem(USER_KEY) || null,
-  taskId: null, pipeId: null, logBuildId: null, reqId: null,
+  taskId: null, pipeId: null, buildId: null, logBuildId: null, reqId: null,
   tab: 'overview', modal: null,
   reqQ: '', boardFilter: 'all', artifactApp: 'all',
   taskQ: '', permQ: '', permCollapsed: {}, homeTab: 'active'
@@ -978,42 +1013,42 @@ function seed(){
       machine:'builder-03', createdAt:'2026-10-02' }
   ];
   var reqs = [
-    { id:'r1', code:'REQ-1042', title:'【出行日本】乘换方案增加无需换乘字段信息', devOwner:'u1', qaOwner:'u2', pmOwner:'u4', priority:'高',
+    { id:'r1', code:'REQ-1042', title:'【出行日本】乘换方案增加无需换乘字段信息', devOwner:'u1', qaOwner:'u2', qaMembers:['u2'], pmOwner:'u4', priority:'P0',
       createdAt:'2026-11-10', due:'2026-11-21',
       desc:'乘换方案列表与详情新增「无需换乘」标识，接口补充 transferCount 字段，支持「仅看直达」筛选，旧版本字段缺失时降级展示。' },
-    { id:'r2', code:'REQ-1043', title:'订单列表支持批量导出 Excel', devOwner:'u5', qaOwner:'u2', pmOwner:'u4', priority:'中',
+    { id:'r2', code:'REQ-1043', title:'订单列表支持批量导出 Excel', devOwner:'u5', qaOwner:'u2', qaMembers:['u2','u6'], pmOwner:'u4', priority:'P1',
       createdAt:'2026-11-12', due:'2026-11-25',
       desc:'B 端订单列表新增批量导出能力，单次上限 5000 条，导出任务异步生成并提供下载中心入口。' },
-    { id:'r3', code:'REQ-1041', title:'商家首页数据看板改版', devOwner:'u5', qaOwner:'u2', pmOwner:'u4', priority:'高',
+    { id:'r3', code:'REQ-1041', title:'商家首页数据看板改版', devOwner:'u5', qaOwner:'u2', qaMembers:['u2'], pmOwner:'u4', priority:'P0',
       createdAt:'2026-11-05', due:'2026-11-19',
       desc:'重构首页 KPI 卡片与趋势图，接入近 30 天实时数据，支持时间区间与门店维度切换。' }
   ];
   var tasks = [
-    { id:'t1', reqId:'r1', title:'乘换方案接口字段扩展', ownerId:'u1', priority:'高',
+    { id:'t1', reqId:'r1', title:'乘换方案接口字段扩展', ownerId:'u1', priority:'P0', status:'done',
       start:'2026-11-10', createdAt:'2026-11-11', due:'2026-11-19',
       desc:'接口返回 transferCount / isDirect，兼容旧版本字段缺失场景。' },
-    { id:'t2', reqId:'r1', title:'结果页展示无需换乘标签', ownerId:'u1', priority:'中',
+    { id:'t2', reqId:'r1', title:'结果页展示无需换乘标签', ownerId:'u1', priority:'P1', status:'dev',
       start:'2026-11-12', createdAt:'2026-11-13', due:'2026-11-18',
       desc:'方案卡片与详情展示「直达」标签，多段行程展示换乘次数。' },
-    { id:'t3', reqId:'r1', title:'筛选支持仅看直达', ownerId:'u1', priority:'中',
+    { id:'t3', reqId:'r1', title:'筛选支持仅看直达', ownerId:'u1', priority:'P1', status:'dev',
       start:'2026-11-13', createdAt:'2026-11-14', due:'2026-11-20',
       desc:'结果页筛选增加「仅看直达」，与排序、时间筛选联动。' },
-    { id:'t4', reqId:'r2', title:'导出接口与异步任务', ownerId:'u2', priority:'高',
+    { id:'t4', reqId:'r2', title:'导出接口与异步任务', ownerId:'u2', priority:'P0', status:'dev',
       start:'2026-11-12', createdAt:'2026-11-13', due:'2026-11-24',
       desc:'批量导出接口、异步任务落库与进度查询。' },
-    { id:'t5', reqId:'r2', title:'导出弹窗与进度轮询', ownerId:'u2', priority:'中',
+    { id:'t5', reqId:'r2', title:'导出弹窗与进度轮询', ownerId:'u2', priority:'P1', status:'testing',
       start:'2026-11-14', createdAt:'2026-11-15', due:'2026-11-25',
       desc:'导出弹窗交互、进度轮询与失败重试。' },
-    { id:'t6', reqId:'r3', title:'KPI 卡片组件重构', ownerId:'u5', priority:'高',
+    { id:'t6', reqId:'r3', title:'KPI 卡片组件重构', ownerId:'u5', priority:'P0', status:'release',
       start:'2026-11-06', createdAt:'2026-11-08', due:'2026-11-24',
       desc:'KPI 卡片支持环比、同比与异常高亮。' },
-    { id:'t7', reqId:'r3', title:'看板筛选支持多门店', ownerId:'u5', priority:'高',
+    { id:'t7', reqId:'r3', title:'看板筛选支持多门店', ownerId:'u5', priority:'P0', status:'ready',
       start:'2026-11-07', createdAt:'2026-11-09', due:'2026-11-18',
       desc:'门店多选筛选与已选项回显。' },
-    { id:'t8', reqId:'r3', title:'趋势图数据接入', ownerId:'u5', priority:'中',
+    { id:'t8', reqId:'r3', title:'趋势图数据接入', ownerId:'u5', priority:'P1', status:'dev',
       start:'2026-11-08', createdAt:'2026-11-10', due:'2026-11-25',
       desc:'趋势图接近 30 天数据，切换门店后刷新。' },
-    { id:'t9', reqId:'r2', title:'导出文件清洗与命名', ownerId:'u2', priority:'低',
+    { id:'t9', reqId:'r2', title:'导出文件清洗与命名', ownerId:'u2', priority:'P2', status:'dev',
       start:'2026-11-15', createdAt:'2026-11-17', due:'2026-11-26',
       desc:'导出文件名带商家与时间戳，去除非法字符。' }
   ];
@@ -1069,7 +1104,7 @@ function seed(){
         { stage:'release', from:'feature/dashboard-kpi', to:'release', sha:'f2d90b6', at:'2026-11-17 18:05', commits:2 }
       ] },
     { id:'p9', taskId:'t7', appId:'a3', name:'主包', branch:'feature/dashboard-filter',
-      status:'ready_test', artifactType:'war', createdAt:'2026-11-12 14:00',
+      status:'dev_passed', artifactType:'war', createdAt:'2026-11-12 14:00',
       conflicts:{qa:false,uat:false,release:false,master:false},
       merges:[{ stage:'qa', from:'feature/dashboard-filter', to:'qa-test', sha:'4c1e8a0', at:'2026-11-18 10:15', commits:1 }] },
     { id:'p10', taskId:'t8', appId:'a3', name:'主包', branch:'feature/dashboard-trend',
@@ -1078,8 +1113,12 @@ function seed(){
       rework:{ from:'uat', label:'测试不通过', reason:'切换门店后 KPI 卡片数值未刷新，需要补充依赖监听',
         by:'林晓', at:'2026-11-18 17:20' },
       merges:[{ stage:'qa', from:'feature/dashboard-trend', to:'qa-test', sha:'d3f7a12', at:'2026-11-18 17:15', commits:2 }] },
+    { id:'p12', taskId:'t4', appId:'a2', name:'主包 · 导出接口', branch:'feature/order-export-api',
+      status:'dev_merged', artifactType:'jar', createdAt:'2026-11-20 09:40',
+      conflicts:{qa:false,uat:false,release:false,master:false},
+      merges:[{ stage:'qa', from:'feature/order-export-api', to:'qa', sha:'a7c1d92', at:'2026-11-20 10:20', commits:2 }] },
     { id:'p11', taskId:'t9', appId:'a2', name:'主包', branch:'feature/order-export-file',
-      status:'dev_built', artifactType:'jar', createdAt:'2026-11-18 10:40',
+      status:'dev_passed', artifactType:'jar', createdAt:'2026-11-18 10:40',
       conflicts:{qa:false,uat:false,release:false,master:false},
       merges:[{ stage:'qa', from:'feature/order-export-file', to:'qa', sha:'8e4b2f7', at:'2026-11-19 11:02', commits:1 }] }
   ];
@@ -1096,7 +1135,15 @@ function seed(){
     { id:'b5', pipelineId:'p8', stage:'release', mergeSha:'f2d90b6', status:'success',
       startedAt:'2026-11-17 18:10', duration:'3m 48s', artifact:{ name:'merchant-web_release_20261117_1805.war', size:'19.9MB', type:'war', url:'/artifacts/b5' }, log:[] },
     { id:'b6', pipelineId:'p11', stage:'qa', mergeSha:'8e4b2f7', status:'success',
-      startedAt:'2026-11-19 11:10', duration:'2m 51s', artifact:{ name:'order-center_qa_20261119_1102.jar', size:'30.9MB', type:'jar', url:'/artifacts/b6' }, log:[] }
+      startedAt:'2026-11-19 11:10', duration:'2m 51s', artifact:{ name:'order-center_qa_20261119_1102.jar', size:'30.9MB', type:'jar', url:'/artifacts/b6' }, log:[] },
+    { id:'b7', pipelineId:'p10', stage:'qa', mergeSha:'d3f7a12', status:'failed',
+      startedAt:'2026-11-19 09:12', duration:'1m 08s', progress:34, artifact:null,
+      failReason:'Gradle 编译失败：lib/features/dashboard/widgets/kpi_card.dart:88 未定义标识符 storeCount',
+      log:['$ git fetch origin','$ git checkout qa-test','$ ./build_app --flavor qa','Building WAR …','> Task :app:compileKotlin',
+        'e: kpi_card.dart:88 undefined name: storeCount','BUILD FAILED in 1m 08s','exit code 1'] },
+    { id:'b8', pipelineId:'p12', stage:'qa', mergeSha:'a7c1d92', status:'running',
+      startedAt:'2026-11-20 10:21', duration:'—', progress:62, artifact:null,
+      log:['$ git fetch origin','$ git checkout qa','$ ./build_app --flavor qa','Building JAR …','> Task :app:compileKotlin'] }
   ];
   return { v: PROTO_V, apps:apps, reqs:reqs, tasks:tasks, pipelines:pipelines, builds:builds,
     accounts:ACCOUNTS.map(function(a){ return JSON.parse(JSON.stringify(a)); }),
@@ -1104,6 +1151,20 @@ function seed(){
     permCfg:JSON.parse(JSON.stringify(PERM_CONFIG)) };
 }
 
+function deriveTaskStatus(st, t){
+  var ps = (st.pipelines||[]).filter(function(p){ return p.taskId === t.id; });
+  if(!ps.length) return 'none';
+  if(ps.every(function(p){ return p.status === 'done'; })) return 'done';
+  var min = 9;
+  ps.forEach(function(p){
+    var rk = 1;
+    if(p.status === 'dev_passed' || p.status === 'ready_test') rk = 2;
+    else if(/^test_/.test(p.status) || p.status === 'testing') rk = 3;
+    else if(/^release_/.test(p.status) || /^accept_/.test(p.status)) rk = 4;
+    if(rk < min) min = rk;
+  });
+  return ['none','dev','ready','testing','release'][min] || 'dev';
+}
 function loadState(){
   try{
     var raw = localStorage.getItem(LS_KEY);
@@ -1111,14 +1172,20 @@ function loadState(){
     var st = JSON.parse(raw);
     if(!st || st.v !== PROTO_V) return seed();
     if(!st.accounts || !st.accounts.length) st.accounts = ACCOUNTS.map(function(a){ return JSON.parse(JSON.stringify(a)); });
-    (st.tasks||[]).forEach(function(t){ if(!t.start) t.start = t.createdAt || '—'; });
+    (st.tasks||[]).forEach(function(t){
+      if(!t.start) t.start = t.createdAt || '—';
+      if(!TASK_STATES[t.status]) t.status = deriveTaskStatus(st, t);
+    });
     (st.reqs||[]).forEach(function(r){
       if(!r.devOwner) r.devOwner = r.ownerId || 'u1';
       if(!r.qaOwner) r.qaOwner = 'u2';
       if(!r.pmOwner) r.pmOwner = r.ownerId || 'u4';
+      if(!r.qaMembers || !r.qaMembers.length) r.qaMembers = [r.qaOwner];
+      if(['高','中','低'].indexOf(r.priority) >= 0) r.priority = ({'高':'P0','中':'P1','低':'P2'})[r.priority];
     });
     if(!st.perms) st.perms = JSON.parse(JSON.stringify(DEFAULT_PERMS));
-    if(!st.permCfg || !st.permCfg.groups || !st.permCfg.groups.length){
+    if(!st.permCfg || !st.permCfg.groups || !st.permCfg.groups.length
+       || (st.permCfg.version||0) < (PERM_CONFIG.version||0)){
       st.permCfg = JSON.parse(JSON.stringify(PERM_CONFIG));
     }
     var validKeys = [];
@@ -1159,6 +1226,69 @@ function reqPeopleText(r){
   if(!r) return '';
   return '开发 '+personName(r.devOwner)+' · 测试 '+personName(r.qaOwner)+' · 产品 '+personName(r.pmOwner);
 }
+function reqQaMembers(r){
+  if(!r) return [];
+  var list = (r.qaMembers||[]).slice();
+  if(r.qaOwner && list.indexOf(r.qaOwner) < 0) list.unshift(r.qaOwner);
+  return list;
+}
+function reqQaMembersText(r){
+  var ids = reqQaMembers(r);
+  return ids.length ? ids.map(personName).join('、') : '未指定';
+}
+/* 我的需求：只按「我是这个需求的哪个负责人」过滤，管理员看全量 */
+function myReqs(){
+  var m = me();
+  if(!m) return [];
+  if(m.role === 'admin') return state.reqs.slice();
+  return state.reqs.filter(function(r){
+    if(m.role === 'dev') return r.devOwner === m.id;
+    if(m.role === 'qa')  return r.qaOwner === m.id || reqQaMembers(r).indexOf(m.id) >= 0;
+    return r.pmOwner === m.id;
+  });
+}
+function myReqRoleText(r){
+  var m = me();
+  if(!m) return '';
+  if(m.role === 'admin') return '管理员视角';
+  if(m.role === 'dev') return '开发负责人';
+  if(m.role === 'qa') return r.qaOwner === m.id ? '测试负责人' : '测试人员';
+  return '产品负责人';
+}
+/* 只有开发负责人（或管理员）能在需求下建任务；测试只维护测试人员 */
+function canCreateTask(r){
+  var m = me();
+  if(!m || !r) return false;
+  return m.role === 'admin' || (m.role === 'dev' && r.devOwner === m.id);
+}
+function canEditQaMembers(r){
+  var m = me();
+  if(!m || !r) return false;
+  /* 只有该需求的测试负责人能维护测试人员，被登记的测试人员不行 */
+  return m.role === 'admin' || (m.role === 'qa' && r.qaOwner === m.id);
+}
+function taskCreateBtn(r, extra){
+  var ok = canCreateTask(r);
+  return '<button type="button" class="btn '+(extra||'btn-sm btn-primary')+'" data-act="new-task" data-id="'+r.id+'"'+
+    (ok ? '' : ' disabled title="只有该需求的开发负责人或管理员才能拆任务；测试请用「+ 测试人员」"')+'>+ 新建任务</button>';
+}
+function qaMemberBtn(r, extra){
+  var ok = canEditQaMembers(r);
+  return '<button type="button" class="btn '+(extra||'btn-sm')+'" data-act="qa-member" data-id="'+r.id+'"'+
+    (ok ? '' : ' disabled title="只有该需求的测试负责人或管理员才能维护测试人员"')+'>+ 测试人员</button>';
+}
+function reqCardHTML(r, withMine){
+  var ts = tasksOf(r.id), st = reqStatus(r);
+  return '<div class="req-card" data-act="open-req" data-id="'+r.id+'">'+
+    '<div class="rc-top"><span class="req-code">'+esc(r.code)+'</span>'+
+      (withMine ? '<span class="rc-mine">'+esc(myReqRoleText(r))+'</span>' : '')+
+      '<span class="pri pri-'+esc(r.priority)+'">'+esc(r.priority)+'</span></div>'+
+    '<div class="rc-title">'+esc(r.title)+'</div>'+
+    '<div class="rc-desc">'+esc(r.desc)+'</div>'+
+    '<div class="rc-foot"><span class="rc-people">'+esc(reqPeopleText(r))+'</span><span>'+ts.length+' 个任务</span>'+
+      '<span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span></div>'+
+  '</div>';
+}
 function branchName(p, stage){
   var app = appOf(p);
   if(!app || !app.branches) return stage;
@@ -1166,8 +1296,8 @@ function branchName(p, stage){
 }
 function targetStage(p){ 
   if(p.status === 'done') return 'master';
-  if(/^dev_/.test(p.status) || p.status === 'none' || p.status === 'ready_test') return 'qa';
-  if(/^test_/.test(p.status) || p.status === 'testing') return 'uat';
+  if(p.status === 'dev_passed' || /^test_/.test(p.status) || p.status === 'testing') return 'uat';
+  if(/^dev_/.test(p.status) || p.status === 'none') return 'qa';
   if(/^release_/.test(p.status)) return 'release';
   return 'master';
 }
@@ -1176,54 +1306,39 @@ function stageLabel(s){ var x = STAGES.find(function(v){ return v.key === s; });
 function mergedCount(p){ return (p.merges||[]).length; }
 function stageDone(p, stage){ return (p.merges||[]).some(function(m){ return m.stage === stage; }); }
 
-/* ---------- 任务状态（由流水聚合） ---------- */
+/* ---------- 任务状态（任务自身状态机，按钮推进） ---------- */
 function todayStr(){ return fmtNow().slice(0,10); }
-var STAGE_RANK = {
-  none:1, dev_merging:1, dev_conflict:1, dev_merged:1, dev_built:1,
-  dev_passed:2, ready_test:2,
-  test_merging:3, test_conflict:3, testing:3,
-  release_merging:4, release_conflict:4, release_check:4, release_verified:4,
-  accept_merging:4, accept_conflict:4,
-  done:5
+var TASK_STATES = {
+  none:    { key:'none',    label:'未开始', cls:'none',    rank:0, hint:'任务已建但还没开始，开发在任务详情点「开始开发」进入开发阶段。' },
+  dev:     { key:'dev',     label:'开发中', cls:'dev',     rank:1, hint:'开发阶段：在流水里合并 QA、打包、自测；自测通过后由开发在任务上点「提测」。' },
+  ready:   { key:'ready',   label:'已提测', cls:'ready',   rank:2, hint:'开发已提测，等测试在任务上点「开始测试」；期间不占开发的工作量。' },
+  testing: { key:'testing', label:'测试中', cls:'testing', rank:3, hint:'测试阶段：流水里合并 UAT、打包 UAT、跑测试；通过后由测试点「进入待发布」。' },
+  release: { key:'release', label:'待发布', cls:'verify',  rank:4, hint:'发布阶段：流水里合并 Release、打包 Release、验证；验证通过后可下载产物并合回 master。' },
+  done:    { key:'done',    label:'已结束', cls:'done',    rank:5, hint:'任务已发布结束，产物可继续下载，不再推进状态。' }
 };
-var RANK_STATE = {
-  1: { key:'dev',     label:'开发中', cls:'dev',     hint:'开发阶段：合并 QA / 打包 / 自测确认' },
-  2: { key:'ready',   label:'已提测', cls:'ready',   hint:'自测通过并提测，等待测试开始' },
-  3: { key:'testing', label:'测试中', cls:'testing', hint:'测试阶段：合并 UAT / 打包 / 测试验证' },
-  4: { key:'release', label:'待发布', cls:'verify',  hint:'Release 验证或合回 master 中' }
-};
-function taskRank(t){
-  var ps = pipesOf(t.id);
-  if(!ps.length) return 0;
-  var minRank = 5;
-  ps.forEach(function(p){ var rk = STAGE_RANK[p.status] || 1; if(rk < minRank) minRank = rk; });
-  return minRank;
-}
+var TASK_CHAIN = ['none','dev','ready','testing','release','done'];
+function taskStatusKey(t){ return (t && TASK_STATES[t.status]) ? t.status : 'none'; }
+function taskRank(t){ return (TASK_STATES[taskStatusKey(t)]||TASK_STATES.none).rank; }
 function daysLate(due){
   var d = (new Date(todayStr()) - new Date(due)) / 86400000;
   return Math.max(0, Math.round(d));
 }
 function taskState(t){
-  var ps = pipesOf(t.id);
-  var allDone = ps.length && ps.every(function(p){ return p.status === 'done'; });
-  if(allDone) return { key:'done', label:'已结束', cls:'done', hint:'任务已发布，全部流水已归档' };
-  if(t.due && t.due < todayStr()){
-    var rk = taskRank(t);
-    var over = rk >= 2 ? 'qa' : 'dev';           // 已提测（rank 2）起算测试侧
+  var key = taskStatusKey(t);
+  var st = TASK_STATES[key];
+  if(key !== 'done' && t.due && t.due < todayStr()){
+    var over = st.rank >= 2 ? 'qa' : 'dev';      // 已提测（rank 2）起算测试侧
     var late = daysLate(t.due);
     return {
-      key:'overdue', over:over, days:late, rank:rk,
+      key:'overdue', over:over, days:late, rank:st.rank, base:key,
       label: over === 'qa' ? '测试超时' : '开发超时',
       cls:   over === 'qa' ? 'overdue-qa' : 'overdue',
-      phase: over === 'qa' ? '已提测 / 测试 / 发布阶段' : '开发阶段（未提测）',
-      hint: '已超过结束时间 '+t.due+'（超期 '+late+' 天），当前在'+
-            (over === 'qa' ? '测试阶段，开发已提测' : '开发阶段，还没有提测')
+      phase: over === 'qa' ? (key==='ready'?'已提测 / 待开始测试':(key==='testing'?'测试中':'待发布 / Release 验证')) : (key==='none'?'未开始（还没点开始开发）':'开发中（未提测）'),
+      hint: '已超过结束时间 '+t.due+'（超期 '+late+' 天），当前任务状态为「'+st.label+'」，属于'+
+            (over === 'qa' ? '测试侧超时（开发已提测）' : '开发侧超时（还没提测）')
     };
   }
-  if(!ps.length) return { key:'none', label:'未开始', cls:'none', hint:'还没有 CI 流水' };
-  var minRank = taskRank(t);
-  var st = RANK_STATE[minRank] || RANK_STATE[1];
-  return { key:st.key, label:st.label, cls:st.cls, hint:st.hint, rank:minRank };
+  return { key:st.key, label:st.label, cls:st.cls, hint:st.hint, rank:st.rank };
 }
 function taskProgress(t){
   var ps = pipesOf(t.id);
@@ -1251,6 +1366,19 @@ function freshBuild(p, stage){
   return state.builds.filter(function(b){
     return b.pipelineId === p.id && b.stage === stage && b.mergeSha === last.sha && b.status === 'success' && b.artifact;
   }).sort(function(a,b){ return String(a.startedAt) < String(b.startedAt) ? 1 : -1; })[0] || null;
+}
+function buildStatusMeta(b){
+  if(!b) return { label:'—', cls:'none' };
+  if(b.status === 'success') return { label:'已入库', cls:'done' };
+  if(b.status === 'running') return { label:'打包中', cls:'building' };
+  return { label:'失败', cls:'failed' };
+}
+function latestBuildOf(p){
+  var bs = buildsOf(p);
+  if(!bs.length) return null;
+  var run = bs.filter(function(b){ return b.status === 'running'; })[0];
+  if(run) return run;
+  return bs.slice().sort(function(a,b){ return String(a.startedAt) < String(b.startedAt) ? 1 : -1; })[0];
 }
 function shortArtifact(b){
   if(!b || !b.artifact) return '—';
@@ -1283,7 +1411,7 @@ function canMerge(p, stage){
   if(runtime.busy) return false;
   if(p.status === 'done') return false;
   if(stage === 'qa') return p.status === 'none' || p.status === 'dev_conflict' || (p.status === 'dev_merged' && !!p.rework);
-  if(stage === 'uat') return p.status === 'ready_test' || p.status === 'test_conflict';
+  if(stage === 'uat') return p.status === 'dev_passed' || p.status === 'test_conflict';
   if(stage === 'release') return p.status === 'testing' || p.status === 'release_conflict';
   if(stage === 'master') return p.status === 'release_verified' || p.status === 'accept_conflict';
   return false;
@@ -1371,17 +1499,7 @@ function resolveConflict(pid){
 }
 
 /* ---------- 提测 / 自测 / 验证 ---------- */
-function submitTest(pid){
-  var p = pipeOf(pid);
-  if(!p) return;
-  if(!canRole('dev')){ toast(roleLockReason('dev'),'warn'); return; }
-  if(p.status !== 'dev_passed'){ toast('提测被拒绝：需先打包 QA 并点「自测通过」','error'); return; }
-  if(!freshBuild(p,'qa')){ toast('提测被拒绝：QA 包已失效，请重新打包','error'); return; }
-  p.status = 'ready_test';
-  p.submittedAt = fmtNow();
-  save(); render();
-  toast('已提测，交给测试同学开始测试','success');
-}
+/* 提测已移到任务状态机（任务详情「提测」按钮），流水不再有提测动作 */
 function qaPass(pid){
   var p = pipeOf(pid);
   if(!p) return;
@@ -1447,6 +1565,8 @@ function runBuild(pid){
   var needRole = stage === 'qa' ? 'dev' : 'qa';
   if(!canRole(needRole)){ toast(roleLockReason(needRole),'warn'); return; }
   if(runtime.busy || isQueued(p)){ toast('该流水已在打包队列中','warn'); return; }
+  var rb = latestBuildOf(p);
+  if(rb && rb.status === 'running'){ toast('这条流水的 '+stageLabel(rb.stage)+' 包正在打包中，等它结束再操作','warn'); return; }
   if(runtime.busy || runtime.queue.length){ runtime.queue.push({ pipelineId:p.id, stage:stage }); save(); render(); toast('已加入打包队列（第 '+runtime.queue.length+' 位）','info'); }
   else startBuild(p, stage);
 }
@@ -1551,32 +1671,35 @@ function conflictGuideBody(p){
 function pipeActions(p){
   var acts = [];
   var st = p.status;
+  var t = taskOf(p.taskId), rank = t ? taskRank(t) : 0;
   var qaBuild = freshBuild(p,'qa'), uatBuild = freshBuild(p,'uat'), relBuild = freshBuild(p,'release');
+  var needStart = { dis:true, reason:'先在任务详情点「开始开发」，任务进入开发中才能合并 QA' };
+  var needTest  = { dis:true, reason:'先在任务详情点「开始测试」，任务进入测试中才能合并 UAT' };
+  var needRel   = { dis:true, reason:'先在任务详情点「进入待发布」，任务进入发布阶段才能合并 Release' };
   if(st === 'none'){
-    acts = [{act:'startDev', label:'开始开发 · 合并 QA', role:'dev'}];
+    acts = [{act:'mergeQa', label:'合并 QA', role:'dev', dis: rank < 1, reason: needStart.reason}];
   } else if(st === 'dev_conflict'){
     acts = [{act:'resolve', label:'已解决冲突 · 合并', role:'dev'}];
   } else if(st === 'dev_merging' || st === 'test_merging' || st === 'release_merging' || st === 'accept_merging'){
     acts = [];
   } else if(st === 'dev_merged'){
     if(p.rework){
-      acts = [{act:'startDev', label:'重新合并 QA', role:'dev'}, {act:'build', label:'打包 QA', kind:'build', role:'dev', dis:true, reason:'需要先重新合并 QA'}];
+      acts = [{act:'mergeQa', label:'重新合并 QA', role:'dev', dis: rank < 1, reason: needStart.reason}, {act:'build', label:'打包 QA', kind:'build', role:'dev', dis:true, reason:'需要先重新合并 QA'}];
     } else if(qaBuild){
       acts = [{act:'qaPass', label:'自测通过', role:'dev'}, {act:'qaReject', label:'拒绝', kind:'danger', role:'dev'}];
     } else {
-      acts = [{act:'build', label:'打包 QA', kind:'build', role:'dev'}, {act:'startDev', label:'重新合并 QA', role:'dev', dis:true, reason:'先打包'}];
+      acts = [{act:'build', label:'打包 QA', kind:'build', role:'dev'}, {act:'mergeQa', label:'重新合并 QA', role:'dev', dis:true, reason:'先打包'}];
     }
   } else if(st === 'dev_built'){
-    acts = [{act:'qaPass', label:'自测通过 · 去提测', role:'dev'}, {act:'qaReject', label:'拒绝 · 回到合并', kind:'danger', role:'dev'}, {act:'build', label:'重新打包 QA', kind:'build', role:'dev'}];
+    acts = [{act:'qaPass', label:'自测通过', role:'dev'}, {act:'qaReject', label:'拒绝 · 回到合并', kind:'danger', role:'dev'}, {act:'build', label:'重新打包 QA', kind:'build', role:'dev'}];
   } else if(st === 'dev_passed'){
-    acts = [{act:'submitTest', label:'提测', role:'dev'}];
-  } else if(st === 'ready_test'){
-    acts = [{act:'startTest', label:'开始测试 · 合并 UAT', role:'qa'}];
+    acts = [{act:'mergeUat', label:'合并 UAT', role:'qa', dis: rank < 3, reason: needTest.reason}];
   } else if(st === 'test_conflict'){
     acts = [{act:'resolve', label:'已解决冲突 · 合并', role:'qa'}];
   } else if(st === 'testing'){
     acts = [{act:'build', label:'打包 UAT', kind:'build', role:'qa', dis:!!uatBuild, reason: uatBuild?'UAT 包已就绪':'先合并 UAT'}];
-    if(uatBuild) acts.push({act:'prepareRelease', label:'合并 Release', role:'qa'});
+    acts.push({act:'prepareRelease', label:'合并 Release', role:'qa', dis: rank < 4 || !uatBuild,
+      reason: rank < 4 ? needRel.reason : '先打包 UAT'});
     acts.push({act:'rejectTest', label:'测试不通过', kind:'danger', role:'qa'});
   } else if(st === 'release_conflict'){
     acts = [{act:'resolve', label:'已解决冲突 · 合并', role:'qa'}];
@@ -1626,7 +1749,7 @@ function viewLogin(){
         '<div><div class="login-title">ShipFlow</div><div class="login-sub">代码合并 · CI 打包 · 发布归档</div></div></div>'+
       '<div class="login-lead">选择账号进入（原型模拟登录，不同角色可执行的动作不同）</div>'+
       '<div class="login-grid">'+cards+'</div>'+
-      '<div class="login-foot">开发：建流水 / 合并 / 打包 / 提测　·　测试：合并 UAT / 发布验证 / 归档　·　管理员：全量　·　产品：只读</div>'+
+      '<div class="login-foot">开发：开始开发 / 合并 / 打包 / 提测　·　测试：开始测试 / 合并 UAT / 发布验证 / 归档　·　管理员：全量　·　产品：只读</div>'+
     '</div></div>';
 }
 
@@ -1685,7 +1808,8 @@ function myTasks(){
     if(m.role === 'dev') return t.ownerId === m.id;
     var r = reqOf(t);
     if(!r) return false;
-    return m.role === 'qa' ? r.qaOwner === m.id : r.pmOwner === m.id;
+    /* 测试按需求可见：负责人 + 被登记的测试人员都能在自己的任务里接住提测后的任务 */
+    return m.role === 'qa' ? reqQaMembers(r).indexOf(m.id) >= 0 : r.pmOwner === m.id;
   });
 }
 function taskNeedsMe(t){
@@ -1886,7 +2010,8 @@ function viewStaff(){
 /* ---------- 视图：首页 ---------- */
 var HOME_TABS = [
   { key:'active', label:'进行中',  hint:'只看当前阶段归我处理的任务' },
-  { key:'other',  label:'跟我有关 · 其他状态', hint:'已交接 / 超时 / 已结束，仍可跟踪' }
+  { key:'other',  label:'跟我有关 · 其他状态', hint:'已交接 / 超时 / 已结束，仍可跟踪' },
+  { key:'reqs',   label:'我的需求', hint:'只显示我是开发 / 测试 / 产品负责人的需求' }
 ];
 function roleStageKeys(role){
   if(role === 'dev') return ['none','dev'];
@@ -1902,7 +2027,7 @@ function taskRowHTML(t, showOwner){
   var r = reqOf(t), st = taskState(t), late = st.key === 'overdue';
   return '<tr>'+
     '<td><span class="t-title" data-act="open-task" data-id="'+t.id+'">'+esc(t.title)+'</span>'+
-      '<div class="t-sub">'+esc(r?r.code:'')+(showOwner?' · '+esc(ownerName(t)):'')+'</div></td>'+
+      '<div class="t-sub">'+esc(r?r.code:'')+'</div></td>'+
     '<td>'+taskStatusPill(t)+'</td>'+
     '<td class="t-range mono">'+esc(t.start||'—')+' ~ '+(late ? '<span class="late">'+esc(t.due||'—')+'</span>' : esc(t.due||'—'))+'</td>'+
     '<td>'+progressBar(t)+'</td>'+
@@ -1911,46 +2036,70 @@ function taskRowHTML(t, showOwner){
       '<button type="button" class="btn btn-sm btn-primary" data-act="new-pipe" data-id="'+t.id+'">+ CI 流水</button>'+
     '</td></tr>';
 }
+function homeTaskBody(cur, tab, m){
+  if(!cur.length){
+    return '<div class="empty" style="padding:46px"><div class="big">'+(tab==='active'?'当前没有归你阶段的任务':'没有其他状态的任务')+'</div>'+
+      (tab==='active'?'换个 tab 看看已交接或已结束的任务，或去「我的需求」看需求进度':'这个账号的任务都在当前阶段内')+'</div>';
+  }
+  return '<table class="grid"><thead><tr><th style="width:34%">任务</th><th style="width:10%">状态</th><th style="width:24%">开始 - 结束</th><th style="width:16%">进度</th><th style="width:16%"></th></tr></thead>'+
+    '<tbody>'+cur.map(function(t){ return taskRowHTML(t, m.role !== 'dev'); }).join('')+'</tbody></table>';
+}
 function viewHome(){
   var m = me();
   var list = myTasks();
+  var reqs = myReqs();
   var stageKeys = roleStageKeys(m.role);
   var activeList = list.filter(function(t){ return stageKeys.indexOf(taskState(t).key) >= 0; });
   var otherList  = list.filter(function(t){ return stageKeys.indexOf(taskState(t).key) < 0; });
-  var kpiOpen = list.filter(function(t){ var k = taskState(t).key; return k !== 'done' && k !== 'overdue'; }).length;
-  var kpiNeed = list.filter(taskNeedsMe).length;
   var kpiDone = list.filter(function(t){ return taskState(t).key === 'done'; }).length;
-  var kpiOver = list.filter(function(t){ return taskState(t).key === 'overdue'; }).length;
   var kpiOverDev = list.filter(function(t){ var s = taskState(t); return s.key === 'overdue' && s.over === 'dev'; }).length;
   var kpiOverQa  = list.filter(function(t){ var s = taskState(t); return s.key === 'overdue' && s.over === 'qa'; }).length;
-  var tab = ui.homeTab === 'other' ? 'other' : 'active';
+  var tab = ['other','reqs'].indexOf(ui.homeTab) >= 0 ? ui.homeTab : 'active';
+  var isReqTab = tab === 'reqs';
   var cur = tab === 'other' ? otherList : activeList;
-  var rows = cur.map(function(t){ return taskRowHTML(t, m.role !== 'dev'); }).join('');
   var tabs = HOME_TABS.map(function(tb){
-    var n = tb.key === 'active' ? activeList.length : otherList.length;
+    var n = tb.key === 'active' ? activeList.length : (tb.key === 'other' ? otherList.length : reqs.length);
     return '<button type="button" class="htab'+(tab===tb.key?' on':'')+'" data-act="home-tab" data-id="'+tb.key+'">'+
       esc(tb.label)+'<span class="cnt">'+n+'</span></button>';
   }).join('');
-  var tabHint = tab === 'active' ? ('当前阶段：'+stageKeysLabel(m.role)) : '这些任务已不在你的阶段，但仍在跟踪范围内';
-  return '<div class="page-head"><div><h1>你好，'+esc(m.name)+'</h1>'+
-      '<p class="sub">'+esc(roleLabel(m.role))+'视角 · '+esc(ROLES[m.role].desc)+'</p></div>'+
-      '<div class="head-actions"><span class="pill pill-role">'+esc(roleLabel(m.role))+'</span></div></div>'+
+  var tabHint = isReqTab ? '按负责人归属过滤：开发看 devOwner、测试看测试负责人与测试人员、产品看 pmOwner，点开与「需求管理」一致'
+    : (tab === 'active' ? ('当前阶段：'+stageKeysLabel(m.role)) : '这些任务已不在你的阶段，但仍在跟踪范围内');
+  /* 需求 tab 的 KPI 换成需求维度 */
+  var reqKpi =
+    '<div class="stats">'+
+      '<div class="stat"><div class="stat-k">我的需求</div><div class="stat-v">'+reqs.length+'</div><div class="stat-n">你是开发 / 测试 / 产品负责人</div></div>'+
+      '<div class="stat"><div class="stat-k">待拆任务</div><div class="stat-v accent">'+reqs.filter(function(r){ return !tasksOf(r.id).length; }).length+'</div><div class="stat-n">还没有任何任务的需求</div></div>'+
+      '<div class="stat"><div class="stat-k">跟踪中</div><div class="stat-v">'+reqs.filter(function(r){ var l = reqStatus(r).label; return l==='进行中'||l==='待开始'||l==='有超时'; }).length+'</div><div class="stat-n">任务未全部结束</div></div>'+
+      '<div class="stat"><div class="stat-k">有超时</div><div class="stat-v over">'+reqs.filter(function(r){ return reqStatus(r).label === '有超时'; }).length+'</div><div class="stat-n">含开发超时或测试超时的任务</div></div>'+
+    '</div>';
+  var taskKpi =
     '<div class="stats">'+
       '<div class="stat"><div class="stat-k">我的任务</div><div class="stat-v">'+list.length+'</div><div class="stat-n">按你的角色负责人归属</div></div>'+
-      '<div class="stat"><div class="stat-k">进行中</div><div class="stat-v">'+kpiOpen+'</div><div class="stat-n">未结束的任务</div></div>'+
-      '<div class="stat"><div class="stat-k">待我处理</div><div class="stat-v accent">'+kpiNeed+'</div><div class="stat-n">有流水轮到你的角色</div></div>'+
-      '<div class="stat"><div class="stat-k">超时</div><div class="stat-v over">'+kpiOver+'</div><div class="stat-n">开发超时 '+kpiOverDev+' · 测试超时 '+kpiOverQa+'</div></div>'+
+      '<div class="stat"><div class="stat-k">进行中</div><div class="stat-v">'+list.filter(function(t){ var k = taskState(t).key; return k !== 'done' && k !== 'overdue'; }).length+'</div><div class="stat-n">未结束的任务</div></div>'+
+      '<div class="stat"><div class="stat-k">待我处理</div><div class="stat-v accent">'+list.filter(taskNeedsMe).length+'</div><div class="stat-n">有流水轮到你的角色</div></div>'+
+      '<div class="stat"><div class="stat-k">超时</div><div class="stat-v over">'+(kpiOverDev+kpiOverQa)+'</div><div class="stat-n">开发超时 '+kpiOverDev+' · 测试超时 '+kpiOverQa+'</div></div>'+
       '<div class="stat"><div class="stat-k">已结束</div><div class="stat-v">'+kpiDone+'</div><div class="stat-n">任务已发布并归档</div></div>'+
-    '</div>'+
+    '</div>';
+  var body;
+  if(isReqTab){
+    body = reqs.length
+      ? '<div style="padding:16px"><div class="req-grid">'+reqs.map(function(r){ return reqCardHTML(r, true); }).join('')+'</div></div>'
+      : '<div class="empty" style="padding:46px"><div class="big">没有与你有关的需求</div>你是某个需求的开发 / 测试 / 产品负责人时，这里才会出现；全量需求在「需求管理」</div>';
+  } else {
+    body = homeTaskBody(cur, tab, m);
+  }
+  var headTitle = isReqTab ? ('我的需求 · '+reqs.length+' 条') : ((tab==='active'?'进行中':'其他状态')+' · '+cur.length+' 条');
+  var headSub = isReqTab ? '点卡片打开需求详情：任务列表与状态、测试人员维护都在里面'
+    : (tab==='active'?'按角色阶段过滤，未开始 / 超时不在此列':'已交接或已结束，供跟踪');
+  return '<div class="page-head"><div><h1>你好，'+esc(m.name)+'</h1>'+
+      '<p class="sub">'+esc(roleLabel(m.role))+(m.role!=='admin' && m.level ? ' · '+esc(levelLabel(m.role, m.level)) : '')+'视角 · '+esc(ROLES[m.role].desc)+'</p></div>'+
+      '<div class="head-actions"><span class="pill pill-role">'+esc(roleLabel(m.role))+'</span></div></div>'+
+    (isReqTab ? reqKpi : taskKpi)+
     '<div class="home-tabs">'+tabs+'<span class="htab-hint">'+esc(tabHint)+'</span></div>'+
     '<div class="card" style="padding:0;overflow:hidden">'+
-      '<div class="card-head" style="padding:14px 16px 12px"><h2>'+(tab==='active'?'进行中':'其他状态')+' · '+cur.length+' 条</h2>'+
-        '<span class="muted">'+(tab==='active'?'按角色阶段过滤，未开始 / 超时不在此列':'已交接或已结束，供跟踪')+'</span></div>'+
-      (cur.length ?
-        '<table class="grid"><thead><tr><th style="width:34%">任务</th><th style="width:10%">状态</th><th style="width:24%">开始 - 结束</th><th style="width:16%">进度</th><th style="width:16%"></th></tr></thead>'+
-        '<tbody>'+rows+'</tbody></table>'
-        : '<div class="empty" style="padding:46px"><div class="big">'+(tab==='active'?'当前没有归你阶段的任务':'没有其他状态的任务')+'</div>'+
-          (tab==='active'?'换个 tab 看看已交接或已结束的任务':'这个账号的任务都在当前阶段内')+'</div>')+
+      '<div class="card-head" style="padding:14px 16px 12px"><h2>'+esc(headTitle)+'</h2>'+
+        '<span class="muted">'+esc(headSub)+'</span></div>'+
+      body+
     '</div>';
 }
 
@@ -2046,16 +2195,7 @@ function viewReqs(){
     if(!q) return true;
     return (r.code+' '+r.title+' '+reqPeopleText(r)).toLowerCase().indexOf(q) >= 0;
   });
-  var cards = list.map(function(r){
-    var ts = tasksOf(r.id), st = reqStatus(r);
-    return '<div class="req-card" data-act="open-req" data-id="'+r.id+'">'+
-      '<div class="rc-top"><span class="req-code">'+esc(r.code)+'</span><span class="pri pri-'+esc(r.priority)+'">'+esc(r.priority)+'</span></div>'+
-      '<div class="rc-title">'+esc(r.title)+'</div>'+
-      '<div class="rc-desc">'+esc(r.desc)+'</div>'+
-      '<div class="rc-foot"><span class="rc-people">'+esc(reqPeopleText(r))+'</span><span>'+ts.length+' 个任务</span>'+
-        '<span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span></div>'+
-    '</div>';
-  }).join('');
+  var cards = list.map(function(r){ return reqCardHTML(r, false); }).join('');
   return '<div class="page-head"><div><h1>需求管理</h1><p class="sub">需求不再绑定应用；应用在任务的 CI 流水里选择，同一任务可以打出多种产物</p></div>'+
       '<div class="head-actions"><button class="btn btn-primary" data-act="new-req">+ 新建需求</button></div></div>'+
     '<div class="req-toolbar"><span class="search">'+
@@ -2089,7 +2229,7 @@ function viewReqDetail(reqId){
         '<div class="req-code">'+esc(r.code)+'</div><div class="detail-title">'+esc(r.title)+'</div>'+
         '<div class="detail-desc">'+esc(r.desc)+'</div></div>'+
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
-          '<span class="pri pri-'+esc(r.priority)+'">'+esc(r.priority)+'优先级</span>'+
+          '<span class="pri pri-'+esc(r.priority)+'">优先级 '+esc(r.priority)+'</span>'+
           '<span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span></div></div>'+
       '<div class="detail-meta"><span>开发 <b>'+esc(personName(r.devOwner))+'</b></span><span>测试 <b>'+esc(personName(r.qaOwner))+'</b></span>'+
         '<span>产品 <b>'+esc(personName(r.pmOwner))+'</b></span>'+
@@ -2098,7 +2238,7 @@ function viewReqDetail(reqId){
       '</div></div>'+
     '<div class="card" style="padding:0;overflow:hidden">'+
       '<div class="card-head" style="padding:14px 16px 12px"><h2>任务拆分</h2><span class="muted">'+ts.length+' 个任务 · 任务下可再挂多条 CI 流水</span>'+
-        '<div class="head-actions"><button type="button" class="btn btn-primary" data-act="new-task" data-id="'+r.id+'">+ 新建任务</button></div></div>'+
+        '<div class="head-actions">'+taskCreateBtn(r,'btn btn-primary')+qaMemberBtn(r,'btn')+'</div></div>'+
       (ts.length ? '<table class="grid"><thead><tr><th style="width:30%">任务</th><th>CI 流水</th><th style="width:15%">状态</th><th style="width:15%">进度</th><th style="width:8%"></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty" style="padding:40px"><div class="big">还没有任务</div>把需求拆成可交付的任务</div>')+
     '</div>';
@@ -2106,34 +2246,62 @@ function viewReqDetail(reqId){
 
 /* ---------- 视图：产物 ---------- */
 function viewArtifacts(){
-  var list = state.builds.filter(function(b){ return b.status === 'success' && b.artifact; });
+  var list = state.builds.slice();
   if(ui.artifactApp !== 'all') list = list.filter(function(b){
     var p = pipeOf(b.pipelineId); return p && p.appId === ui.artifactApp;
   });
-  var rows = list.slice().reverse().map(function(b){
+  list.sort(function(a,b){ return String(a.startedAt) < String(b.startedAt) ? 1 : -1; });
+  var ok = 0, run = 0, fail = 0;
+  list.forEach(function(b){
+    if(b.status === 'success') ok++; else if(b.status === 'running') run++; else fail++;
+  });
+  var rows = list.map(function(b){
     var p = pipeOf(b.pipelineId), t = p ? taskOf(p.taskId) : null, app = p ? appOf(p) : null;
-    return '<tr><td class="mono" style="font-size:11.5px;word-break:break-all">'+esc(b.artifact.name)+'</td>'+
-      '<td>'+esc(app?app.name:'—')+'<div class="t-sub">'+esc(p?p.name:'')+'</div></td>'+
-      '<td>'+esc(t?t.title:'—')+'</td>'+
+    var st = buildStatusMeta(b);
+    var artCell;
+    if(b.status === 'success'){
+      artCell = '<span class="mono" style="font-size:11.5px;word-break:break-all">'+esc(b.artifact.name)+'</span>';
+    } else if(b.status === 'running'){
+      artCell = '<div class="build-running"><span class="spin"></span>正在打包 · '+(b.progress||0)+'%</div>'+
+        '<div class="t-sub mono">'+(app?esc(app.code):'app')+'_'+esc(b.stage)+'_…'+(b.artifactType||(app?app.artifactType:''))+'</div>';
+    } else {
+      artCell = '<div class="build-failed">构建失败，暂无产物</div>'+
+        (b.failReason ? '<div class="t-sub ellip" title="'+esc(b.failReason)+'">'+esc(b.failReason)+'</div>' : '');
+    }
+    return '<tr data-act="build-detail" data-id="'+b.id+'" class="row-click">'+
+      '<td>'+artCell+'</td>'+
+      '<td><div class="cell-clamp2" title="'+esc(app?app.name:'—')+'">'+esc(app?app.name:'—')+'</div><div class="t-sub ellip">'+esc(p?p.name:'')+'</div></td>'+
+      '<td><div class="cell-clamp2" title="'+esc(t?t.title:'—')+'">'+esc(t?t.title:'—')+'</div></td>'+
       '<td><span class="stage-tag">'+esc(stageLabel(b.stage))+'</span><div class="t-sub mono">'+esc(b.mergeSha)+'</div></td>'+
-      '<td>'+esc(b.artifact.size)+'</td><td class="mono" style="font-size:11px">'+esc(b.startedAt)+'</td>'+
-      '<td style="text-align:right"><button type="button" class="btn btn-sm btn-primary" data-act="download" data-id="'+b.id+'">下载</button></td></tr>';
+      '<td><span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span></td>'+
+      '<td>'+esc(b.artifact?b.artifact.size:'—')+'</td>'+
+      '<td class="mono" style="font-size:11px;white-space:nowrap">'+esc(b.startedAt)+'</td>'+
+      '<td style="text-align:right;white-space:nowrap">'+
+        '<button type="button" class="btn btn-sm" data-act="build-detail" data-id="'+b.id+'">详情</button>'+
+        (b.status === 'running' ? ' <button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+b.id+'">日志</button>' : '')+
+        (b.status === 'success' ? ' <button type="button" class="btn btn-sm btn-primary" data-act="download" data-id="'+b.id+'">下载</button>' : '')+
+        (b.status === 'failed' ? ' <button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+b.id+'">日志</button>' : '')+
+      '</td></tr>';
   }).join('');
-  return '<div class="page-head"><div><h1>打包产物</h1><p class="sub">产物长期保留，下载链接不需要鉴权，可直接分享给测试与产品</p></div></div>'+
+  return '<div class="page-head"><div><h1>打包产物</h1><p class="sub">已入库产物可下载（链接不鉴权）；正在打包与打包失败的构建也在列表里，点行看详情与打包日志</p></div></div>'+
     '<div class="req-toolbar"><select data-role="artifact-app">'+
       '<option value="all"'+(ui.artifactApp==='all'?' selected':'')+'>全部应用</option>'+
       state.apps.map(function(a){ return '<option value="'+a.id+'"'+(ui.artifactApp===a.id?' selected':'')+'>'+esc(a.name)+'</option>'; }).join('')+
-    '</select><span class="muted">'+list.length+' 个产物</span></div>'+
-    (list.length ? '<div class="card" style="padding:0;overflow:hidden"><table class="grid">'+
-      '<thead><tr><th>产物</th><th style="width:14%">应用</th><th style="width:20%">任务</th><th style="width:12%">阶段</th><th style="width:9%">大小</th><th style="width:14%">构建时间</th><th style="width:8%"></th></tr></thead>'+
+    '</select>'+
+    '<span class="muted" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">共 '+list.length+' 条 · '+
+      '<span class="pill pill-done">已入库 '+ok+'</span>'+
+      '<span class="pill pill-building">打包中 '+run+'</span>'+
+      '<span class="pill pill-failed">失败 '+fail+'</span></span></div>'+
+    (list.length ? '<div class="card" style="padding:0;overflow:hidden"><table class="grid" style="table-layout:fixed">'+
+      '<thead><tr><th style="width:24%">产物</th><th style="width:11%">应用</th><th style="width:15%">任务</th><th style="width:10%">阶段</th><th style="width:8%">状态</th><th style="width:6%">大小</th><th style="width:14%">构建时间</th><th style="width:12%"></th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table></div>'
-      : '<div class="card"><div class="empty"><div class="big">还没有产物</div>流水打包成功后，产物会自动入库</div></div>');
+      : '<div class="card"><div class="empty"><div class="big">还没有构建</div>流水点「打包」后可在这里看正在打包与失败的记录</div></div>');
 }
 
 /* ---------- 视图：需求说明 ---------- */
 function viewSpec(){
   return '<div class="page-head"><div><h1>需求说明</h1>'+
-      '<p class="sub">一期：登录与角色 → 需求 → 任务 → 多条 CI 流水 → 合并 / 打包 / 产物入库</p></div></div>'+
+      '<p class="sub">一期：登录与角色 → 需求 → 任务 → 多条 CI 流水 → 合并 / 打包 / 产物入库　·　完整版文档见 <a href="./需求说明.html" style="color:#2563eb">需求说明.html</a></p></div></div>'+
     '<div class="spec">'+
       '<h2><span class="n">01</span>一期目标与范围</h2>'+
       '<ul class="bullets">'+
@@ -2143,60 +2311,76 @@ function viewSpec(){
         '<li>提交记录按任务一份：一个任务对应一个代码仓库、一条 Feature 分支，多条流水共用它，只是产出不同产物（apk / ipa / jar 等）。</li>'+
         '<li>登录按账号区分角色：开发 / 测试 / 管理员 / 产品；除管理员外每个角色分 L1~L3，级别不同可见菜单不同。</li>'+
         '<li>菜单权限由管理员在「角色权限」里按「角色 × 级别」勾选维护；人员由管理员在「人员管理」里新增并分配账号、初始密码、角色与级别。</li>'+
-        '<li>首页只放「我的任务」，任务卡不提供操作按钮，所有操作都进任务详情 → CI 流水；列表按角色分两个 tab：进行中 / 跟我有关 · 其他状态。</li>'+
-        '<li>任务状态按流水进展分四段：开发中 → 已提测 → 测试中 → 待发布，另有未开始 / 超时 / 已结束；任务看板按状态分七列，只看状态不做操作。</li>'+
+        '<li>首页只放「我的任务」，任务卡不提供操作按钮，所有操作都进任务详情 → CI 流水；列表分三个 tab：进行中 / 跟我有关 · 其他状态 / 我的需求（第三个只显示负责人是我的需求，点开与「需求管理」一致）。</li>'+
+        '<li>任务状态由任务详情的按钮推进：开始开发 → 提测 → 开始测试 → 进入待发布 → 完成发布；超时（开发 / 测试）与已结束按时间与状态派生，看板按状态分七列，只看状态不做操作。</li>'+
+        '<li>流水只负责代码合并与打包：合并、冲突待解决、已解决冲突、打包 QA/UAT/Release、通过、拒绝；「开始开发」「提测」「开始测试」都不在流水上。</li>'+
         '<li>建需求时同时指定开发负责人、测试负责人、产品负责人；任务负责人默认由开发负责人承接。</li>'+
-        '<li>不做：Jenkins 接入、审批流、镜像构建、蓝绿发布、自动回滚（二期）。</li>'+
+        '<li>不做：Jenkins 接入、审批流、镜像构建、蓝绿发布、自动回滚。</li>'+
       '</ul>'+
+      '<div class="blk-title">工作流程：谁在哪一步做什么</div>'+
+      '<table><tr><th style="width:16%">角色</th><th style="width:30%">在哪操作</th><th>做什么与权限边界</th></tr>'+
+        '<tr><td>产品负责人</td><td>需求管理 → 新建需求</td><td>填写需求并指定开发 / 测试 / 产品负责人；产品在首页「我的需求」只看得到自己是产品负责人的需求，看不到别人的。</td></tr>'+
+        '<tr><td>开发负责人</td><td>需求详情 →「+ 新建任务」</td><td>把需求拆成任务，指定任务负责人（本组开发）与计划开始 / 结束时间。<b>只有该需求的开发负责人或管理员能建任务</b>，其他角色按钮置灰。任务全部由开发创建，测试不建任务。</td></tr>'+
+        '<tr><td>测试负责人</td><td>需求详情 →「+ 测试人员」</td><td>登记参与该需求测试的测试人员，<b>不建任务、不改任务</b>；测试负责人默认在内。被登记的测试人员同样能在「我的需求」里看到这条需求。</td></tr>'+
+        '<tr><td>任务负责人（开发）</td><td>首页 → 进行中 → 任务详情</td><td>只看得到负责人是自己的任务，点「开始开发」后在该任务的 CI 流水中合并 QA → 打包 → 自测，自测通过后点「提测」。</td></tr>'+
+        '<tr><td>测试</td><td>首页 → 进行中 → 任务详情</td><td>接住开发提测过来的任务（已提测 / 测试中 / 待发布），点「开始测试」→ 合并 UAT、打包、测试 → 待发布 → 验证通过后合回 master 并结束任务。</td></tr>'+
+      '</table>'+
       '<h2><span class="n">02</span>数据模型</h2>'+
       '<table><tr><th style="width:16%">实体</th><th style="width:34%">关键字段</th><th>说明</th></tr>'+
         '<tr><td>账号 Account</td><td class="mono">id / name / role / level / account / password / team / active</td><td>角色 dev / qa / admin / pm；admin 不设 level；active=false 不出现在登录页</td></tr>'+
         '<tr><td>角色权限 Perm</td><td class="mono">perms[\'role/level\'] = [menuKey]</td><td>以「角色/级别」为键存菜单 key 数组；admin 固定全量、不可编辑</td></tr>'+
         '<tr><td>应用 App</td><td class="mono">name / platform(android|ios|server|web) / code / repo / buildScript / artifactType / artifactPattern / branches{qa,uat,release,master} / machine</td><td>按平台拆分：Android 与 iOS 是两个应用，产物类型与构建脚本在应用里固定，流水不再自选</td></tr>'+
         '<tr><td>需求 Requirement</td><td class="mono">code / title / desc / devOwner / qaOwner / pmOwner / priority / start / due</td><td>不再关联应用；三个负责人分别对应开发、测试、产品，任务列表与抽屉按此展示</td></tr>'+
-        '<tr><td>任务 Task</td><td class="mono">reqId / title / desc / ownerId / priority / start / due</td><td>计划开始 start / 结束 due；状态由流水与时间聚合，见 04</td></tr>'+
+        '<tr><td>任务 Task</td><td class="mono">reqId / title / desc / ownerId / priority / start / due / status(none|dev|ready|testing|release|done)</td><td>计划开始 start / 结束 due；status 由任务详情的推进按钮修改，超时按 due 与 status 派生，见 03 / 04</td></tr>'+
         '<tr><td>CI 流水 Pipeline</td><td class="mono">taskId / appId / name / branch / status / merges[] / conflicts{} / rework{} / buildId</td><td>真正执行合并与打包的单元；产物类型与构建脚本来自所关联的应用</td></tr>'+
-        '<tr><td>构建 Build</td><td class="mono">pipelineId / stage / mergeSha / status / startedAt / duration / artifact{name,size,type,url}</td><td>mergeSha 判断包是否对应最新合并；队列串行执行</td></tr>'+
+        '<tr><td>构建 Build</td><td class="mono">pipelineId / stage / mergeSha / status(success\|running\|failed) / progress / startedAt / duration / failReason / artifact{name,size,type,url}</td><td>mergeSha 判断包是否对应最新合并；队列串行执行；打包中带实时进度，失败记 failReason，产物为空</td></tr>'+
       '</table>'+
-      '<h2><span class="n">03</span>流水状态机</h2>'+
-      '<div class="flow">'+
-        '<div class="fnode">未开始</div><span class="farr">→</span>'+
-        '<div class="fnode acc">合并 QA</div><span class="farr">→</span>'+
-        '<div class="fnode ok">已合入 QA</div><span class="farr">→</span>'+
-        '<div class="fnode warn">打包 QA</div><span class="farr">→</span>'+
-        '<div class="fnode ok">QA 包就绪 · 待自测确认</div>'+
-      '</div>'+
-      '<div class="flow" style="margin-top:8px">'+
-        '<div class="fnode ok">自测通过 → 已提测</div><span class="farr">→</span>'+
-        '<div class="fnode acc">合并 UAT</div><span class="farr">→</span>'+
-        '<div class="fnode ok">测试中</div><span class="farr">→</span>'+
-        '<div class="fnode warn">打包 UAT</div><span class="farr">→</span>'+
-        '<div class="fnode acc">合并 Release</div>'+
-      '</div>'+
-      '<div class="flow" style="margin-top:8px">'+
-        '<div class="fnode warn">Release 验证中</div><span class="farr">→</span>'+
-        '<div class="fnode warn">打包 Release</div><span class="farr">→</span>'+
-        '<div class="fnode ok">验证通过 · 待合回 master</div><span class="farr">→</span>'+
-        '<div class="fnode acc">合回 master</div><span class="farr">→</span>'+
-        '<div class="fnode ok">结束</div>'+
-      '</div>'+
-      '<div class="flow" style="margin-top:8px">'+
-        '<div class="fnode err">合并冲突</div><span class="farr">↺</span>'+
+      '<h2><span class="n">03</span>三类状态：需求 / 任务 / 流水</h2>'+
+      '<div class="fnote">需求管交付范围，任务管人与时间，流水管代码合并与打包。任务状态由任务详情上的按钮推进；流水只负责合并、冲突、打包、通过 / 拒绝，<b>流水没有「开始开发」按钮</b>，一个任务可以有多条流水（Android / iOS）。</div>'+
+      '<div class="blk-title">需求状态（由任务聚合，只读）</div>'+
+      '<table><tr><th style="width:16%">状态</th><th style="width:34%">触发条件</th><th>说明</th></tr>'+
+        '<tr><td>待拆任务</td><td>需求下还没有任务</td><td>需求刚建，等开发拆任务</td></tr>'+
+        '<tr><td>待开始</td><td>有任务，但全部任务都是「未开始」</td><td>还没有人点开始开发</td></tr>'+
+        '<tr><td>进行中</td><td>至少一个任务进入开发中 / 已提测 / 测试中 / 待发布</td><td>需求在推进中，点需求卡片看各任务状态</td></tr>'+
+        '<tr><td>有超时</td><td>任一任务已超时（开发超时或测试超时）</td><td>只是提示，点进任务看具体是哪种超时</td></tr>'+
+        '<tr><td>已完成</td><td>全部任务都已结束（已发布）</td><td>需求交付完成</td></tr>'+
+      '</table>'+
+      '<div class="blk-title">任务状态（任务详情按钮推进，共 8 种含超时）</div>'+
+      '<table><tr><th style="width:14%">状态</th><th style="width:20%">推进按钮</th><th style="width:14%">谁点</th><th>进入条件与说明</th></tr>'+
+        '<tr><td>未开始</td><td>开始开发</td><td>开发</td><td>任务刚建、还没人开始；点「开始开发」后开发才能在该任务的流水上合并 QA</td></tr>'+
+        '<tr><td>开发中</td><td>提测</td><td>开发</td><td>流水里合并 QA、打包、自测；至少一条流水「自测通过」且有成功的 QA 包才能提测</td></tr>'+
+        '<tr><td>已提测</td><td>开始测试</td><td>测试</td><td>开发已交付；测试点「开始测试」后任务进入测试中，流水的「合并 UAT」才可用</td></tr>'+
+        '<tr><td>测试中</td><td>进入待发布</td><td>测试</td><td>流水里合并 UAT、打包 UAT、跑测试；有成功的 UAT 包才能进入待发布</td></tr>'+
+        '<tr><td>待发布</td><td>完成发布 · 已结束</td><td>测试</td><td>流水里合并 Release、打包 Release、验证；至少一条流水验证通过并合回 master 才能结束任务</td></tr>'+
+        '<tr><td>开发超时</td><td>—</td><td>—</td><td>超过结束时间且任务还停在未开始 / 开发中（红 pill）</td></tr>'+
+        '<tr><td>测试超时</td><td>—</td><td>—</td><td>超过结束时间且任务已在已提测 / 测试中 / 待发布（橙 pill）</td></tr>'+
+        '<tr><td>已结束</td><td>—</td><td>—</td><td>任务发布完成；状态不可再推进，产物仍可下载</td></tr>'+
+      '</table>'+
+      '<div class="fnote">任务状态与流水解耦：任务状态是任务自己的字段（按钮改它），流水状态记录代码走到哪一步。流水动作会校验任务状态（例如任务还没「开始开发」时「合并 QA」置灰并提示）。</div>'+
+      '<div class="blk-title">流水状态（合并 / 冲突 / 打包 / 通过 / 拒绝）</div>'+
+      '<table><tr><th style="width:18%">流水状态</th><th style="width:26%">怎么进来</th><th>说明与可用动作</th></tr>'+
+        '<tr><td>未开始</td><td>新建流水</td><td>只有「合并 QA」；任务未开始开发时该按钮置灰</td></tr>'+
+        '<tr><td>合并中</td><td>点合并</td><td>QA / UAT / Release / master 各有合并中，等待结果</td></tr>'+
+        '<tr><td>冲突待解决</td><td>合并出现冲突</td><td>停在当前阶段，弹出冲突通知与 git 命令；流水卡片只有「已解决冲突 · 合并」一个按钮</td></tr>'+
+        '<tr><td>已合入 QA / 已合入 UAT</td><td>冲突解决后合并成功</td><td>代码已进目标分支，可以打包</td></tr>'+
+        '<tr><td>QA 包就绪 · 待自测</td><td>打包 QA 成功</td><td>可「自测通过」（通过）或「拒绝」（回到合并），也可重新打包</td></tr>'+
+        '<tr><td>自测通过</td><td>点自测通过</td><td>流水停在「已通过」，等任务「提测」后再点「合并 UAT」；不点提测则该按钮置灰</td></tr>'+
+        '<tr><td>测试中</td><td>合并 UAT 成功</td><td>可打包 UAT；UAT 包就绪后可「合并 Release」（任务需已进入待发布）</td></tr>'+
+        '<tr><td>Release 验证中</td><td>合并 Release 成功</td><td>打包 Release，成功后可「验证通过」或「验证不通过」</td></tr>'+
+        '<tr><td>已验证 · 待合回 master</td><td>验证通过</td><td>可下载产物并「合回 master」</td></tr>'+
+        '<tr><td>已合入 master</td><td>合回 master 成功</td><td>流水结束，只剩下载产物</td></tr>'+
+      '</table>'+
+      '<div class="flow" style="margin-top:10px">'+
+        '<div class="fnode err">冲突待解决</div><span class="farr">↺</span>'+
         '<span class="fnote-inline">停在当前阶段 → 基于 Feature 建临时分支 → 本地解冲突 → 已解决冲突 · 合并</span>'+
       '</div>'+
       '<div class="fnote">三处硬门禁：① 提测前必须有 QA 包并自测通过；② 合并 Release 前必须有 UAT 包；③ 验收前必须有 Release 包并验证通过。</div>'+
-      '<h2><span class="n">04</span>任务状态（由流水与时间聚合）</h2>'+
-      '<table><tr><th style="width:16%">状态</th><th style="width:30%">触发条件</th><th>说明</th></tr>'+
-        '<tr><td>未开始</td><td>还没有 CI 流水</td><td>任务刚建，等待开发建流水</td></tr>'+
-        '<tr><td>开发中</td><td>流水最小阶段在开发段（未开始 / 合并 QA / 冲突 / 已合 QA / QA 包就绪 / 自测通过）</td><td>开发自己推进，提测前全部动作归开发</td></tr>'+
-        '<tr><td>已提测</td><td>最小阶段为「已提测 · 待开始测试」</td><td>开发已交付，等测试接手</td></tr>'+
-        '<tr><td>测试中</td><td>最小阶段在测试段（合并 UAT / 冲突 / 测试中 / UAT 包就绪）</td><td>测试推进、验证</td></tr>'+
-        '<tr><td>待发布</td><td>最小阶段在发布段（合并 Release / 冲突 / Release 验证 / Release 包就绪）</td><td>Release 验证与合回 master</td></tr>'+
-        '<tr><td>开发超时</td><td>已超过结束时间且未结束，任务仍未提测（当前阶段在开发段 / 还没有流水）</td><td>红色 pill；归开发侧，要开发补时间或赶进度</td></tr>'+
-        '<tr><td>测试超时</td><td>已超过结束时间且未结束，任务已提测（测试 / 发布阶段）</td><td>橙色 pill；归测试侧，开发已交付，不再算开发拖延</td></tr>'+
-        '<tr><td>已结束</td><td>任务下全部流水都已发布归档（done）</td><td>优先级最高；只看状态，不再有「冲突」态，冲突体现在流水里</td></tr>'+
+      '<h2><span class="n">04</span>超时与结束规则</h2>'+
+      '<table><tr><th style="width:16%">判定</th><th style="width:34%">条件</th><th>说明</th></tr>'+
+        '<tr><td>开发超时</td><td>已超过结束时间，且任务状态为未开始 / 开发中（还没提测）</td><td>红色 pill；归开发侧，要开发补时间或赶进度</td></tr>'+
+        '<tr><td>测试超时</td><td>已超过结束时间，且任务状态为已提测 / 测试中 / 待发布</td><td>橙色 pill；归测试侧，开发已交付，不再算开发拖延</td></tr>'+
+        '<tr><td>已结束</td><td>任务点了「完成发布 · 已结束」</td><td>优先级最高，超时不再覆盖；只看状态，不再有「冲突」态，冲突体现在流水里</td></tr>'+
       '</table>'+
-      '<div class="fnote">聚合规则：取该任务所有流水所处阶段的最小值（最落后的那条决定任务进度）；状态优先级 已结束 &gt; 超时 &gt; 四段进展 &gt; 未开始。</div>'+
       '<div class="fnote">超时按当前阶段归属：尚未提测算开发超时（红），已提测及之后算测试超时（橙）。看板超时列仍是一列，但卡片、我的任务列表、任务详情（「超时归属」一行含超期天数与所处阶段）都显示具体类型；首页「超时」KPI 小字给出开发 / 测试各自数量。</div>'+
       '<h2><span class="n">04B</span>首页「我的任务」tab 规则</h2>'+
       '<table><tr><th style="width:18%">tab</th><th style="width:26%">开发 dev</th><th style="width:26%">测试 qa</th><th>产品 / 管理员</th></tr>'+
@@ -2206,8 +2390,8 @@ function viewSpec(){
       '<div class="fnote">「我的任务」按需求负责人归属计算：开发取需求开发负责人、测试取测试负责人、产品取产品负责人；列表不显示负责人，只显示开始-结束时间区间。</div>'+
       '<h2><span class="n">05</span>角色与可执行动作</h2>'+
       '<table><tr><th style="width:18%">角色</th><th style="width:26%">能看到的</th><th>能操作的</th></tr>'+
-        '<tr><td>开发 dev</td><td>我的任务 + 自己的流水</td><td>建流水、合并 QA、打包 QA、自测通过/拒绝、提测</td></tr>'+
-        '<tr><td>测试 qa</td><td>全部任务的流水</td><td>开始测试（合并 UAT）、打包 UAT、合并 Release、打包 Release、验证通过/不通过、合回 master</td></tr>'+
+        '<tr><td>开发 dev</td><td>我的任务 + 自己的流水</td><td>任务上：开始开发、提测；流水上：合并 QA、打包 QA、自测通过 / 拒绝</td></tr>'+
+        '<tr><td>测试 qa</td><td>全部任务的流水</td><td>任务上：开始测试、进入待发布、完成发布；流水上：合并 UAT、打包 UAT、合并 Release、打包 Release、验证通过 / 不通过、合回 master</td></tr>'+
         '<tr><td>管理员 admin</td><td>全部数据</td><td>任意阶段动作，维护应用配置与账号</td></tr>'+
         '<tr><td>产品 pm</td><td>需求与任务进度</td><td>只读：提需求、看进度，不操作代码与打包</td></tr>'+
       '</table>'+
@@ -2223,8 +2407,11 @@ function viewSpec(){
         '<tr><td>POST</td><td class="mono">/api/pipelines/:id/merge</td><td>body stage，建临时分支或直接合入目标分支</td></tr>'+
         '<tr><td>POST</td><td class="mono">/api/pipelines/:id/build</td><td>执行 ./build_app，进入单机队列</td></tr>'+
         '<tr><td>POST</td><td class="mono">/api/pipelines/:id/qa-verdict</td><td>自测通过 / 拒绝</td></tr>'+
-        '<tr><td>POST</td><td class="mono">/api/pipelines/:id/test | verify | accept</td><td>提测 / 验证通过 / 合回 master</td></tr>'+
-        '<tr><td>GET</td><td class="mono">/api/artifacts</td><td>产物列表，下载直链不鉴权</td></tr>'+
+        '<tr><td>POST</td><td class="mono">/api/tasks/:id/status</td><td>body status，推进任务状态（开始开发 / 提测 / 开始测试 / 进入待发布 / 完成发布），服务端校验门禁</td></tr>'+
+        '<tr><td>POST</td><td class="mono">/api/pipelines/:id/merge | verify | accept</td><td>合并（stage 决定 QA/UAT/Release/master）/ 验证通过 / 合回 master</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/artifacts</td><td>产物 / 构建列表（含打包中与失败），下载直链不鉴权</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/builds/:id</td><td>单次构建详情（状态、进度、失败原因、产物）</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/builds/:id/log</td><td>打包日志，运行中可轮询增量</td></tr>'+
         '<tr><td>GET/PUT</td><td class="mono">/api/roles/perms</td><td>读取 / 保存「角色 × 级别」菜单权限（仅管理员）</td></tr>'+
         '<tr><td>GET/POST/PUT</td><td class="mono">/api/staff</td><td>人员列表 / 新增（账号 + 初始密码 + 角色 + 级别）/ 编辑（仅管理员）</td></tr>'+
       '</table>'+
@@ -2233,11 +2420,73 @@ function viewSpec(){
       '<div class="todo"><span class="num">02</span><div><span class="q">不通过就回到上一节点</span><span class="a">自测拒绝 / 测试不通过退回「已合入 QA」，Release 验证不通过退回「测试中」，都要重打包再流转。</span></div></div>'+
       '<div class="todo"><span class="num">03</span><div><span class="q">验证通过后由测试点「合回 master」</span><span class="a">release 直接合入 master，不额外走 MR；合入完成流水结束，不再提供重新打包。</span></div></div>'+
       '<div class="todo"><span class="num">04</span><div><span class="q">合并无需排队，打包必须排队</span><span class="a">打包机只有一份 clone，构建期间任何流水都禁止切分支合并；产物长期保留、下载不鉴权。</span></div></div>'+
+      '<div class="todo"><span class="num">05</span><div><span class="q">打包日志随时可查，正在打包与失败也要可见</span><span class="a">CI 流水卡片上有「打包日志」按钮，直接打开最近一次构建（还在跑就实时刷进度）；打包产物页不只列成功产物，正在打包（带进度、产物未生成）与失败（带失败原因）都在列表里，点行右侧弹出构建详情，再点「查看打包日志」看完整日志。运行中的流水禁止再次点打包。</span></div></div>'+
+      '<div class="todo"><span class="num">06</span><div><span class="q">流水不管任务开始，任务状态由任务按钮推进</span><span class="a">流水只有合并 / 冲突待解决 / 已解决冲突 / 打包 QA·UAT·Release / 通过 / 拒绝；开始开发、提测、开始测试、进入待发布、完成发布都在任务详情上点，流水动作会按任务状态置灰提示。</span></div></div>'
     '</div>';
 }
 
 
 /* ---------- 任务详情：可扩展的按钮与 tab ---------- */
+/* 任务状态推进（流水只负责合并 / 冲突 / 打包 / 通过 / 拒绝，开始开发、提测、开始测试、待发布、结束都在任务上） */
+var TASK_STEPS = {
+  none:    { act:'taskStart',   label:'开始开发',          to:'dev',     role:'dev' },
+  dev:     { act:'taskSubmit',  label:'提测',              to:'ready',   role:'dev' },
+  ready:   { act:'taskTest',    label:'开始测试',          to:'testing', role:'qa'  },
+  testing: { act:'taskRelease', label:'进入待发布',        to:'release', role:'qa'  },
+  release: { act:'taskFinish',  label:'完成发布 · 已结束', to:'done',    role:'qa'  }
+};
+function taskGate(t, step){
+  var ps = pipesOf(t.id);
+  if(step.to === 'ready'){
+    if(!ps.length) return '还没有 CI 流水：先在「CI 流水」页建一条，走完合并 QA / 打包 / 自测';
+    var ok = ps.filter(function(p){ return p.status === 'dev_passed' && freshBuild(p,'qa'); });
+    if(!ok.length) return '还没有自测通过的流水：需要至少一条流水「合并 QA → 打包 → 自测通过」';
+  }
+  if(step.to === 'testing'){
+    var ok2 = ps.filter(function(p){ return p.status === 'dev_passed'; });
+    if(!ok2.length) return '还没有自测通过的流水，无法开始测试';
+  }
+  if(step.to === 'release'){
+    var ok3 = ps.filter(function(p){ return !!freshBuild(p,'uat'); });
+    if(!ok3.length) return '需要至少一条流水有成功的 UAT 包（先合并 UAT 再打包）';
+  }
+  if(step.to === 'done'){
+    var ok4 = ps.filter(function(p){ return p.status === 'done' || p.status === 'release_verified'; });
+    if(!ok4.length) return '需要至少一条流水 Release 验证通过并合回 master，才能结束任务';
+  }
+  return '';
+}
+function taskStepMeta(t){
+  var step = TASK_STEPS[taskStatusKey(t)];
+  if(!step) return null;
+  var need = taskGate(t, step);
+  return { act:step.act, label:step.label, role:step.role, to:step.to, dis: !!need, reason: need };
+}
+function advanceTask(tid){
+  var t = taskOf(tid);
+  if(!t) return;
+  var step = TASK_STEPS[taskStatusKey(t)];
+  if(!step) return;
+  if(step.role && !canRole(step.role)){ toast(roleLockReason(step.role),'warn'); return; }
+  var need = taskGate(t, step);
+  if(need){ toast(need,'warn'); return; }
+  t.status = step.to;
+  t.statusAt = fmtNow();
+  t.statusBy = me() ? me().name : '—';
+  if(step.to === 'ready'){
+    pipesOf(t.id).forEach(function(p){ if(p.status === 'dev_passed') p.submittedAt = fmtNow(); });
+  }
+  if(step.to === 'done') t.finishedAt = fmtNow();
+  save(); render();
+  var msg = {
+    dev:     '任务已开始开发，去流水里合并 QA',
+    ready:   '已提测，等测试在任务详情点「开始测试」',
+    testing: '已开始测试，去流水里合并 UAT 并打包',
+    release: '已进入待发布，去流水里合并 Release 并打包验证',
+    done:    '任务已发布结束，产物可继续下载'
+  }[step.to] || '任务状态已更新';
+  toast(msg, 'success');
+}
 var TASK_ACTIONS = [
   { act:'new-pipe',   label:'+ CI 流水', primary:true, role:'dev',  always:true },
   { act:'open-req',   label:'打开需求',  role:null },
@@ -2258,7 +2507,16 @@ function tabCount(t, key){
   return null;
 }
 function taskActionBar(t){
-  return TASK_ACTIONS.map(function(a){
+  var step = taskStepMeta(t), head = '';
+  if(step){
+    var locked = step.role ? !canRole(step.role) : false;
+    var dis = step.dis || locked;
+    var toLabel = (TASK_STATES[step.to]||{}).label || '';
+    var title = dis ? (locked ? roleLockReason(step.role) : step.reason) : ('把任务状态推进到「'+toLabel+'」');
+    head += '<button type="button" class="btn btn-sm btn-primary" data-act="'+step.act+'" data-id="'+t.id+'"'+
+      (dis ? ' disabled' : '') + ' title="'+esc(title)+'">'+esc(step.label)+'</button>';
+  }
+  return head + TASK_ACTIONS.map(function(a){
     var locked = a.role ? !canRole(a.role) : false;
     var cls = 'btn btn-sm' + (a.primary ? ' btn-primary' : '') + (a.danger ? ' btn-danger-line' : '');
     return '<button type="button" class="'+cls+'" data-act="'+a.act+'" data-id="'+t.id+'"' +
@@ -2278,7 +2536,15 @@ function pipeCard(p){
   var app = appOf(p), meta = STATUS_META[p.status] || STATUS_META.none;
   var stage = currentStage(p), target = branchName(p, stage);
   var b = buildOf(p);
-  var acts = pipeActions(p);
+  var lb0 = latestBuildOf(p), running0 = !!(lb0 && lb0.status === 'running');
+  var acts = pipeActions(p).map(function(a){
+    if(running0 && a.act === 'build'){
+      var c = {}; for(var k in a) c[k] = a[k];
+      c.dis = true; c.reason = '正在打包中，等这次构建结束再操作';
+      return c;
+    }
+    return a;
+  });
   var actHTML = acts.length ? acts.map(function(a){ return actionBtn(a, p.id); }).join('')
     : '<span class="muted">'+ (p.status==='done' ? '流水已结束' : '处理中…') +'</span>';
   return '<div class="pipe-card">'+
@@ -2292,10 +2558,17 @@ function pipeCard(p){
     '<div class="pc-meta">'+
       '<span>最近合并 '+(function(){ var m=(p.merges||[]).slice(-1)[0]; return m? '<b class="mono">'+esc(m.sha)+'</b> '+esc(String(m.at).slice(5)) : '<span class="muted">—</span>'; })()+'</span>'+
       '<span>产物 '+(b? '<b class="mono">'+esc(shortArtifact(b))+'</b>' : '<span class="muted">—</span>')+'</span>'+
+      (function(){ var lb = latestBuildOf(p); return (lb && lb.status === 'running')
+        ? '<span class="pill pill-building"><span class="spin"></span>打包中 '+(lb.progress||0)+'%</span>' : ''; })()+
     '</div>'+
     (/conflict/.test(p.status)? '<div class="pc-conflict">存在冲突 · 临时分支 '+esc(tempBranchName(p,stage))+' 解决后点「已解决冲突 · 合并」</div>' : '')+
     (p.rework? '<div class="pc-rework">'+esc(p.rework.label)+'：'+esc(p.rework.reason)+'</div>' : '')+
+    (function(){
+      var tip = acts.filter(function(a){ return a.dis && /任务详情/.test(a.reason||''); })[0];
+      return tip ? '<div class="pc-tip">'+esc(tip.reason)+'</div>' : '';
+    })()+
     '<div class="pc-acts">'+actHTML+
+      '<button type="button" class="btn btn-sm btn-ghost" data-act="pipe-log" data-id="'+p.id+'">打包日志</button>'+
       '<button type="button" class="btn btn-sm btn-ghost" data-act="open-pipe" data-id="'+p.id+'">流水详情</button></div>'+
   '</div>';
 }
@@ -2314,6 +2587,7 @@ function renderDrawer(){
   var root = byId('drawerRoot');
   if(!root) return;
   if(ui.logBuildId){ root.innerHTML = logDrawer(); return; }
+  if(ui.buildId){ root.innerHTML = buildDrawer(); return; }
   if(ui.pipeId){ root.innerHTML = pipeDrawer(); return; }
   if(ui.taskId){ root.innerHTML = taskDrawer(); return; }
   if(ui.reqId){ root.innerHTML = reqDrawer(); return; }
@@ -2343,12 +2617,13 @@ function reqDrawer(){
       '<span class="tb-role">优先级 '+esc(r.priority)+' · 期望 '+esc(r.due)+'</span><span class="tb-gap"></span>'+
       '<span class="muted">'+ts.length+' 个任务 · '+pipeCount+' 条 CI 流水</span></div>'+
     '<div class="drawer-body">'+
-      '<div class="task-actions"><button type="button" class="btn btn-sm btn-primary" data-act="new-task" data-id="'+r.id+'">+ 新建任务</button></div>'+
+      '<div class="task-actions">'+taskCreateBtn(r)+qaMemberBtn(r)+'</div>'+
       '<div class="blk-title">需求描述</div><p class="hint">'+esc(r.desc||'—')+'</p>'+
       '<div class="meta-grid" style="margin-top:12px">'+
         '<div class="mrow"><span class="mk">开发负责人</span><span class="mv">'+esc(personName(r.devOwner))+'</span></div>'+
         '<div class="mrow"><span class="mk">测试负责人</span><span class="mv">'+esc(personName(r.qaOwner))+'</span></div>'+
         '<div class="mrow"><span class="mk">产品负责人</span><span class="mv">'+esc(personName(r.pmOwner))+'</span></div>'+
+        '<div class="mrow"><span class="mk">测试人员</span><span class="mv">'+esc(reqQaMembersText(r))+'</span></div>'+
         '<div class="mrow"><span class="mk">创建时间</span><span class="mv">'+esc(r.createdAt)+'</span></div>'+
         '<div class="mrow"><span class="mk">期望完成</span><span class="mv">'+esc(r.due)+'</span></div>'+
       '</div>'+
@@ -2362,7 +2637,7 @@ function reqDrawer(){
 function taskDrawer(){
   var t = taskOf(ui.taskId);
   if(!t){ ui.taskId = null; return ''; }
-  var r = reqOf(t), ps = pipesOf(t.id), st = taskState(t), m = me();
+  var r = reqOf(t), ps = pipesOf(t.id), st = taskState(t), m = me(), step = taskStepMeta(t);
   var body;
   if(ui.tab === 'pipes'){
     body = ps.length ? ps.map(pipeCard).join('')
@@ -2386,8 +2661,9 @@ function taskDrawer(){
     ps.forEach(function(p){ buildsOf(p).forEach(function(b){ bs.push({p:p,b:b}); }); });
     bs.sort(function(a,b){ return String(a.b.startedAt) < String(b.b.startedAt) ? 1 : -1; });
     body = bs.length ? bs.map(function(x){
+      var bm0 = buildStatusMeta(x.b);
       return '<div class="build-item"><div class="bi-top"><span class="bi-name">'+esc(x.b.artifact?x.b.artifact.name:'构建 #'+x.b.id)+'</span>'+
-        '<span class="pill pill-'+(x.b.status==='success'?'done':'merging')+'">'+(x.b.status==='success'?'成功':'进行中')+'</span></div>'+
+        '<span class="pill pill-'+bm0.cls+'">'+bm0.label+'</span></div>'+
         '<div class="muted">'+esc(x.p.name)+' · '+esc(stageLabel(x.b.stage))+' · '+esc(x.b.startedAt)+' · '+esc(x.b.duration)+'</div>'+
         (x.b.artifact?'<div><button type="button" class="btn btn-sm" data-act="download" data-id="'+x.b.id+'">下载</button> <button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+x.b.id+'">查看日志</button></div>':'')+
       '</div>';
@@ -2412,7 +2688,10 @@ function taskDrawer(){
         return '<div class="ov-pipe"><span class="mono">'+esc(p.name)+'</span><span class="muted">'+esc(appOf(p)?appOf(p).name:'')+' · '+esc(p.artifactType||'')+'</span>'+
           '<span class="pill pill-'+meta.cls+'">'+esc(meta.label)+'</span></div>';
       }).join('') : '<p class="hint">还没有流水，点上方「+ CI 流水」创建</p>')+
-      '<div class="blk-title">任务状态</div><p class="hint">'+esc(st.hint)+'</p>';
+      '<div class="blk-title">任务状态</div><p class="hint">'+esc(st.hint)+'</p>'+
+      (step ? '<p class="hint">下一动作：<b>'+esc(step.label)+'</b>（'+esc(roleLabel(step.role))+'）'+
+        (step.dis ? ' · 暂不可用：'+esc(step.reason) : ' · 满足条件，可点上方按钮推进')+'</p>'
+        : '<p class="hint">任务已结束，不再推进状态；产物仍在打包产物页可下载。</p>');
   }
   return '<div class="drawer-mask" data-act="close-task"></div><aside class="drawer wide">'+
     '<div class="drawer-head"><div><div class="mini mono" style="color:#7d8a9b">'+esc(r?r.code:'')+' · '+esc(ownerName(t))+'</div>'+
@@ -2457,10 +2736,11 @@ function pipeDrawer(){
   }).join('');
   var bs = buildsOf(p).slice().reverse().map(function(x){
     return '<div class="build-item"><div class="bi-top"><span class="bi-name">'+esc(x.artifact?x.artifact.name:'构建 #'+x.id)+'</span>'+
-      '<span class="pill pill-'+(x.status==='success'?'done':'merging')+'">'+(x.status==='success'?'成功':'进行中')+'</span></div>'+
+      (function(){ var bm = buildStatusMeta(x); return '<span class="pill pill-'+bm.cls+'">'+bm.label+'</span></div>'; })()+
       '<div class="muted">'+esc(stageLabel(x.stage))+' · '+esc(x.mergeSha)+' · '+esc(x.startedAt)+' · '+esc(x.duration)+'</div>'+
       '<div style="display:flex;gap:6px;margin-top:2px">'+
         (x.artifact?'<button type="button" class="btn btn-sm" data-act="download" data-id="'+x.id+'">下载</button>':'')+
+        '<button type="button" class="btn btn-sm btn-ghost" data-act="build-detail" data-id="'+x.id+'">详情</button>'+
         '<button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+x.id+'">日志</button></div></div>';
   }).join('');
   var acts = pipeActions(p);
@@ -2507,12 +2787,61 @@ function logDrawer(){
     '<div class="log-head"><div><div class="log-title">'+esc(app?app.name:'构建')+' · '+esc(stageLabel(b.stage))+' 构建</div>'+
       '<div class="log-sub">'+esc(p?p.name:'')+' · '+esc(b.start!==undefined?b.start:b.startedAt)+' · '+esc(p?p.branch:'')+'</div></div>'+
       '<div style="display:flex;gap:8px"><button class="icon-btn" data-act="close-log" title="关闭">×</button></div></div>'+
-    '<div class="log-panel-head"><span>'+(running?'正在执行 ./build_app':'构建结束')+'</span><span>'+(b.artifact?esc(b.artifact.size):'—')+'</span></div>'+
+    '<div class="log-panel-head"><span>'+(running?'正在执行 ./build_app':(b.status==='failed'?'构建失败':'构建结束 · 成功'))+'</span>'+
+      '<span>'+(b.status==='failed'?esc(b.failReason||'exit code 1'):(b.artifact?esc(b.artifact.size):'—'))+'</span></div>'+
     '<div style="padding:0 18px 10px"><div class="progress-track"><span data-live-progress style="width:'+(b.progress||(b.status==='success'?100:0))+'%"></span></div></div>'+
     '<div class="logbox" data-live-log>'+logHTML(b)+(running?'<div class="ll ll-dim">▍</div>':'')+'</div>'+
     '<div class="log-foot"><span>'+esc(b.duration||'')+'</span><div style="display:flex;gap:8px">'+
       (p?'<button type="button" class="btn" data-act="back-pipe" data-id="'+p.id+'">返回流水</button>':'')+
       '<button type="button" class="btn" data-act="close-log">关闭</button></div></div></div>';
+}
+
+function buildDrawer(){
+  var b = state.builds.find(function(x){ return x.id === ui.buildId; });
+  if(!b){ ui.buildId = null; return ''; }
+  var p = pipeOf(b.pipelineId), app = p ? appOf(p) : null, t = p ? taskOf(p.taskId) : null, r = t ? reqOf(t) : null;
+  var st = buildStatusMeta(b), running = b.status === 'running';
+  var progress = running ? (b.progress||0) : (b.status === 'success' ? 100 : (b.progress||0));
+  var logTail = (b.log||[]).slice(-5);
+  var logHTMLs = logTail.map(function(l){
+    var cls = /^\$/.test(l) ? 'll-cmd' : (/SUCCESS|成功|upload/.test(l) ? 'll-ok' : (/error|FAILED|失败|exit code/.test(l) ? 'll-err' : 'll-out'));
+    return '<div class="lp '+cls+'">'+esc(l)+'</div>';
+  }).join('');
+  return '<div class="drawer-mask" data-act="close-build"></div><aside class="drawer wide">'+
+    '<div class="drawer-head"><div><div class="mini" style="color:#7d8a9b">'+esc(t?t.title:'—')+' · '+esc(p?p.name:'')+'</div>'+
+      '<h3>'+esc(app?app.name:'构建')+' · '+esc(stageLabel(b.stage))+' 构建</h3></div>'+
+      '<button class="icon-btn" data-act="close-build" title="关闭">×</button></div>'+
+    '<div class="drawer-body">'+
+      '<div class="statusline"><span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span>'+
+        (running?'<span class="rtag"><span class="spin"></span>打包机执行中</span>':'')+
+        '<span class="grow"></span><span class="mono muted" style="font-size:11px">'+esc(b.id)+'</span></div>'+
+      '<div class="progress-track light" style="margin:11px 0 5px"><span style="width:'+progress+'%'+
+        (b.status==='failed'?' background:#ef4444':'')+(running?' background:#2563eb':'')+'"></span></div>'+
+      '<div class="muted" style="font-size:11px">'+esc(running ? '已执行 '+(b.progress||0)+'%，完成后产物自动入库' :
+        (b.status === 'success' ? '构建完成，产物已入库' : '构建失败，未产生产物'))+'</div>'+
+      (b.status === 'failed' && b.failReason ?
+        '<div class="conflict-box" style="margin-top:12px;border-color:#f5c9c5;background:#fdecec;color:#a01b12">'+
+        '<b style="color:#b3261e">构建失败</b>'+esc(b.failReason)+'</div>' : '')+
+      '<div class="meta-grid" style="margin-top:14px">'+
+        '<div class="mrow"><span class="mk">所属需求</span><span class="mv">'+esc(r?r.code+' · '+r.title:'—')+'</span></div>'+
+        '<div class="mrow"><span class="mk">任务</span><span class="mv">'+esc(t?t.title:'—')+'</span></div>'+
+        '<div class="mrow"><span class="mk">CI 流水</span><span class="mv">'+esc(p?p.name:'—')+'</span></div>'+
+        '<div class="mrow"><span class="mk">目标阶段</span><span class="mv">'+esc(stageLabel(b.stage))+'</span></div>'+
+        '<div class="mrow"><span class="mk">合并提交</span><span class="mv mono">'+esc(b.mergeSha)+'</span></div>'+
+        '<div class="mrow"><span class="mk">开始时间</span><span class="mv mono">'+esc(b.startedAt)+'</span></div>'+
+        '<div class="mrow"><span class="mk">耗时</span><span class="mv mono">'+esc(b.duration||'—')+'</span></div>'+
+        '<div class="mrow"><span class="mk">产物文件</span><span class="mv mono" style="font-size:11.5px;word-break:break-all">'+esc(b.artifact?b.artifact.name:'—')+'</span></div>'+
+        '<div class="mrow"><span class="mk">大小 / 类型</span><span class="mv">'+esc(b.artifact?b.artifact.size:(b.artifactType||'—'))+(b.artifact?' · '+esc(b.artifact.type):'')+'</span></div>'+
+        '<div class="mrow"><span class="mk">存储</span><span class="mv mono">'+esc(b.artifact?b.artifact.url:'—')+'</span></div>'+
+      '</div>'+
+      '<div class="drawer-acts">'+
+        '<button type="button" class="btn btn-primary" data-act="open-log" data-id="'+b.id+'">查看打包日志</button>'+
+        (b.status === 'success' ? '<button type="button" class="btn" data-act="download" data-id="'+b.id+'">下载产物</button>' : '')+
+        (p ? '<button type="button" class="btn btn-ghost" data-act="open-pipe" data-id="'+p.id+'">返回流水</button>' : '')+
+      '</div>'+
+      '<div class="blk-title">日志（最近 '+logTail.length+' 行）</div>'+
+      (logTail.length ? '<div class="log-preview">'+logHTMLs+'</div>' : '<div class="muted">历史构建日志已归档</div>')+
+    '</div></aside>';
 }
 
 /* ---------- 弹框 ---------- */
@@ -2603,6 +2932,30 @@ function renderModal(){
     return;
   }
 
+  if(type === 'qamember'){
+    var rq = state.reqs.find(function(x){ return x.id === ui.modal.reqId; });
+    var pool = accounts().filter(function(a){ return a.active !== false && a.role === 'qa'; });
+    var cur = rq ? reqQaMembers(rq) : [];
+    var cards = pool.map(function(a){
+      var on = cur.indexOf(a.id) >= 0, isOwner = rq && rq.qaOwner === a.id;
+      return '<label class="qa-ck'+(isOwner?' locked':'')+'">'+
+        '<input type="checkbox" name="members" value="'+a.id+'"'+(on?' checked':'')+(isOwner?' disabled':'')+'>'+
+        '<span class="u-av" style="background:'+esc(a.color||'#475569')+'">'+esc(String(a.name).slice(0,1))+'</span>'+
+        '<span class="qa-ck-n">'+esc(a.name)+'</span>'+
+        '<span class="qa-ck-t">'+esc(levelLabel('qa',a.level))+(isOwner?' · 负责人':'')+'</span></label>';
+    }).join('');
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:520px">'+
+      '<form data-form="qamember" data-req="'+esc(rq?rq.id:'')+'">'+
+        '<div class="modal-head"><div><h3>维护测试人员</h3><p>'+esc(rq ? (rq.code+' · '+rq.title) : '')+'</p></div>'+
+        '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="field full">'+
+          '<span class="fx">参与该需求测试的测试人员（测试负责人固定在内）。任务仍由开发负责人创建，测试只在这里登记人员。</span>'+
+          '<div class="qa-pool">'+cards+'</div></div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+        '<button type="submit" class="btn btn-primary">保存</button></div>'+
+      '</form></div></div>';
+    return;
+  }
   if(type === 'req'){
     var nextNo = 1044 + state.reqs.length;
     root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal">'+
@@ -2616,7 +2969,7 @@ function renderModal(){
           '<div class="field"><label>产品负责人<span class="req-star">*</span></label>'+ownerSelect('pmOwner', ['pm'], 'u4')+'</div>'+
           '<div class="field full"><label>需求标题<span class="req-star">*</span></label><input name="title" placeholder="一句话说清要交付什么"></div>'+
           '<div class="field full"><label>需求描述</label><textarea name="desc" placeholder="背景、验收标准、涉及端…"></textarea></div>'+
-          '<div class="field"><label>优先级</label><select name="priority"><option>高</option><option selected>中</option><option>低</option></select></div>'+
+          '<div class="field"><label>优先级</label><select name="priority"><option value="P0">P0 · 最高</option><option value="P1" selected>P1 · 高</option><option value="P2">P2 · 普通</option></select></div>'+
           '<div class="field"><label>开始时间<span class="req-star">*</span></label><input type="date" name="start" value="'+todayStr()+'"></div>'+
           '<div class="field"><label>结束时间<span class="req-star">*</span></label><input type="date" name="due" value="2026-11-30"></div>'+
         '</div></div>'+
@@ -2639,7 +2992,7 @@ function renderModal(){
             accounts().filter(function(x){ return x.role==='dev' || x.role==='admin'; }).map(function(x){
               return '<option value="'+x.id+'"'+(x.id==='u1'?' selected':'')+'>'+esc(x.name)+'（'+esc(roleLabel(x.role))+'）</option>';
             }).join('')+'</select></div>'+
-          '<div class="field"><label>优先级</label><select name="priority"><option>高</option><option selected>中</option><option>低</option></select></div>'+
+          '<div class="field"><label>优先级</label><select name="priority"><option value="P0">P0 · 最高</option><option value="P1" selected>P1 · 高</option><option value="P2">P2 · 普通</option></select></div>'+
           '<div class="field"><label>开始时间<span class="req-star">*</span></label><input type="date" name="start" value="'+todayStr()+'"></div>'+
           '<div class="field"><label>结束时间<span class="req-star">*</span></label><input type="date" name="due" value="2026-11-30"></div>'+
           '<div class="field full"><span class="fx">建完任务后再到任务详情里加 CI 流水：一条流水对应一个应用 + 一条 Feature 分支 + 一种产物。</span></div>'+
@@ -2735,6 +3088,7 @@ document.addEventListener('keydown', function(e){
   if(e.key !== 'Escape' && e.keyCode !== 27) return;
   if(ui.modal){ ui.modal = null; renderModal(); return; }
   if(ui.logBuildId){ ui.logBuildId = null; renderDrawer(); return; }
+  if(ui.buildId){ ui.buildId = null; renderDrawer(); return; }
   if(ui.pipeId){ ui.pipeId = null; renderDrawer(); return; }
   if(ui.taskId){ ui.taskId = null; renderDrawer(); return; }
   if(ui.reqId){ ui.reqId = null; renderDrawer(); return; }
@@ -2835,9 +3189,9 @@ document.addEventListener('click', function(e){
     render();
     return;
   }
-  if(act === 'open-task'){ ui.taskId = id; ui.pipeId = null; ui.logBuildId = null; ui.tab = 'overview'; render(); return; }
+  if(act === 'open-task'){ ui.taskId = id; ui.pipeId = null; ui.buildId = null; ui.logBuildId = null; ui.tab = 'overview'; render(); return; }
   if(act === 'close-task'){ ui.taskId = null; render(); return; }
-  if(act === 'open-pipe'){ ui.pipeId = id; ui.logBuildId = null; render(); return; }
+  if(act === 'open-pipe'){ ui.pipeId = id; ui.buildId = null; ui.logBuildId = null; render(); return; }
   if(act === 'close-pipe'){ ui.pipeId = null; render(); return; }
   if(act === 'tab'){
     ui.tab = id; renderDrawer(); return;
@@ -2847,16 +3201,29 @@ document.addEventListener('click', function(e){
     if(!rid){ var t0 = taskOf(id), r0 = t0 ? reqOf(t0) : null; rid = r0 ? r0.id : null; }
     if(rid){
       ui.reqId = rid; ui.taskId = null; ui.pipeId = null; ui.logBuildId = null;
-      history.replaceState(null, '', '#/reqs');
+      /* 不强制跳转路由：在哪个页面点开就在哪个页面开抽屉（首页「我的需求」只看自己的，不该被带到全量需求列表） */
       render();
     }
     return;
   }
   if(act === 'close-req'){ ui.reqId = null; render(); return; }
-  if(act === 'open-log'){ ui.logBuildId = id; ui.pipeId = null; render(); return; }
+  if(act === 'open-log'){ ui.logBuildId = id; render(); return; }
   if(act === 'close-log'){ ui.logBuildId = null; render(); return; }
+  if(act === 'pipe-log'){
+    var pl = pipeOf(id), plb = pl ? latestBuildOf(pl) : null;
+    if(!plb){ toast('这条流水还没有构建记录，先点「打包」生成日志','warn'); return; }
+    ui.logBuildId = plb.id; render(); return;
+  }
+  if(act === 'build-detail'){ ui.buildId = id; ui.logBuildId = null; render(); return; }
+  if(act === 'close-build'){ ui.buildId = null; render(); return; }
   if(act === 'back-pipe'){ ui.logBuildId = null; ui.pipeId = id; render(); return; }
   if(act === 'new-pipe'){ ui.modal = { type:'pipe', taskId:id }; renderModal(); return; }
+  if(act === 'qa-member'){
+    var rr = state.reqs.find(function(x){ return x.id === el.dataset.id; });
+    if(!rr) return;
+    ui.modal = { type:'qamember', reqId: rr.id };
+    renderModal(); return;
+  }
   if(act === 'new-task'){ ui.modal = { type:'task', reqId:id }; renderModal(); return; }
   if(act === 'new-req'){ ui.modal = { type:'req' }; renderModal(); return; }
   if(act === 'new-app'){ ui.modal = { type:'app' }; renderModal(); return; }
@@ -2875,14 +3242,14 @@ document.addEventListener('click', function(e){
     if(ui.modal){ ui.modal = null; renderModal(); }
     resolveConflict(id); return;
   }
-  if(act === 'startDev'){ doMerge(id, 'qa'); return; }
-  if(act === 'startTest'){ doMerge(id, 'uat'); return; }
+  if(act === 'mergeQa'){ doMerge(id, 'qa'); return; }
+  if(act === 'mergeUat'){ doMerge(id, 'uat'); return; }
   if(act === 'prepareRelease'){ doMerge(id, 'release'); return; }
   if(act === 'accept'){ doMerge(id, 'master'); return; }
   if(act === 'build'){ runBuild(id); return; }
   if(act === 'qaPass'){ qaPass(id); return; }
   if(act === 'qaReject'){ qaReject(id); return; }
-  if(act === 'submitTest'){ submitTest(id); return; }
+  if(act === 'taskStart' || act === 'taskSubmit' || act === 'taskTest' || act === 'taskRelease' || act === 'taskFinish'){ advanceTask(id); return; }
   if(act === 'verifyPass'){ verifyPass(id); return; }
   if(act === 'rejectTest'){ ui.modal = { type:'reject', pipeId:id, kind:'test' }; renderModal(); return; }
   if(act === 'rejectRelease'){ ui.modal = { type:'reject', pipeId:id, kind:'release' }; renderModal(); return; }
@@ -3048,10 +3415,23 @@ document.addEventListener('submit', function(e){
     state.reqs.push({ id:uid('r'), code:(fd.get('code')||'').trim()||('REQ-'+Math.floor(Math.random()*1000)),
       title:title, desc:(fd.get('desc')||'').trim(),
       devOwner:fd.get('devOwner'), qaOwner:fd.get('qaOwner'), pmOwner:fd.get('pmOwner'),
-      priority:fd.get('priority')||'中', start:rStart, createdAt:fmtNow().slice(0,10), due:rDue||'2026-12-31' });
+      priority:fd.get('priority')||'P1', start:rStart, createdAt:fmtNow().slice(0,10), due:rDue||'2026-12-31' });
     ui.modal = null; save(); render(); toast('需求已创建，接下来拆任务','success'); return;
   }
 
+  if(kind === 'qamember'){
+    var rqm = state.reqs.find(function(x){ return x.id === form.dataset.req; });
+    if(!rqm){ toast('需求不存在','error'); return; }
+    if(!canEditQaMembers(rqm)){ toast('只有该需求的测试负责人或管理员能维护测试人员','error'); return; }
+    var picked = [].slice.call(form.querySelectorAll('input[name="members"]:checked')).map(function(x){ return x.value; });
+    if(rqm.qaOwner && picked.indexOf(rqm.qaOwner) < 0) picked.unshift(rqm.qaOwner);
+    if(!picked.length){ toast('至少保留一个测试人员','error'); return; }
+    rqm.qaMembers = picked;
+    save();
+    ui.modal = null; render();
+    toast('测试人员已更新：' + picked.map(personName).join('、'),'success');
+    return;
+  }
   if(kind === 'task'){
     var tt = (fd.get('title')||'').trim();
     if(!tt){ toast('任务标题要填','error'); return; }
@@ -3059,9 +3439,9 @@ document.addEventListener('submit', function(e){
     if(!tDue){ toast('请选择结束时间','error'); return; }
     if(tDue < tStart){ toast('结束时间不能早于开始时间','error'); return; }
     state.tasks.push({ id:uid('t'), reqId:form.dataset.req, title:tt, desc:(fd.get('desc')||'').trim(),
-      ownerId:fd.get('ownerId'), priority:fd.get('priority')||'中',
+      ownerId:fd.get('ownerId'), priority:fd.get('priority')||'P1', status:'none',
       start:tStart, createdAt:fmtNow().slice(0,10), due:tDue });
-    ui.modal = null; save(); render(); toast('任务已创建，可以给它加 CI 流水了','success'); return;
+    ui.modal = null; save(); render(); toast('任务已创建，进任务详情点「开始开发」','success'); return;
   }
 
   if(kind === 'pipe'){

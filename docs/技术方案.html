@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>ShipFlow 技术方案 · ShipFlow</title>
+<meta name="description" content="ShipFlow 代码合并与打包平台的技术架构、框架选型、SQLite 存储与 PostgreSQL 迁移方案。">
+<link rel="stylesheet" href="./assets/docs.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./index.html">
+    <span class="brand-mark">SF</span>
+    <span><b>ShipFlow</b><small>代码合并与打包平台</small></span>
+  </a>
+  <nav class="topnav">
+    <a href="./index.html">首页</a>
+    <a href="./需求说明.html">需求说明</a>
+    <a href="./技术方案.html" class="active">技术方案</a>
+    <a href="./设计文档.html">详细设计</a>
+    <a href="./代码合并与打包平台-原型.html">交互原型</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="toc-title">目录</div>
+    <nav class="toc"><a class="toc-link toc-h2" href="#sec-1">1. 背景与目标</a>
+<a class="toc-link toc-h2" href="#sec-2">2. 一期范围</a>
+<a class="toc-link toc-h3" href="#sec-3">2.1 功能范围</a>
+<a class="toc-link toc-h3" href="#sec-4">2.2 三类状态</a>
+<a class="toc-link toc-h2" href="#sec-5">3. 技术选型</a>
+<a class="toc-link toc-h2" href="#sec-6">4. 总体架构</a>
+<a class="toc-link toc-h2" href="#sec-7">5. 本地运行形态</a>
+<a class="toc-link toc-h3" href="#sec-8">5.1 关于 .sql 与 .db</a>
+<a class="toc-link toc-h2" href="#sec-9">6. 数据存储</a>
+<a class="toc-link toc-h3" href="#sec-10">6.1 存储分层</a>
+<a class="toc-link toc-h3" href="#sec-11">6.2 表清单</a>
+<a class="toc-link toc-h3" href="#sec-12">6.3 关键约束</a>
+<a class="toc-link toc-h3" href="#sec-13">6.4 文件布局</a>
+<a class="toc-link toc-h3" href="#sec-14">6.5 迁移到 PostgreSQL</a>
+<a class="toc-link toc-h2" href="#sec-15">7. 核心流程</a>
+<a class="toc-link toc-h3" href="#sec-16">7.1 任务状态推进</a>
+<a class="toc-link toc-h3" href="#sec-17">7.2 流水合并与打包</a>
+<a class="toc-link toc-h3" href="#sec-18">7.3 冲突处理</a>
+<a class="toc-link toc-h3" href="#sec-19">7.4 构建队列与日志</a>
+<a class="toc-link toc-h3" href="#sec-20">7.5 打包产物</a>
+<a class="toc-link toc-h2" href="#sec-21">8. 权限设计</a>
+<a class="toc-link toc-h2" href="#sec-22">9. API 草案</a>
+<a class="toc-link toc-h2" href="#sec-23">10. 前端设计</a>
+<a class="toc-link toc-h2" href="#sec-24">11. 工程结构</a>
+<a class="toc-link toc-h2" href="#sec-25">12. 风险与注意事项</a>
+<a class="toc-link toc-h2" href="#sec-26">13. 实施顺序</a>
+<a class="toc-link toc-h2" href="#sec-27">14. 关键决策记录</a></nav>
+  </aside>
+  <main class="content">
+    <div class="doc-header">
+      <div class="doc-eyebrow">架构方案</div>
+      <h1>ShipFlow 技术方案</h1>
+      <p class="doc-sub">架构、技术选型与本地运行方案</p>
+    </div>
+    <details class="mobile-toc">
+      <summary>目录</summary>
+      <nav class="toc"><a class="toc-link toc-h2" href="#sec-1">1. 背景与目标</a>
+<a class="toc-link toc-h2" href="#sec-2">2. 一期范围</a>
+<a class="toc-link toc-h3" href="#sec-3">2.1 功能范围</a>
+<a class="toc-link toc-h3" href="#sec-4">2.2 三类状态</a>
+<a class="toc-link toc-h2" href="#sec-5">3. 技术选型</a>
+<a class="toc-link toc-h2" href="#sec-6">4. 总体架构</a>
+<a class="toc-link toc-h2" href="#sec-7">5. 本地运行形态</a>
+<a class="toc-link toc-h3" href="#sec-8">5.1 关于 .sql 与 .db</a>
+<a class="toc-link toc-h2" href="#sec-9">6. 数据存储</a>
+<a class="toc-link toc-h3" href="#sec-10">6.1 存储分层</a>
+<a class="toc-link toc-h3" href="#sec-11">6.2 表清单</a>
+<a class="toc-link toc-h3" href="#sec-12">6.3 关键约束</a>
+<a class="toc-link toc-h3" href="#sec-13">6.4 文件布局</a>
+<a class="toc-link toc-h3" href="#sec-14">6.5 迁移到 PostgreSQL</a>
+<a class="toc-link toc-h2" href="#sec-15">7. 核心流程</a>
+<a class="toc-link toc-h3" href="#sec-16">7.1 任务状态推进</a>
+<a class="toc-link toc-h3" href="#sec-17">7.2 流水合并与打包</a>
+<a class="toc-link toc-h3" href="#sec-18">7.3 冲突处理</a>
+<a class="toc-link toc-h3" href="#sec-19">7.4 构建队列与日志</a>
+<a class="toc-link toc-h3" href="#sec-20">7.5 打包产物</a>
+<a class="toc-link toc-h2" href="#sec-21">8. 权限设计</a>
+<a class="toc-link toc-h2" href="#sec-22">9. API 草案</a>
+<a class="toc-link toc-h2" href="#sec-23">10. 前端设计</a>
+<a class="toc-link toc-h2" href="#sec-24">11. 工程结构</a>
+<a class="toc-link toc-h2" href="#sec-25">12. 风险与注意事项</a>
+<a class="toc-link toc-h2" href="#sec-26">13. 实施顺序</a>
+<a class="toc-link toc-h2" href="#sec-27">14. 关键决策记录</a></nav>
+    </details>
+    <article class="markdown-body">
+<blockquote>
+<p>状态：一期方案<br>关联需求：<a href="./%E9%9C%80%E6%B1%82%E8%AF%B4%E6%98%8E.html">需求说明.html</a><br>关联原型：<a href="./%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%E4%B8%8E%E6%89%93%E5%8C%85%E5%B9%B3%E5%8F%B0-%E5%8E%9F%E5%9E%8B.html">代码合并与打包平台-原型.html</a><br>详细设计：<a href="./%E8%AE%BE%E8%AE%A1%E6%96%87%E6%A1%A3.html">设计文档.html</a></p>
+</blockquote>
+<h2 id="sec-1">1. 背景与目标</h2>
+<p>ShipFlow 是一套内部研发交付平台，把「应用 → 需求 → 任务 → CI 流水 → 合并 → 打包 → 产物」串成一条可追踪的流水线。</p>
+<p>一期要解决：</p>
+<ul>
+<li>开发、测试、管理员、产品按账号区分角色，按角色执行各自动作</li>
+<li>应用配置与需求解耦，需求不绑应用，新建流水时再选应用</li>
+<li>一个任务可以挂多条 CI 流水，例如同一任务同时打 Android APK 与 iOS IPA</li>
+<li>每条流水独立完成 QA、UAT、Release、master 四个阶段的合并与打包</li>
+<li>任务状态由任务详情页的按钮推进，流水只负责合并、冲突、打包、通过和拒绝</li>
+<li>打包机单机单 clone，构建串行执行，日志和产物随时可查</li>
+</ul>
+<p>一期不做：Jenkins 接入、审批流、镜像构建、蓝绿发布、自动回滚、多构建机、SSO。</p>
+<h2 id="sec-2">2. 一期范围</h2>
+<h3 id="sec-3">2.1 功能范围</h3>
+<ul>
+<li>账号与角色：开发、测试、管理员、产品；除管理员外分 L1~L3</li>
+<li>权限：菜单权限按角色 × 级别配置；操作动作按角色执行</li>
+<li>应用配置：平台、仓库、分支映射、构建脚本、产物类型、产物路径</li>
+<li>需求：编号、标题、描述、开发 / 测试 / 产品负责人、测试人员、优先级、开始 / 结束时间</li>
+<li>任务：负责人、计划时间、任务状态、多条 CI 流水</li>
+<li>流水：Feature 分支、四阶段合并、冲突处理、合并记录、构建记录、产物</li>
+<li>打包：单机队列、实时进度、失败原因、完整日志</li>
+<li>产物：成功产物下载；正在打包和失败的构建也在产物页可见</li>
+</ul>
+<h3 id="sec-4">2.2 三类状态</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>状态来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>需求</td>
+<td>由任务聚合</td>
+<td>待拆任务 / 待开始 / 进行中 / 有超时 / 已完成</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>任务详情按钮推进</td>
+<td>未开始 / 开发中 / 已提测 / 测试中 / 待发布 / 已结束；超时按时间和状态派生</td>
+</tr>
+<tr>
+<td>流水</td>
+<td>合并与打包动作推进</td>
+<td>未开始 / 合并中 / 冲突 / 已合入 / 包就绪 / 自测通过 / 测试中 / 验证中 / 已验证 / 已合入 master</td>
+</tr>
+</tbody></table></div>
+<p>任务状态和流水状态解耦。流水动作会校验任务状态：任务未「开始开发」不能合并 QA；未「开始测试」不能合并 UAT；未「进入待发布」不能合并 Release。</p>
+<h2 id="sec-5">3. 技术选型</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>选型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前端</td>
+<td>Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router + TanStack Query</td>
+<td>权限后台、表格和表单密集；用 Element Plus 变量覆盖成原型蓝色风格</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>NestJS + class-validator + JWT + bcrypt + Swagger</td>
+<td>模块化清晰，TypeScript 全栈</td>
+</tr>
+<tr>
+<td>ORM</td>
+<td>Prisma</td>
+<td>一期 SQLite，后续切 PostgreSQL 时查询层改动小</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>SQLite 文件 <code>data/shipflow.db</code></td>
+<td>不需要安装数据库服务，随项目生成</td>
+</tr>
+<tr>
+<td>构建队列</td>
+<td>内存 FIFO + 单消费者</td>
+<td>一期单构建机；队列不持久化，重启后需重新触发</td>
+</tr>
+<tr>
+<td>进程执行</td>
+<td>execa + git CLI</td>
+<td>直接调用本机 git，行为与研发本地一致</td>
+</tr>
+<tr>
+<td>产物匹配</td>
+<td>fast-glob</td>
+<td>按应用配置的 <code>artifactPattern</code> 匹配产物</td>
+</tr>
+<tr>
+<td>日志</td>
+<td>文件 + HTTP 轮询增量</td>
+<td>需求要求运行中可轮询；<code>GET /api/builds/:id/log?offset=</code></td>
+</tr>
+<tr>
+<td>产物存储</td>
+<td>本地 <code>storage/</code></td>
+<td>后续可替换为 MinIO/S3</td>
+</tr>
+<tr>
+<td>工程</td>
+<td>pnpm workspace</td>
+<td>web、api、worker 与 shared 包统一管理</td>
+</tr>
+</tbody></table></div>
+<h2 id="sec-6">4. 总体架构</h2>
+<div class="mermaid">flowchart TB
+    Web[&quot;Vue 3 + Element Plus&quot;] --&gt; API[&quot;NestJS API&quot;]
+    API --&gt; DB[(&quot;SQLite&lt;br/&gt;data/shipflow.db&quot;)]
+    API --&gt; Queue[&quot;内存构建队列&lt;br/&gt;FIFO + 单消费者&quot;]
+    Queue --&gt; Runner[&quot;BuildRunner&lt;br/&gt;子进程&quot;]
+    Runner --&gt; Git[(&quot;Git 仓库&quot;)]
+    Runner --&gt; Artifact[(&quot;storage/artifacts&quot;)]
+    Runner --&gt; Log[(&quot;storage/logs&quot;)]
+    Web -.-&gt;|轮询构建日志| API</div>
+<p>架构原则：</p>
+<ol>
+<li><strong>控制面与执行面分离</strong>：API 负责账号、权限、需求、任务、流水状态和门禁；构建执行放在子进程。</li>
+<li><strong>任务状态与流水状态解耦</strong>：任务按钮推进任务状态，流水只管合并、冲突和打包。</li>
+<li><strong>状态机服务端权威</strong>：前端按钮只做展示，所有状态流转和门禁在 API 层再次校验。</li>
+<li><strong>单机串行</strong>：一期只有一个构建机，打包必须排队，构建期间禁止切分支合并。</li>
+<li><strong>存储可迁移</strong>：业务代码依赖仓储接口，不直接依赖 SQLite 或 Prisma。</li>
+</ol>
+<h2 id="sec-7">5. 本地运行形态</h2>
+<pre><code class="language-bash">pnpm install
+pnpm db:init     # 生成 data/shipflow.db 并写入种子数据
+pnpm dev         # 同时启动 web 与 api
+</code></pre>
+<ul>
+<li>Web：<code>http://localhost:5173</code></li>
+<li>API：<code>http://localhost:3000</code></li>
+<li>构建子进程由 API 在同一台机器上拉起</li>
+<li>不需要安装 PostgreSQL、Redis、Jenkins</li>
+</ul>
+<p>目录约定：</p>
+<pre><code class="language-text">data/shipflow.db                         # 运行时数据库，git 忽略
+prisma/schema.prisma                     # 模型定义
+prisma/migrations/**/migration.sql       # 建表 SQL
+prisma/init.sql                          # 演示用合并版初始化 SQL
+storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/     # 成功产物
+storage/logs/&lt;appId&gt;/&lt;buildId&gt;.log       # 构建日志
+storage/tmp/                             # 产物中转
+workspace/&lt;appId&gt;/                       # git clone，可重建
+</code></pre>
+<h3 id="sec-8">5.1 关于 <code>.sql</code> 与 <code>.db</code></h3>
+<p>SQLite 的运行时文件是 <code>.db</code> 或 <code>.sqlite</code>，<code>.sql</code> 只是建表和种子脚本。</p>
+<ul>
+<li>源码交付：提交 <code>prisma/migrations/**/migration.sql</code> 和 <code>prisma/init.sql</code>，首次运行 <code>pnpm db:init</code> 生成 <code>data/shipflow.db</code></li>
+<li>演示打包：构建时生成带种子数据的 <code>data/shipflow.db</code>，随演示包分发</li>
+<li>运行中的 <code>.db</code> 不提交 git</li>
+</ul>
+<h2 id="sec-9">6. 数据存储</h2>
+<h3 id="sec-10">6.1 存储分层</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>存什么</th>
+<th>是否事实来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SQLite</td>
+<td>账号、权限、需求、任务、流水、合并、冲突、构建、产物元数据、事件</td>
+<td>是</td>
+</tr>
+<tr>
+<td>本地文件</td>
+<td>git clone、成功产物、完整构建日志</td>
+<td>产物和日志是；clone 可重建</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>构建队列、当前构建进程、串行锁</td>
+<td>否</td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-11">6.2 表清单</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>表</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>users</code></td>
+<td>账号、角色、级别</td>
+</tr>
+<tr>
+<td><code>permission_groups</code> / <code>permission_defs</code> / <code>role_permissions</code></td>
+<td>权限定义与角色级别矩阵</td>
+</tr>
+<tr>
+<td><code>apps</code></td>
+<td>应用、仓库、分支、构建脚本、产物配置</td>
+</tr>
+<tr>
+<td><code>requirements</code> / <code>requirement_qa_members</code></td>
+<td>需求、三个负责人、测试人员</td>
+</tr>
+<tr>
+<td><code>tasks</code></td>
+<td>任务、负责人、计划时间、任务状态</td>
+</tr>
+<tr>
+<td><code>pipelines</code></td>
+<td>CI 流水、Feature 分支、流水状态、rework 信息</td>
+</tr>
+<tr>
+<td><code>pipeline_merges</code></td>
+<td>合并记录，作废只打标记</td>
+</tr>
+<tr>
+<td><code>pipeline_conflicts</code> / <code>pipeline_conflict_files</code></td>
+<td>冲突记录与冲突文件</td>
+</tr>
+<tr>
+<td><code>pipeline_events</code></td>
+<td>流水事件与审计</td>
+</tr>
+<tr>
+<td><code>builds</code></td>
+<td>构建记录、进度、失败原因、日志路径</td>
+</tr>
+<tr>
+<td><code>artifacts</code></td>
+<td>成功产物元数据</td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-12">6.3 关键约束</h3>
+<ol>
+<li><strong>任务状态落库</strong>。<code>tasks.status</code> 取 <code>none|dev|ready|testing|release|done</code>，由任务详情按钮修改；超时由 <code>due_at + status</code> 派生。</li>
+<li><strong>流水状态没有提测节点</strong>：提测是任务状态，流水 <code>dev_passed</code> 只表示「自测通过」，任务进入测试中后才可合并 UAT。</li>
+<li><strong>构建状态只有 <code>running|success|failed</code></strong>。构建记录在真正开始执行时创建；排队在内存队列里，不写 <code>builds</code>。</li>
+<li><strong>产物页按构建展示</strong>。<code>GET /api/artifacts</code> 返回构建列表，包含成功、打包中、失败三种；成功构建才有产物。</li>
+<li><strong>下载不鉴权</strong>。按需求产物下载直链不鉴权；<code>artifact_download</code> 权限项保留，但一期不参与下载校验。</li>
+<li><strong>日志随时可查</strong>。完整日志落文件，<code>builds.log_tail</code> 保留最后 200 行；运行中通过 <code>/log?offset=</code> 轮询增量。</li>
+<li><strong>合并记录不删除</strong>。自测拒绝、测试不通过、验证不通过时用 <code>invalidated_at</code> 标记作废，保留审计。</li>
+<li><strong>提交记录按任务一份</strong>。一个任务共用一条 Feature 分支和一个仓库，多条流水只是产物不同。</li>
+</ol>
+<h3 id="sec-13">6.4 文件布局</h3>
+<pre><code class="language-text">storage/
+├─ artifacts/&lt;appId&gt;/&lt;buildId&gt;/&lt;file&gt;     # 成功产物，长期保留
+├─ logs/&lt;appId&gt;/&lt;buildId&gt;.log            # 完整构建日志
+└─ tmp/&lt;buildId&gt;/                        # 产物中转
+
+workspace/&lt;appId&gt;/                       # git clone，可重建
+</code></pre>
+<h3 id="sec-14">6.5 迁移到 PostgreSQL</h3>
+<p>需要改：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>改动</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prisma provider</td>
+<td><code>sqlite</code> → <code>postgresql</code></td>
+</tr>
+<tr>
+<td>连接配置</td>
+<td><code>DATABASE_URL</code> 指向 PostgreSQL</td>
+</tr>
+<tr>
+<td>迁移</td>
+<td>重新生成 PostgreSQL migration</td>
+</tr>
+<tr>
+<td>JSON 列</td>
+<td>可选升级为 <code>jsonb</code></td>
+</tr>
+<tr>
+<td>数据迁移</td>
+<td>从 SQLite 读取，按 ID 写入 PostgreSQL</td>
+</tr>
+</tbody></table></div>
+<p>不需要改：</p>
+<ul>
+<li>领域实体、三类状态机</li>
+<li>用例、Controller、DTO</li>
+<li>前端页面和接口</li>
+<li>权限、任务、流水、构建业务规则</li>
+<li>仓储接口签名</li>
+</ul>
+<h2 id="sec-15">7. 核心流程</h2>
+<h3 id="sec-16">7.1 任务状态推进</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>当前</th>
+<th>按钮</th>
+<th>谁点</th>
+<th>进入条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未开始</td>
+<td>开始开发</td>
+<td>开发</td>
+<td>无</td>
+</tr>
+<tr>
+<td>开发中</td>
+<td>提测</td>
+<td>开发</td>
+<td>至少一条流水「自测通过」且有成功的 QA 包</td>
+</tr>
+<tr>
+<td>已提测</td>
+<td>开始测试</td>
+<td>测试</td>
+<td>至少一条流水「自测通过」</td>
+</tr>
+<tr>
+<td>测试中</td>
+<td>进入待发布</td>
+<td>测试</td>
+<td>至少一条流水有成功的 UAT 包</td>
+</tr>
+<tr>
+<td>待发布</td>
+<td>完成发布 · 已结束</td>
+<td>测试</td>
+<td>至少一条流水 Release 验证通过并合回 master</td>
+</tr>
+</tbody></table></div>
+<p>超时：</p>
+<ul>
+<li>未开始 / 开发中超过结束时间 → 开发超时</li>
+<li>已提测 / 测试中 / 待发布超过结束时间 → 测试超时</li>
+<li>已结束优先级最高，不显示超时</li>
+</ul>
+<h3 id="sec-17">7.2 流水合并与打包</h3>
+<p>流水状态：</p>
+<ul>
+<li><code>none</code> → 合并 QA → <code>dev_merged</code> / <code>dev_conflict</code></li>
+<li><code>dev_merged</code> → 打包 QA → <code>dev_built</code></li>
+<li><code>dev_built</code> → 自测通过 → <code>dev_passed</code>；拒绝 → <code>dev_merged</code></li>
+<li><code>dev_passed</code> →（任务进入测试中）→ 合并 UAT → <code>testing</code> / <code>test_conflict</code></li>
+<li><code>testing</code> → 打包 UAT；有 UAT 包后可合并 Release</li>
+<li><code>testing</code> → 合并 Release → <code>release_check</code> / <code>release_conflict</code></li>
+<li><code>release_check</code> → 打包 Release → 验证通过 → <code>release_verified</code></li>
+<li><code>release_verified</code> → 合回 master → <code>done</code></li>
+</ul>
+<p>任务状态校验：</p>
+<ul>
+<li>任务不是开发中，合并 QA 置灰</li>
+<li>任务不是测试中，合并 UAT 置灰</li>
+<li>任务不是待发布，合并 Release 置灰</li>
+</ul>
+<p>三处硬门禁：</p>
+<ol>
+<li>提测前必须有 QA 包并自测通过，且包对应最新一次 QA 合并</li>
+<li>合并 Release 前必须有成功的 UAT 包</li>
+<li>合回 master 前必须有成功的 Release 包并验证通过</li>
+</ol>
+<h3 id="sec-18">7.3 冲突处理</h3>
+<ul>
+<li>冲突时流水停在当前阶段，弹出冲突通知</li>
+<li>「冲突分支」是任务里配置的 Feature 分支，不是临时分支</li>
+<li>系统基于 Feature 分支创建临时分支：<code>temp/Conflict_&lt;目标分支&gt;_feature/&lt;feature&gt;_&lt;yy.MMDD.HHmm.ss&gt;</code></li>
+<li>开发在临时分支解决冲突并推送后，回到平台点「已解决冲突 · 合并」</li>
+<li>平台把临时分支合入目标分支，Feature 分支不做改动</li>
+<li>冲突态流水只有「已解决冲突 · 合并」一个按钮</li>
+</ul>
+<h3 id="sec-19">7.4 构建队列与日志</h3>
+<ul>
+<li>打包必须排队，合并不排队</li>
+<li>单机单 clone，构建期间任何流水禁止切分支合并</li>
+<li>运行中的流水禁止再次点打包</li>
+<li>构建状态：<code>running|success|failed</code></li>
+<li>运行中展示进度；失败记录 <code>failReason</code>，产物为空</li>
+<li>流水卡片有「打包日志」按钮，运行中和失败都能看</li>
+<li>完整日志落文件；运行中通过 <code>GET /api/builds/:id/log?offset=</code> 轮询增量</li>
+<li>产物页同时展示已入库、打包中、失败三种构建</li>
+</ul>
+<h3 id="sec-20">7.5 打包产物</h3>
+<ul>
+<li>成功构建生成产物，记录名称、类型、大小、SHA256、路径</li>
+<li>产物不可变，重新打包生成新的构建和产物</li>
+<li>失败构建不生成产物，但构建记录和日志保留</li>
+<li>产物下载直链不鉴权，按需求可直接分享</li>
+<li>产物页支持按应用筛选，展示状态、进度、失败原因</li>
+</ul>
+<h2 id="sec-21">8. 权限设计</h2>
+<ul>
+<li>菜单权限按「角色 × 级别」配置，决定左侧菜单和页面可见性</li>
+<li>操作动作按角色决定：开发、测试、管理员、产品</li>
+<li>管理员固定拥有全部菜单和动作，不参与矩阵编辑</li>
+<li>权限定义由 <code>config/permissions.json</code> 驱动，5 组 23 项</li>
+<li>权限矩阵支持按权限为行、角色 × 级别为列勾选，管理员列只读全选</li>
+<li><code>req_member</code> 控制维护需求测试人员</li>
+<li>操作类权限项保留在配置中，一期动作校验以角色 + 状态为准</li>
+</ul>
+<h2 id="sec-22">9. API 草案</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>POST</td>
+<td><code>/api/auth/login</code></td>
+<td>登录，返回 token 与权限</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/me</code></td>
+<td>当前账号、角色、级别、菜单与操作权限</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/my-tasks</code></td>
+<td>首页「我的任务」</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/my-requirements</code></td>
+<td>首页「我的需求」</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/requirements</code></td>
+<td>需求列表</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/requirements</code></td>
+<td>新建需求</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/tasks/:id/status</code></td>
+<td>推进任务状态，服务端校验门禁</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/tasks/:id/pipelines</code></td>
+<td>新建流水，body <code>appId / name / branch</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/tasks/:id/commits</code></td>
+<td>任务级提交记录，最近 20 条</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/merge</code></td>
+<td>合并指定阶段，body <code>stage</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/resolve</code></td>
+<td>冲突已解决，继续合并</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/build</code></td>
+<td>触发构建，进入单机队列</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/qa-verdict</code></td>
+<td>自测通过 / 拒绝</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/verify</code></td>
+<td>Release 验证通过 / 不通过</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/accept</code></td>
+<td>合回 master</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/artifacts</code></td>
+<td>产物 / 构建列表，含打包中与失败</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/builds/:id</code></td>
+<td>构建详情</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/builds/:id/log</code></td>
+<td>构建日志，支持 <code>offset</code> 增量轮询</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/artifacts/:id/download</code></td>
+<td>下载产物，不鉴权</td>
+</tr>
+<tr>
+<td>GET/PUT</td>
+<td><code>/api/roles/perms</code></td>
+<td>权限矩阵，仅管理员</td>
+</tr>
+<tr>
+<td>GET/POST/PUT</td>
+<td><code>/api/staff</code></td>
+<td>人员管理，仅管理员</td>
+</tr>
+</tbody></table></div>
+<h2 id="sec-23">10. 前端设计</h2>
+<ul>
+<li><code>/login</code>：原型以选账号方式进入；正式环境采用账号 + 密码 + JWT</li>
+<li><code>/home</code>：三个 tab：进行中 / 跟我有关 · 其他状态 / 我的需求</li>
+<li><code>/board</code>：七列任务看板，只展示状态</li>
+<li><code>/reqs</code>、<code>/reqs/:id</code>：需求列表与详情，含测试人员</li>
+<li><code>/apps</code>：应用配置</li>
+<li><code>/artifacts</code>：产物 / 构建列表，含打包中与失败</li>
+<li><code>/roles</code>、<code>/staff</code>：仅管理员</li>
+<li><code>/spec</code>：需求说明</li>
+<li>任务详情：状态推进按钮 + 概览 / CI 流水 / 提交记录 / 构建记录</li>
+</ul>
+<p>构建日志使用轮询，不引入 SSE。</p>
+<h2 id="sec-24">11. 工程结构</h2>
+<pre><code class="language-text">shipflow/
+├─ apps/
+│  ├─ web/                 # Vue 3 + Vite + Element Plus
+│  └─ api/                 # NestJS HTTP + 构建消费者
+├─ packages/
+│  └─ shared/              # 三类状态常量、DTO、权限常量
+├─ prisma/
+│  ├─ schema.prisma
+│  ├─ migrations/
+│  ├─ init.sql
+│  └─ seed.ts
+├─ config/permissions.json # 权限定义
+├─ data/                   # SQLite 文件
+├─ storage/                # 产物、日志、临时文件
+├─ workspace/              # git clone
+└─ docs/
+</code></pre>
+<p>一期构建消费者放在 <code>apps/api</code> 内，减少进程间通信；需要多构建机时再拆 <code>apps/worker</code>。</p>
+<h2 id="sec-25">12. 风险与注意事项</h2>
+<ol>
+<li><strong>SQLite 单写者</strong>：开启 WAL 与 <code>busy_timeout</code>，一期保持单进程写入。</li>
+<li><strong>构建机工具链</strong>：iOS 依赖 macOS + Xcode，Android 依赖 SDK；构建失败要有明确日志。</li>
+<li><strong>Git 凭据</strong>：使用本机 SSH agent 或 deploy key，不把私钥写库。</li>
+<li><strong>构建脚本可信输入</strong>：<code>buildScript</code> 等同于执行任意命令，只有管理员能改应用配置。</li>
+<li><strong>下载不鉴权</strong>：按需求产物直链不鉴权；内部演示可接受，正式环境建议改为限时签名链接。</li>
+<li><strong>日志增长</strong>：单次日志按 50MB 截断，历史日志按保留天数清理，保留 <code>log_tail</code>。</li>
+<li><strong>路径安全</strong>：产物读取、日志读取必须做路径规范化和越界校验。</li>
+<li><strong>队列不持久化</strong>：一期内存队列，进程重启后排队任务丢失，需要用户重新触发打包。</li>
+</ol>
+<h2 id="sec-26">13. 实施顺序</h2>
+<ol>
+<li>搭建 pnpm workspace、<code>apps/web</code>、<code>apps/api</code>、<code>packages/shared</code></li>
+<li>完成 Prisma schema、<code>migration.sql</code>、<code>init.sql</code>、seed</li>
+<li>定义仓储接口与 SQLite 实现，补契约测试</li>
+<li>实现登录、账号、角色级别、菜单与动作权限</li>
+<li>实现应用、需求、任务 CRUD；任务状态推进与门禁</li>
+<li>实现流水状态机、合并、冲突临时分支、rework</li>
+<li>实现构建队列、子进程执行、进度、失败原因、日志轮询、产物入库</li>
+<li>迁移原型页面到 Vue 3 + Element Plus</li>
+<li>完成演示打包：带种子数据的 <code>shipflow.db</code> 与一键启动脚本</li>
+</ol>
+<h2 id="sec-27">14. 关键决策记录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>决策</th>
+<th>选择</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>任务状态</td>
+<td>落库，由任务按钮推进</td>
+<td>需求说明明确任务状态与流水解耦</td>
+</tr>
+<tr>
+<td>流水职责</td>
+<td>只做合并、冲突、打包、通过 / 拒绝</td>
+<td>开始开发、提测、开始测试、待发布、结束都在任务上</td>
+</tr>
+<tr>
+<td>构建状态</td>
+<td>running / success / failed</td>
+<td>与需求说明和原型一致；排队放内存</td>
+</tr>
+<tr>
+<td>构建日志</td>
+<td>文件 + 轮询增量</td>
+<td>需求要求运行中可轮询，正在打包和失败都能看</td>
+</tr>
+<tr>
+<td>产物页</td>
+<td>按构建展示，含打包中与失败</td>
+<td>需求明确产物页不只列成功产物</td>
+</tr>
+<tr>
+<td>下载</td>
+<td>不鉴权</td>
+<td>需求明确产物直链不鉴权；安全收紧留二期</td>
+</tr>
+<tr>
+<td>权限</td>
+<td>菜单按级别，动作按角色</td>
+<td>需求说明明确级别只影响菜单</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>SQLite 一期，PostgreSQL 未来</td>
+<td>演示零安装；仓储抽象保证可迁移</td>
+</tr>
+<tr>
+<td>前端</td>
+<td>Vue 3 + Element Plus</td>
+<td>团队选型，后台组件覆盖完整</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>NestJS</td>
+<td>模块化清晰，TypeScript 全栈</td>
+</tr>
+</tbody></table></div>
+
+
+    </article>
+    <footer class="doc-footer">
+      <span>ShipFlow · 内部研发交付平台</span>
+      <span><a href="./index.html">返回首页</a> · <a href="./代码合并与打包平台-原型.html">查看交互原型</a></span>
+    </footer>
+  </main>
+</div>
+<button class="to-top" type="button" aria-label="回到顶部">↑</button>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/lib/common.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="./assets/docs.js"></script>
+</body>
+</html>

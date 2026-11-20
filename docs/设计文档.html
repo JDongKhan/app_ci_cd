@@ -1,0 +1,2684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>ShipFlow 详细设计 · ShipFlow</title>
+<meta name="description" content="ShipFlow 账号角色、权限、需求、任务、流水、构建与打包产物的详细设计，附完整建表 SQL。">
+<link rel="stylesheet" href="./assets/docs.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./index.html">
+    <span class="brand-mark">SF</span>
+    <span><b>ShipFlow</b><small>代码合并与打包平台</small></span>
+  </a>
+  <nav class="topnav">
+    <a href="./index.html">首页</a>
+    <a href="./需求说明.html">需求说明</a>
+    <a href="./技术方案.html">技术方案</a>
+    <a href="./设计文档.html" class="active">详细设计</a>
+    <a href="./代码合并与打包平台-原型.html">交互原型</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="toc-title">目录</div>
+    <nav class="toc"><a class="toc-link toc-h2" href="#sec-1">1. 文档说明</a>
+<a class="toc-link toc-h2" href="#sec-2">2. 设计原则</a>
+<a class="toc-link toc-h2" href="#sec-3">3. 模块与数据关系</a>
+<a class="toc-link toc-h2" href="#sec-4">4. 通用约定</a>
+<a class="toc-link toc-h2" href="#sec-5">5. 账号与角色</a>
+<a class="toc-link toc-h3" href="#sec-6">5.1 角色</a>
+<a class="toc-link toc-h3" href="#sec-7">5.2 users 表</a>
+<a class="toc-link toc-h3" href="#sec-8">5.3 登录</a>
+<a class="toc-link toc-h3" href="#sec-9">5.4 人员管理</a>
+<a class="toc-link toc-h3" href="#sec-9b">5.5 工作流程与角色分工</a>
+<a class="toc-link toc-h2" href="#sec-10">6. 权限设计</a>
+<a class="toc-link toc-h3" href="#sec-11">6.1 权限分类</a>
+<a class="toc-link toc-h3" href="#sec-12">6.2 表结构</a>
+<a class="toc-link toc-h3" href="#sec-13">6.3 权限项</a>
+<a class="toc-link toc-h3" href="#sec-14">6.4 默认权限矩阵</a>
+<a class="toc-link toc-h3" href="#sec-15">6.5 角色与动作</a>
+<a class="toc-link toc-h3" href="#sec-16">6.6 权限管理</a>
+<a class="toc-link toc-h2" href="#sec-17">7. 应用配置</a>
+<a class="toc-link toc-h3" href="#sec-18">7.1 apps 表</a>
+<a class="toc-link toc-h3" href="#sec-19">7.2 平台配置</a>
+<a class="toc-link toc-h3" href="#sec-20">7.3 分支映射</a>
+<a class="toc-link toc-h3" href="#sec-21">7.4 校验</a>
+<a class="toc-link toc-h3" href="#sec-22">7.5 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-23">8. 需求设计</a>
+<a class="toc-link toc-h3" href="#sec-24">8.1 requirements 表</a>
+<a class="toc-link toc-h3" href="#sec-25">8.2 requirement_qa_members 表</a>
+<a class="toc-link toc-h3" href="#sec-26">8.3 负责人规则</a>
+<a class="toc-link toc-h3" href="#sec-27">8.4 需求状态</a>
+<a class="toc-link toc-h3" href="#sec-28">8.5 「我的需求」</a>
+<a class="toc-link toc-h3" href="#sec-29">8.6 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-30">9. 任务设计</a>
+<a class="toc-link toc-h3" href="#sec-31">9.1 tasks 表</a>
+<a class="toc-link toc-h3" href="#sec-32">9.2 任务状态</a>
+<a class="toc-link toc-h3" href="#sec-33">9.3 超时</a>
+<a class="toc-link toc-h3" href="#sec-34">9.4 任务进度</a>
+<a class="toc-link toc-h3" href="#sec-35">9.5 首页 tab</a>
+<a class="toc-link toc-h3" href="#sec-36">9.6 提交记录</a>
+<a class="toc-link toc-h3" href="#sec-37">9.7 任务详情</a>
+<a class="toc-link toc-h3" href="#sec-38">9.8 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-39">10. 流水设计</a>
+<a class="toc-link toc-h3" href="#sec-40">10.1 pipelines 表</a>
+<a class="toc-link toc-h3" href="#sec-41">10.2 流水状态</a>
+<a class="toc-link toc-h3" href="#sec-42">10.3 流水动作与任务状态校验</a>
+<a class="toc-link toc-h3" href="#sec-43">10.4 合并记录</a>
+<a class="toc-link toc-h3" href="#sec-44">10.5 冲突处理</a>
+<a class="toc-link toc-h3" href="#sec-45">10.6 退回与 rework</a>
+<a class="toc-link toc-h3" href="#sec-46">10.7 流水事件</a>
+<a class="toc-link toc-h3" href="#sec-47">10.8 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-48">11. 构建设计</a>
+<a class="toc-link toc-h3" href="#sec-49">11.1 builds 表</a>
+<a class="toc-link toc-h3" href="#sec-50">11.2 队列</a>
+<a class="toc-link toc-h3" href="#sec-51">11.3 执行</a>
+<a class="toc-link toc-h3" href="#sec-52">11.4 日志</a>
+<a class="toc-link toc-h3" href="#sec-53">11.5 产物页</a>
+<a class="toc-link toc-h3" href="#sec-54">11.6 API</a>
+<a class="toc-link toc-h2" href="#sec-55">12. 打包产物设计</a>
+<a class="toc-link toc-h3" href="#sec-56">12.1 artifacts 表</a>
+<a class="toc-link toc-h3" href="#sec-57">12.2 命名</a>
+<a class="toc-link toc-h3" href="#sec-58">12.3 存储</a>
+<a class="toc-link toc-h3" href="#sec-59">12.4 发现与校验</a>
+<a class="toc-link toc-h3" href="#sec-60">12.5 新鲜度</a>
+<a class="toc-link toc-h3" href="#sec-61">12.6 下载</a>
+<a class="toc-link toc-h3" href="#sec-62">12.7 清理</a>
+<a class="toc-link toc-h2" href="#sec-63">13. API 汇总</a>
+<a class="toc-link toc-h2" href="#sec-64">14. 页面与路由</a>
+<a class="toc-link toc-h2" href="#sec-65">15. 核心时序</a>
+<a class="toc-link toc-h2" href="#sec-66">16. 测试要点</a>
+<a class="toc-link toc-h2" href="#sec-68">附录 A：完整建表 SQL</a></nav>
+  </aside>
+  <main class="content">
+    <div class="doc-header">
+      <div class="doc-eyebrow">详细设计</div>
+      <h1>ShipFlow 详细设计</h1>
+      <p class="doc-sub">模块设计、表结构、状态机与接口</p>
+    </div>
+    <details class="mobile-toc">
+      <summary>目录</summary>
+      <nav class="toc"><a class="toc-link toc-h2" href="#sec-1">1. 文档说明</a>
+<a class="toc-link toc-h2" href="#sec-2">2. 设计原则</a>
+<a class="toc-link toc-h2" href="#sec-3">3. 模块与数据关系</a>
+<a class="toc-link toc-h2" href="#sec-4">4. 通用约定</a>
+<a class="toc-link toc-h2" href="#sec-5">5. 账号与角色</a>
+<a class="toc-link toc-h3" href="#sec-6">5.1 角色</a>
+<a class="toc-link toc-h3" href="#sec-7">5.2 users 表</a>
+<a class="toc-link toc-h3" href="#sec-8">5.3 登录</a>
+<a class="toc-link toc-h3" href="#sec-9">5.4 人员管理</a>
+<a class="toc-link toc-h3" href="#sec-9b">5.5 工作流程与角色分工</a>
+<a class="toc-link toc-h2" href="#sec-10">6. 权限设计</a>
+<a class="toc-link toc-h3" href="#sec-11">6.1 权限分类</a>
+<a class="toc-link toc-h3" href="#sec-12">6.2 表结构</a>
+<a class="toc-link toc-h3" href="#sec-13">6.3 权限项</a>
+<a class="toc-link toc-h3" href="#sec-14">6.4 默认权限矩阵</a>
+<a class="toc-link toc-h3" href="#sec-15">6.5 角色与动作</a>
+<a class="toc-link toc-h3" href="#sec-16">6.6 权限管理</a>
+<a class="toc-link toc-h2" href="#sec-17">7. 应用配置</a>
+<a class="toc-link toc-h3" href="#sec-18">7.1 apps 表</a>
+<a class="toc-link toc-h3" href="#sec-19">7.2 平台配置</a>
+<a class="toc-link toc-h3" href="#sec-20">7.3 分支映射</a>
+<a class="toc-link toc-h3" href="#sec-21">7.4 校验</a>
+<a class="toc-link toc-h3" href="#sec-22">7.5 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-23">8. 需求设计</a>
+<a class="toc-link toc-h3" href="#sec-24">8.1 requirements 表</a>
+<a class="toc-link toc-h3" href="#sec-25">8.2 requirement_qa_members 表</a>
+<a class="toc-link toc-h3" href="#sec-26">8.3 负责人规则</a>
+<a class="toc-link toc-h3" href="#sec-27">8.4 需求状态</a>
+<a class="toc-link toc-h3" href="#sec-28">8.5 「我的需求」</a>
+<a class="toc-link toc-h3" href="#sec-29">8.6 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-30">9. 任务设计</a>
+<a class="toc-link toc-h3" href="#sec-31">9.1 tasks 表</a>
+<a class="toc-link toc-h3" href="#sec-32">9.2 任务状态</a>
+<a class="toc-link toc-h3" href="#sec-33">9.3 超时</a>
+<a class="toc-link toc-h3" href="#sec-34">9.4 任务进度</a>
+<a class="toc-link toc-h3" href="#sec-35">9.5 首页 tab</a>
+<a class="toc-link toc-h3" href="#sec-36">9.6 提交记录</a>
+<a class="toc-link toc-h3" href="#sec-37">9.7 任务详情</a>
+<a class="toc-link toc-h3" href="#sec-38">9.8 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-39">10. 流水设计</a>
+<a class="toc-link toc-h3" href="#sec-40">10.1 pipelines 表</a>
+<a class="toc-link toc-h3" href="#sec-41">10.2 流水状态</a>
+<a class="toc-link toc-h3" href="#sec-42">10.3 流水动作与任务状态校验</a>
+<a class="toc-link toc-h3" href="#sec-43">10.4 合并记录</a>
+<a class="toc-link toc-h3" href="#sec-44">10.5 冲突处理</a>
+<a class="toc-link toc-h3" href="#sec-45">10.6 退回与 rework</a>
+<a class="toc-link toc-h3" href="#sec-46">10.7 流水事件</a>
+<a class="toc-link toc-h3" href="#sec-47">10.8 API 与页面</a>
+<a class="toc-link toc-h2" href="#sec-48">11. 构建设计</a>
+<a class="toc-link toc-h3" href="#sec-49">11.1 builds 表</a>
+<a class="toc-link toc-h3" href="#sec-50">11.2 队列</a>
+<a class="toc-link toc-h3" href="#sec-51">11.3 执行</a>
+<a class="toc-link toc-h3" href="#sec-52">11.4 日志</a>
+<a class="toc-link toc-h3" href="#sec-53">11.5 产物页</a>
+<a class="toc-link toc-h3" href="#sec-54">11.6 API</a>
+<a class="toc-link toc-h2" href="#sec-55">12. 打包产物设计</a>
+<a class="toc-link toc-h3" href="#sec-56">12.1 artifacts 表</a>
+<a class="toc-link toc-h3" href="#sec-57">12.2 命名</a>
+<a class="toc-link toc-h3" href="#sec-58">12.3 存储</a>
+<a class="toc-link toc-h3" href="#sec-59">12.4 发现与校验</a>
+<a class="toc-link toc-h3" href="#sec-60">12.5 新鲜度</a>
+<a class="toc-link toc-h3" href="#sec-61">12.6 下载</a>
+<a class="toc-link toc-h3" href="#sec-62">12.7 清理</a>
+<a class="toc-link toc-h2" href="#sec-63">13. API 汇总</a>
+<a class="toc-link toc-h2" href="#sec-64">14. 页面与路由</a>
+<a class="toc-link toc-h2" href="#sec-65">15. 核心时序</a>
+<a class="toc-link toc-h2" href="#sec-66">16. 测试要点</a>
+<a class="toc-link toc-h2" href="#sec-68">附录 A：完整建表 SQL</a></nav>
+    </details>
+    <article class="markdown-body">
+<blockquote>
+<p>关联需求：<a href="./%E9%9C%80%E6%B1%82%E8%AF%B4%E6%98%8E.html">需求说明.html</a><br>关联原型：<a href="./%E4%BB%A3%E7%A0%81%E5%90%88%E5%B9%B6%E4%B8%8E%E6%89%93%E5%8C%85%E5%B9%B3%E5%8F%B0-%E5%8E%9F%E5%9E%8B.html">代码合并与打包平台-原型.html</a><br>关联方案：<a href="./%E6%8A%80%E6%9C%AF%E6%96%B9%E6%A1%88.html">技术方案.html</a><br>口径：本文与需求说明、交互原型同为一期设计（v1），表述一致</p>
+</blockquote>
+<h2 id="sec-1">1. 文档说明</h2>
+<p>本文说明一期各模块的具体设计：</p>
+<ul>
+<li>账号、角色、级别与权限</li>
+<li>应用、需求、任务</li>
+<li>任务状态机与任务级门禁</li>
+<li>流水状态机、合并、冲突、rework</li>
+<li>构建队列、进度、失败原因、日志</li>
+<li>打包产物与产物页</li>
+<li>表结构、接口、页面和测试要点</li>
+</ul>
+<h2 id="sec-2">2. 设计原则</h2>
+<ol>
+<li><strong>任务状态与流水状态解耦</strong>。任务状态由任务详情按钮推进；流水只负责合并、冲突、打包、通过 / 拒绝。</li>
+<li><strong>状态机服务端权威</strong>。前端按钮只做展示，所有状态流转和门禁在 API 层校验。</li>
+<li><strong>任务状态落库</strong>。<code>tasks.status</code> 是任务自己的字段，不由流水实时推导。</li>
+<li><strong>产物不可变</strong>。一次构建对应一批产物，重新打包生成新的构建和产物。</li>
+<li><strong>文件与元数据分离</strong>。大文件、日志落磁盘，数据库只存路径、大小、哈希和状态。</li>
+<li><strong>存储可迁移</strong>。业务代码依赖仓储接口，不直接依赖 SQLite 或 Prisma。</li>
+</ol>
+<h2 id="sec-3">3. 模块与数据关系</h2>
+<div class="mermaid">erDiagram
+    USERS ||--o{ REQUIREMENTS : dev_owner
+    USERS ||--o{ REQUIREMENT_QA_MEMBERS : qa_member
+    REQUIREMENTS ||--o{ REQUIREMENT_QA_MEMBERS : has
+    REQUIREMENTS ||--o{ TASKS : contains
+    USERS ||--o{ TASKS : owner
+    TASKS ||--o{ PIPELINES : contains
+    APPS ||--o{ PIPELINES : builds
+    PIPELINES ||--o{ PIPELINE_MERGES : has
+    PIPELINES ||--o{ PIPELINE_CONFLICTS : has
+    PIPELINES ||--o{ PIPELINE_EVENTS : logs
+    PIPELINES ||--o{ BUILDS : runs
+    BUILDS ||--o{ ARTIFACTS : produces
+    PERMISSION_GROUPS ||--o{ PERMISSION_DEFS : groups
+    PERMISSION_DEFS ||--o{ ROLE_PERMISSIONS : grants</div>
+<p>核心链路：</p>
+<pre><code class="language-text">Requirement 1 ── N Task 1 ── N Pipeline 1 ── N Build 1 ── N Artifact
+App 1 ── N Pipeline
+User 1 ── N Requirement（开发 / 测试 / 产品负责人）
+User 1 ── N Requirement（测试人员）
+User 1 ── N Task（开发负责人）
+</code></pre>
+<h2 id="sec-4">4. 通用约定</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>约定</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>主键</td>
+<td><code>TEXT</code>，应用生成 UUID</td>
+</tr>
+<tr>
+<td>时间</td>
+<td>UTC，领域层用 <code>Date</code>，SQLite 存 <code>DATETIME</code></td>
+</tr>
+<tr>
+<td>状态</td>
+<td><code>TEXT</code> + TypeScript 联合类型</td>
+</tr>
+<tr>
+<td>JSON</td>
+<td><code>TEXT</code>，仓储层序列化；切 PostgreSQL 后可升级 <code>jsonb</code></td>
+</tr>
+<tr>
+<td>布尔</td>
+<td>ORM 映射，业务代码不直接写 <code>0/1</code></td>
+</tr>
+<tr>
+<td>软删除</td>
+<td><code>deleted_at</code> 或 <code>active</code></td>
+</tr>
+<tr>
+<td>外键</td>
+<td>开启 SQLite <code>PRAGMA foreign_keys = ON</code></td>
+</tr>
+<tr>
+<td>命名</td>
+<td>表名、字段名统一 snake_case</td>
+</tr>
+</tbody></table></div>
+<h2 id="sec-5">5. 账号与角色</h2>
+<h3 id="sec-6">5.1 角色</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>标识</th>
+<th>说明</th>
+<th>级别</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>开发</td>
+<td><code>dev</code></td>
+<td>开始开发、提测、合并 QA、打包 QA、自测</td>
+<td>L1 / L2 / L3</td>
+</tr>
+<tr>
+<td>测试</td>
+<td><code>qa</code></td>
+<td>开始测试、进入待发布、完成发布、合并 UAT / Release / master、打包、验证</td>
+<td>L1 / L2 / L3</td>
+</tr>
+<tr>
+<td>产品</td>
+<td><code>pm</code></td>
+<td>提需求、维护需求、看进度，不操作代码与打包</td>
+<td>L1 / L2 / L3</td>
+</tr>
+<tr>
+<td>管理员</td>
+<td><code>admin</code></td>
+<td>全部菜单和动作，维护应用、权限、人员</td>
+<td>无级别</td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-7">5.2 users 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>account</code></td>
+<td>TEXT</td>
+<td>登录账号，唯一，小写</td>
+</tr>
+<tr>
+<td><code>password_hash</code></td>
+<td>TEXT</td>
+<td>bcrypt 哈希</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT</td>
+<td>显示名</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>TEXT</td>
+<td>dev / qa / admin / pm</td>
+</tr>
+<tr>
+<td><code>level</code></td>
+<td>TEXT</td>
+<td>l1 / l2 / l3；admin 为 NULL</td>
+</tr>
+<tr>
+<td><code>team</code></td>
+<td>TEXT</td>
+<td>团队</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>INTEGER</td>
+<td>1 启用，0 停用</td>
+</tr>
+<tr>
+<td><code>last_login_at</code></td>
+<td>DATETIME</td>
+<td>最近登录</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>创建时间</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>DATETIME</td>
+<td>更新时间</td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-8">5.3 登录</h3>
+<ul>
+<li>原型为演示方便，登录页直接选账号进入</li>
+<li>正式实现使用账号 + 密码 + JWT，账号数据模型不变</li>
+<li>账号必须 <code>active = 1</code></li>
+<li>登录成功更新 <code>last_login_at</code></li>
+<li>登录失败统一提示，不区分账号不存在或密码错误</li>
+<li>JWT 载荷包含 <code>sub</code>、<code>role</code>、<code>level</code>，有效期 7 天</li>
+</ul>
+<h3 id="sec-9">5.4 人员管理</h3>
+<p>仅管理员：</p>
+<ul>
+<li>新增账号：账号、姓名、初始密码、角色、级别、团队</li>
+<li>编辑账号：姓名、角色、级别、团队、启用状态</li>
+<li>重置密码</li>
+<li>停用账号：<code>active = 0</code></li>
+</ul>
+<p>约束：</p>
+<ul>
+<li>账号创建后不可修改</li>
+<li>管理员不能停用自己</li>
+<li>至少保留一个启用状态的管理员</li>
+<li>admin 的 level 必须为空</li>
+</ul>
+<h3 id="sec-9b">5.5 工作流程与角色分工</h3>
+<p>一条需求从提出到结束固定走四步，职责不重叠：产品建需求 → 开发负责人拆任务并指定任务负责人、测试负责人只登记测试人员 → 任务负责人领任务开发 → 测试接住提测后的任务直到发布结束。<strong>任务只由开发负责人创建，测试不建任务</strong>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>执行角色</th>
+<th>入口</th>
+<th>产出 / 权限边界</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 提需求</td>
+<td>产品负责人</td>
+<td>需求管理 → 新建需求</td>
+<td>生成需求，指定开发 / 测试 / 产品负责人；产品在「我的需求」只看到自己是产品负责人的需求</td>
+</tr>
+<tr>
+<td>2 拆任务</td>
+<td>开发负责人</td>
+<td>需求详情 →「+ 新建任务」</td>
+<td>生成任务，指定任务负责人与计划开始 / 结束时间；<code>task_create</code> 且必须是该需求的 <code>dev_owner_id</code>，其余角色按钮置灰</td>
+</tr>
+<tr>
+<td>2b 登记测试人员</td>
+<td>测试负责人</td>
+<td>需求详情 →「+ 测试人员」</td>
+<td>写入 <code>requirement_qa_members</code>；测试负责人固定在内；<code>req_member</code> 且必须是该需求的 <code>qa_owner_id</code>；不建任务</td>
+</tr>
+<tr>
+<td>3 开发交付</td>
+<td>任务负责人（开发）</td>
+<td>首页「进行中」→ 任务详情</td>
+<td>开始开发 → 流水合并 QA / 打包 / 自测 → 提测；任务按 <code>owner_id = 当前用户</code> 过滤</td>
+</tr>
+<tr>
+<td>4 测试交付</td>
+<td>测试负责人与测试人员</td>
+<td>首页「进行中」→ 任务详情</td>
+<td>开始测试 → 合并 UAT / 打包 / 测试 → 待发布 → 验证并合回 master → 已结束；任务按需求可见性过滤（负责人 + 测试人员）</td>
+</tr>
+</tbody></table></div>
+<p>可见范围由「我是这个需求的哪个负责人」决定，不由角色统一决定：同一个测试可能既是 A 需求的测试负责人、又是 B 需求的测试人员，两条需求都会进入他的「我的需求」与「我的任务」。</p>
+<h2 id="sec-10">6. 权限设计</h2>
+<h3 id="sec-11">6.1 权限分类</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>说明</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>菜单权限</td>
+<td>控制左侧菜单和页面可见性</td>
+<td><code>home</code>、<code>board</code>、<code>reqs</code></td>
+</tr>
+<tr>
+<td>操作权限</td>
+<td>权限配置中的动作项</td>
+<td><code>merge_qa</code>、<code>verify</code>、<code>req_member</code></td>
+</tr>
+<tr>
+<td>管理员专属</td>
+<td>只有 admin 可用</td>
+<td><code>roles</code>、<code>staff</code></td>
+</tr>
+</tbody></table></div>
+<p>需求说明明确：<strong>级别只决定菜单可见范围，具体可执行动作仍由角色决定</strong>。因此：</p>
+<ul>
+<li>菜单导航由「角色 × 级别」矩阵决定</li>
+<li>流水和任务动作由角色 + 当前状态决定</li>
+<li>操作权限项保留在配置中，用于说明和后续细化，一期不作为最终动作门禁</li>
+</ul>
+<h3 id="sec-12">6.2 表结构</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>表</th>
+<th>关键字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>permission_groups</code></td>
+<td>key、label、description、sort</td>
+<td>权限分组</td>
+</tr>
+<tr>
+<td><code>permission_defs</code></td>
+<td>key、group_key、label、menu、hash、admin_only、sort</td>
+<td>权限项定义</td>
+</tr>
+<tr>
+<td><code>role_permissions</code></td>
+<td>role、level、permission_key</td>
+<td>角色 × 级别矩阵</td>
+</tr>
+</tbody></table></div>
+<p>权限定义以 <code>config/permissions.json</code> 为准，启动时同步到 <code>permission_groups</code> 和 <code>permission_defs</code>；授权矩阵存数据库。新增权限只改配置文件或通过「角色权限」页导入 JSON。</p>
+<h3 id="sec-13">6.3 权限项</h3>
+<p>权限项共 5 组 23 项：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>分组</th>
+<th>key</th>
+<th>名称</th>
+<th>类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>工作台</td>
+<td><code>home</code></td>
+<td>首页 · 我的任务</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>工作台</td>
+<td><code>board</code></td>
+<td>任务看板</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>需求与任务</td>
+<td><code>reqs</code></td>
+<td>需求管理</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>需求与任务</td>
+<td><code>req_create</code></td>
+<td>新建需求</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>需求与任务</td>
+<td><code>task_create</code></td>
+<td>新建任务</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>需求与任务</td>
+<td><code>req_member</code></td>
+<td>维护需求测试人员</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>需求与任务</td>
+<td><code>task_delete</code></td>
+<td>删除任务</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>应用与产物</td>
+<td><code>apps</code></td>
+<td>应用配置</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>应用与产物</td>
+<td><code>app_edit</code></td>
+<td>新建 / 编辑应用</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>应用与产物</td>
+<td><code>artifacts</code></td>
+<td>打包产物</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>应用与产物</td>
+<td><code>artifact_download</code></td>
+<td>下载产物</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>pipe_create</code></td>
+<td>新建 CI 流水</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>merge_qa</code></td>
+<td>合并 QA</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>build_run</code></td>
+<td>打包</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>merge_uat</code></td>
+<td>合并 UAT</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>test_run</code></td>
+<td>开始测试</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>merge_release</code></td>
+<td>合并 Release</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>verify</code></td>
+<td>发布验证</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>merge_master</code></td>
+<td>合回 master</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>CI 流水</td>
+<td><code>accept</code></td>
+<td>验收归档</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>系统管理</td>
+<td><code>roles</code></td>
+<td>角色权限</td>
+<td>菜单，仅管理员</td>
+</tr>
+<tr>
+<td>系统管理</td>
+<td><code>staff</code></td>
+<td>人员管理</td>
+<td>菜单，仅管理员</td>
+</tr>
+<tr>
+<td>系统管理</td>
+<td><code>spec</code></td>
+<td>需求说明</td>
+<td>菜单</td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-14">6.4 默认权限矩阵</h3>
+<p>各角色级别的默认权限如下：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>角色 / 级别</th>
+<th>权限</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>dev / l1</td>
+<td>home、board、spec</td>
+</tr>
+<tr>
+<td>dev / l2</td>
+<td>home、board、reqs、spec、pipe_create、merge_qa、build_run</td>
+</tr>
+<tr>
+<td>dev / l3</td>
+<td>home、board、reqs、apps、artifacts、spec、pipe_create、merge_qa、build_run、task_create、artifact_download</td>
+</tr>
+<tr>
+<td>qa / l1</td>
+<td>home、board、reqs、spec、req_member</td>
+</tr>
+<tr>
+<td>qa / l2</td>
+<td>home、board、reqs、artifacts、spec、req_member、test_run、merge_uat、verify、accept、merge_release、merge_master</td>
+</tr>
+<tr>
+<td>qa / l3</td>
+<td>home、board、reqs、artifacts、spec、req_member、test_run、merge_uat、verify、accept、merge_release、merge_master、build_run、artifact_download</td>
+</tr>
+<tr>
+<td>pm / l1</td>
+<td>home、reqs、spec、req_create</td>
+</tr>
+<tr>
+<td>pm / l2</td>
+<td>home、reqs、board、artifacts、spec、req_create</td>
+</tr>
+<tr>
+<td>pm / l3</td>
+<td>home、reqs、board、artifacts、spec、req_create、artifact_download</td>
+</tr>
+<tr>
+<td>admin</td>
+<td>全部</td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-15">6.5 角色与动作</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>动作</th>
+<th>角色</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>开始开发（none → dev）</td>
+<td>开发</td>
+<td>任务详情按钮</td>
+</tr>
+<tr>
+<td>提测（dev → ready）</td>
+<td>开发</td>
+<td>任务详情按钮</td>
+</tr>
+<tr>
+<td>开始测试（ready → testing）</td>
+<td>测试</td>
+<td>任务详情按钮</td>
+</tr>
+<tr>
+<td>进入待发布（testing → release）</td>
+<td>测试</td>
+<td>任务详情按钮</td>
+</tr>
+<tr>
+<td>完成发布（release → done）</td>
+<td>测试</td>
+<td>任务详情按钮</td>
+</tr>
+<tr>
+<td>新建需求</td>
+<td>产品 / 管理员</td>
+<td><code>req_create</code></td>
+</tr>
+<tr>
+<td>新建任务</td>
+<td>该需求的开发负责人 / 管理员</td>
+<td><code>task_create</code>，且 <code>dev_owner_id</code> 必须是本人</td>
+</tr>
+<tr>
+<td>新建流水</td>
+<td>开发 / 管理员</td>
+<td><code>pipe_create</code></td>
+</tr>
+<tr>
+<td>合并 QA</td>
+<td>开发 / 管理员</td>
+<td>任务必须开发中</td>
+</tr>
+<tr>
+<td>打包 QA、自测通过 / 拒绝</td>
+<td>开发 / 管理员</td>
+<td>流水状态 + QA 包</td>
+</tr>
+<tr>
+<td>合并 UAT</td>
+<td>测试 / 管理员</td>
+<td>任务必须测试中</td>
+</tr>
+<tr>
+<td>打包 UAT</td>
+<td>测试 / 管理员</td>
+<td>流水状态</td>
+</tr>
+<tr>
+<td>合并 Release</td>
+<td>测试 / 管理员</td>
+<td>任务必须待发布，且有 UAT 包</td>
+</tr>
+<tr>
+<td>打包 Release、验证</td>
+<td>测试 / 管理员</td>
+<td>流水状态</td>
+</tr>
+<tr>
+<td>合回 master</td>
+<td>测试 / 管理员</td>
+<td>已验证</td>
+</tr>
+<tr>
+<td>维护需求测试人员</td>
+<td>该需求的测试负责人 / 管理员</td>
+<td><code>req_member</code>，且 <code>qa_owner_id</code> 必须是本人；测试不建任务</td>
+</tr>
+<tr>
+<td>删除任务</td>
+<td>管理员</td>
+<td><code>task_delete</code></td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-16">6.6 权限管理</h3>
+<ul>
+<li>只有 admin 可以访问 <code>/api/roles/perms</code></li>
+<li>矩阵按「权限为行、角色 × 级别为列」</li>
+<li>管理员列只读全选</li>
+<li>列头支持全选 / 清空</li>
+<li>保存时校验权限 key、角色、级别</li>
+<li>支持导入 JSON，结构同原型 <code>perm-config</code></li>
+<li>权限变更后重新拉取 <code>/api/me</code></li>
+</ul>
+<h2 id="sec-17">7. 应用配置</h2>
+<h3 id="sec-18">7.1 apps 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT</td>
+<td>应用名</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td>TEXT</td>
+<td>android / ios / server / web</td>
+</tr>
+<tr>
+<td><code>code</code></td>
+<td>TEXT</td>
+<td>项目标识</td>
+</tr>
+<tr>
+<td><code>repo</code></td>
+<td>TEXT</td>
+<td>Git 仓库</td>
+</tr>
+<tr>
+<td><code>default_branch</code></td>
+<td>TEXT</td>
+<td>默认分支</td>
+</tr>
+<tr>
+<td><code>build_script</code></td>
+<td>TEXT</td>
+<td>构建脚本</td>
+</tr>
+<tr>
+<td><code>artifact_type</code></td>
+<td>TEXT</td>
+<td>apk / ipa / jar / war</td>
+</tr>
+<tr>
+<td><code>artifact_pattern</code></td>
+<td>TEXT</td>
+<td>产物匹配 glob</td>
+</tr>
+<tr>
+<td><code>branches_json</code></td>
+<td>TEXT</td>
+<td>QA/UAT/Release/master 分支映射</td>
+</tr>
+<tr>
+<td><code>machine</code></td>
+<td>TEXT</td>
+<td>构建机标识</td>
+</tr>
+<tr>
+<td><code>stack</code></td>
+<td>TEXT</td>
+<td>技术栈说明</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>创建时间</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>DATETIME</td>
+<td>更新时间</td>
+</tr>
+</tbody></table></div>
+<p>唯一约束：<code>(name, platform)</code>。Android 和 iOS 可以同名同 code，但平台不同。</p>
+<h3 id="sec-19">7.2 平台配置</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>平台</th>
+<th>产物类型</th>
+<th>匹配示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Android</td>
+<td>apk</td>
+<td><code>build/app/outputs/**/*.apk</code></td>
+</tr>
+<tr>
+<td>iOS</td>
+<td>ipa</td>
+<td><code>build/ios/ipa/*.ipa</code></td>
+</tr>
+<tr>
+<td>服务端</td>
+<td>jar</td>
+<td><code>target/*.jar</code></td>
+</tr>
+<tr>
+<td>Web</td>
+<td>war</td>
+<td><code>dist/*.war</code></td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-20">7.3 分支映射</h3>
+<pre><code class="language-json">{
+  &quot;qa&quot;: &quot;qa&quot;,
+  &quot;uat&quot;: &quot;uat&quot;,
+  &quot;release&quot;: &quot;Release&quot;,
+  &quot;master&quot;: &quot;master&quot;
+}
+</code></pre>
+<p>四个 key 必须齐全；流水按阶段取目标分支。</p>
+<h3 id="sec-21">7.4 校验</h3>
+<ul>
+<li><code>(name, platform)</code> 唯一</li>
+<li><code>repo</code> 为合法 Git 地址</li>
+<li><code>build_script</code> 非空</li>
+<li><code>artifact_type</code> 在允许列表</li>
+<li><code>artifact_pattern</code> 非空</li>
+<li><code>branches_json</code> 四个 key 齐全</li>
+</ul>
+<h3 id="sec-22">7.5 API 与页面</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>权限</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET</td>
+<td><code>/api/apps</code></td>
+<td><code>apps</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/apps</code></td>
+<td><code>app_edit</code></td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/apps/:id</code></td>
+<td><code>app_edit</code></td>
+</tr>
+</tbody></table></div>
+<p>页面：<code>/apps</code>，卡片展示平台、仓库、分支、产物配置。</p>
+<h2 id="sec-23">8. 需求设计</h2>
+<h3 id="sec-24">8.1 requirements 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>code</code></td>
+<td>TEXT</td>
+<td>需求编号，唯一</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>TEXT</td>
+<td>标题</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>TEXT</td>
+<td>描述</td>
+</tr>
+<tr>
+<td><code>dev_owner_id</code></td>
+<td>TEXT</td>
+<td>开发负责人</td>
+</tr>
+<tr>
+<td><code>qa_owner_id</code></td>
+<td>TEXT</td>
+<td>测试负责人</td>
+</tr>
+<tr>
+<td><code>pm_owner_id</code></td>
+<td>TEXT</td>
+<td>产品负责人</td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>TEXT</td>
+<td>P0 / P1 / P2（P0 最高，默认 P1）</td>
+</tr>
+<tr>
+<td><code>start_at</code></td>
+<td>DATETIME</td>
+<td>计划开始</td>
+</tr>
+<tr>
+<td><code>due_at</code></td>
+<td>DATETIME</td>
+<td>计划结束</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>创建时间</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>DATETIME</td>
+<td>更新时间</td>
+</tr>
+</tbody></table></div>
+<h3 id="sec-25">8.2 requirement_qa_members 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>requirement_id</code></td>
+<td>TEXT</td>
+<td>需求</td>
+</tr>
+<tr>
+<td><code>user_id</code></td>
+<td>TEXT</td>
+<td>测试人员</td>
+</tr>
+</tbody></table></div>
+<p>复合主键 <code>(requirement_id, user_id)</code>。测试负责人自动包含在测试人员内；<code>req_member</code> 权限可维护该列表。</p>
+<h3 id="sec-26">8.3 负责人规则</h3>
+<ul>
+<li>开发负责人 <code>role = dev</code> 且启用</li>
+<li>测试负责人 <code>role = qa</code> 且启用</li>
+<li>产品负责人 <code>role = pm</code> 且启用</li>
+<li>测试人员必须 <code>role = qa</code> 且启用</li>
+<li>新建任务时，任务负责人默认取需求的开发负责人</li>
+<li>建任务必须是该需求的 <code>dev_owner_id</code>（或管理员）并具备 <code>task_create</code> 权限；测试即使有 <code>task_create</code> 也不能替他人需求拆任务，需求详情按钮对其置灰</li>
+<li>维护测试人员必须是该需求的 <code>qa_owner_id</code>（或管理员）并具备 <code>req_member</code>；被登记的测试人员不可从列表移除负责人本人</li>
+</ul>
+<h3 id="sec-27">8.4 需求状态</h3>
+<p>需求状态只读，由任务聚合：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>待拆任务</td>
+<td>还没有任务</td>
+</tr>
+<tr>
+<td>待开始</td>
+<td>全部任务都是未开始</td>
+</tr>
+<tr>
+<td>进行中</td>
+<td>至少一个任务在开发中 / 已提测 / 测试中 / 待发布</td>
+</tr>
+<tr>
+<td>有超时</td>
+<td>至少一个任务超时，且不是全部结束</td>
+</tr>
+<tr>
+<td>已完成</td>
+<td>全部任务已结束</td>
+</tr>
+</tbody></table></div>
+<p>优先级：已完成 &gt; 有超时 &gt; 进行中 &gt; 待开始 &gt; 待拆任务。</p>
+<h3 id="sec-28">8.5 「我的需求」</h3>
+<ul>
+<li>开发：<code>dev_owner_id = 当前用户</code></li>
+<li>测试：<code>qa_owner_id = 当前用户</code> 或在 <code>requirement_qa_members</code></li>
+<li>产品：<code>pm_owner_id = 当前用户</code></li>
+<li>管理员：全部</li>
+</ul>
+<h3 id="sec-29">8.6 API 与页面</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>权限</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET</td>
+<td><code>/api/requirements</code></td>
+<td><code>reqs</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/requirements/:id</code></td>
+<td><code>reqs</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/requirements</code></td>
+<td><code>req_create</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/my-requirements</code></td>
+<td><code>home</code></td>
+</tr>
+</tbody></table></div>
+<p>页面：<code>/reqs</code> 卡片列表，<code>/reqs/:id</code> 详情，展示负责人、测试人员、任务列表和进度。</p>
+<p>需求详情同时以右侧抽屉呈现（<code>GET /api/requirements/:id</code>）。<strong>抽屉不改变当前路由</strong>：首页「我的需求」tab 点卡片就在首页打开抽屉，不会被带到 <code>/reqs</code> 全量列表；需求管理页点卡片同样原地打开。抽屉按钮行（新建任务、测试人员）与任务详情「打开需求」都指向这个抽屉。</p>
+<h2 id="sec-30">9. 任务设计</h2>
+<h3 id="sec-31">9.1 tasks 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>req_id</code></td>
+<td>TEXT</td>
+<td>所属需求</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>TEXT</td>
+<td>任务标题</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>TEXT</td>
+<td>描述</td>
+</tr>
+<tr>
+<td><code>owner_id</code></td>
+<td>TEXT</td>
+<td>开发负责人</td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>TEXT</td>
+<td>P0 / P1 / P2（P0 最高，默认 P1）</td>
+</tr>
+<tr>
+<td><code>start_at</code></td>
+<td>DATETIME</td>
+<td>计划开始</td>
+</tr>
+<tr>
+<td><code>due_at</code></td>
+<td>DATETIME</td>
+<td>计划结束</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>none / dev / ready / testing / release / done</td>
+</tr>
+<tr>
+<td><code>status_at</code></td>
+<td>DATETIME</td>
+<td>最近状态变更时间</td>
+</tr>
+<tr>
+<td><code>status_by</code></td>
+<td>TEXT</td>
+<td>最近状态操作人</td>
+</tr>
+<tr>
+<td><code>finished_at</code></td>
+<td>DATETIME</td>
+<td>完成时间</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>创建时间</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>DATETIME</td>
+<td>更新时间</td>
+</tr>
+<tr>
+<td><code>deleted_at</code></td>
+<td>DATETIME</td>
+<td>软删除时间</td>
+</tr>
+</tbody></table></div>
+<p>索引：<code>req_id</code>、<code>owner_id</code>、<code>due_at</code>、<code>status</code>。</p>
+<h3 id="sec-32">9.2 任务状态</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>标识</th>
+<th>推进按钮</th>
+<th>谁点</th>
+<th>进入条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未开始</td>
+<td><code>none</code></td>
+<td>开始开发</td>
+<td>开发</td>
+<td>无</td>
+</tr>
+<tr>
+<td>开发中</td>
+<td><code>dev</code></td>
+<td>提测</td>
+<td>开发</td>
+<td>至少一条流水 <code>dev_passed</code> 且有成功 QA 包</td>
+</tr>
+<tr>
+<td>已提测</td>
+<td><code>ready</code></td>
+<td>开始测试</td>
+<td>测试</td>
+<td>至少一条流水 <code>dev_passed</code></td>
+</tr>
+<tr>
+<td>测试中</td>
+<td><code>testing</code></td>
+<td>进入待发布</td>
+<td>测试</td>
+<td>至少一条流水有成功 UAT 包</td>
+</tr>
+<tr>
+<td>待发布</td>
+<td><code>release</code></td>
+<td>完成发布 · 已结束</td>
+<td>测试</td>
+<td>至少一条流水 <code>done</code> 或 <code>release_verified</code></td>
+</tr>
+<tr>
+<td>已结束</td>
+<td><code>done</code></td>
+<td>—</td>
+<td>—</td>
+<td>不能继续推进</td>
+</tr>
+</tbody></table></div>
+<p>任务状态是任务自己的字段，不由流水实时推导。</p>
+<h3 id="sec-33">9.3 超时</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>判定</th>
+<th>条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>开发超时</td>
+<td>超过结束时间，且状态为未开始 / 开发中</td>
+</tr>
+<tr>
+<td>测试超时</td>
+<td>超过结束时间，且状态为已提测 / 测试中 / 待发布</td>
+</tr>
+<tr>
+<td>已结束</td>
+<td>状态为 done，优先级最高，不显示超时</td>
+</tr>
+</tbody></table></div>
+<p>展示上区分开发超时和测试超时；看板「超时」列用不同 pill，首页 KPI 显示「开发超时 X · 测试超时 Y」。</p>
+<h3 id="sec-34">9.4 任务进度</h3>
+<pre><code class="language-text">任务进度 = 所有流水已完成合并阶段数的平均值 / 4
+</code></pre>
+<p>只统计有效合并，四舍五入为 0~100。</p>
+<h3 id="sec-35">9.5 首页 tab</h3>
+<p>首页有三个 tab：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>tab</th>
+<th>开发</th>
+<th>测试</th>
+<th>产品 / 管理员</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>进行中</td>
+<td>未开始 + 开发中</td>
+<td>已提测 + 测试中 + 待发布</td>
+<td>全部未结束任务</td>
+</tr>
+<tr>
+<td>跟我有关 · 其他状态</td>
+<td>其余任务</td>
+<td>其余任务</td>
+<td>其余任务</td>
+</tr>
+<tr>
+<td>我的需求</td>
+<td>开发负责的需求</td>
+<td>测试负责或测试人员的需求</td>
+<td>产品负责的需求；管理员全部</td>
+</tr>
+</tbody></table></div>
+<p>任务列表不显示负责人，只显示开始 - 结束时间；行尾提供「任务详情」「+ CI 流水」。</p>
+<h3 id="sec-36">9.6 提交记录</h3>
+<ul>
+<li>一个任务对应一个仓库和一条 Feature 分支</li>
+<li>多条流水共用该分支，只是产物类型不同</li>
+<li>分支取该任务第一条流水的 <code>branch</code>，仓库取对应应用的 <code>repo</code></li>
+<li>新建流水时校验：同一任务下所有流水必须使用相同仓库和相同 Feature 分支</li>
+<li><code>GET /api/tasks/:id/commits?limit=20</code> 通过 <code>git log</code> 读取最近提交，不落库</li>
+</ul>
+<h3 id="sec-37">9.7 任务详情</h3>
+<p>按钮：</p>
+<ul>
+<li>当前状态推进按钮（开始开发 / 提测 / 开始测试 / 进入待发布 / 完成发布）</li>
+<li><ul>
+<li>CI 流水</li>
+</ul>
+</li>
+<li>打开需求：关闭任务抽屉、打开对应需求的右侧抽屉，停留在当前页面（不跳转 <code>/reqs</code> 全量列表）</li>
+<li>删除任务（仅管理员）</li>
+</ul>
+<p>tabs：概览 / CI 流水 / 提交记录 / 构建记录。</p>
+<p>删除任务为软删除；有正在运行构建时拒绝删除；历史流水、构建和产物保留。</p>
+<h3 id="sec-38">9.8 API 与页面</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET</td>
+<td><code>/api/my-tasks</code></td>
+<td>我的任务：开发按 <code>owner_id = 本人</code>；测试按所属需求的 <code>qa_owner_id</code> 或 <code>requirement_qa_members</code> 含本人；产品按需求的 <code>pm_owner_id = 本人</code>；管理员全量</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/board</code></td>
+<td>看板</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/tasks/:id</code></td>
+<td>任务详情</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/tasks</code></td>
+<td>新建任务</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/tasks/:id/status</code></td>
+<td>推进任务状态，body <code>{ status }</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/tasks/:id/commits</code></td>
+<td>最近 20 条提交</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/tasks/:id</code></td>
+<td>软删除，仅管理员</td>
+</tr>
+</tbody></table></div>
+<h2 id="sec-39">10. 流水设计</h2>
+<h3 id="sec-40">10.1 pipelines 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>task_id</code></td>
+<td>TEXT</td>
+<td>任务</td>
+</tr>
+<tr>
+<td><code>app_id</code></td>
+<td>TEXT</td>
+<td>应用</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT</td>
+<td>流水名称，例如 Android 包</td>
+</tr>
+<tr>
+<td><code>branch</code></td>
+<td>TEXT</td>
+<td>Feature 分支</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>流水状态</td>
+</tr>
+<tr>
+<td><code>rework_from</code></td>
+<td>TEXT</td>
+<td>退回来源阶段</td>
+</tr>
+<tr>
+<td><code>rework_reason</code></td>
+<td>TEXT</td>
+<td>退回原因</td>
+</tr>
+<tr>
+<td><code>rework_by</code></td>
+<td>TEXT</td>
+<td>退回操作人</td>
+</tr>
+<tr>
+<td><code>rework_at</code></td>
+<td>DATETIME</td>
+<td>退回时间</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>创建时间</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>DATETIME</td>
+<td>更新时间</td>
+</tr>
+</tbody></table></div>
+<p>唯一约束：<code>(task_id, app_id, branch)</code>。同一任务下所有流水的仓库和 Feature 分支必须一致。</p>
+<h3 id="sec-41">10.2 流水状态</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>初始</td>
+<td><code>none</code></td>
+<td>未开始</td>
+</tr>
+<tr>
+<td>QA</td>
+<td><code>dev_merging</code></td>
+<td>QA 合并中</td>
+</tr>
+<tr>
+<td>QA</td>
+<td><code>dev_conflict</code></td>
+<td>QA 合并冲突</td>
+</tr>
+<tr>
+<td>QA</td>
+<td><code>dev_merged</code></td>
+<td>已合入 QA</td>
+</tr>
+<tr>
+<td>QA</td>
+<td><code>dev_built</code></td>
+<td>QA 包就绪 · 待自测</td>
+</tr>
+<tr>
+<td>QA</td>
+<td><code>dev_passed</code></td>
+<td>自测通过</td>
+</tr>
+<tr>
+<td>UAT</td>
+<td><code>test_merging</code></td>
+<td>UAT 合并中</td>
+</tr>
+<tr>
+<td>UAT</td>
+<td><code>test_conflict</code></td>
+<td>UAT 合并冲突</td>
+</tr>
+<tr>
+<td>UAT</td>
+<td><code>testing</code></td>
+<td>测试中</td>
+</tr>
+<tr>
+<td>Release</td>
+<td><code>release_merging</code></td>
+<td>Release 合并中</td>
+</tr>
+<tr>
+<td>Release</td>
+<td><code>release_conflict</code></td>
+<td>Release 合并冲突</td>
+</tr>
+<tr>
+<td>Release</td>
+<td><code>release_check</code></td>
+<td>Release 验证中</td>
+</tr>
+<tr>
+<td>Release</td>
+<td><code>release_verified</code></td>
+<td>已验证 · 待合回 master</td>
+</tr>
+<tr>
+<td>master</td>
+<td><code>accept_merging</code></td>
+<td>master 合并中</td>
+</tr>
+<tr>
+<td>master</td>
+<td><code>accept_conflict</code></td>
+<td>master 合并冲突</td>
+</tr>
+<tr>
+<td>结束</td>
+<td><code>done</code></td>
+<td>已合入 master</td>
+</tr>
+</tbody></table></div>
+<p>没有 <code>ready_test</code>。提测是任务状态，不是流水状态。</p>
+<p>状态机：</p>
+<div class="mermaid">stateDiagram-v2
+    [*] --&gt; none
+    none --&gt; dev_merging
+    dev_merging --&gt; dev_merged
+    dev_merging --&gt; dev_conflict
+    dev_conflict --&gt; dev_merging: 已解决冲突
+    dev_merged --&gt; dev_built: 打包 QA 成功
+    dev_built --&gt; dev_passed: 自测通过
+    dev_built --&gt; dev_merged: 拒绝
+    dev_passed --&gt; test_merging: 任务进入测试中
+    test_merging --&gt; testing
+    test_merging --&gt; test_conflict
+    test_conflict --&gt; test_merging: 已解决冲突
+    testing --&gt; release_merging: 任务进入待发布
+    release_merging --&gt; release_check
+    release_merging --&gt; release_conflict
+    release_conflict --&gt; release_merging: 已解决冲突
+    release_check --&gt; release_verified: 验证通过
+    release_check --&gt; testing: 验证不通过
+    release_verified --&gt; accept_merging
+    accept_merging --&gt; done
+    accept_merging --&gt; accept_conflict
+    accept_conflict --&gt; accept_merging: 已解决冲突
+    done --&gt; [*]</div>
+<h3 id="sec-42">10.3 流水动作与任务状态校验</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>流水状态</th>
+<th>可用动作</th>
+<th>任务状态要求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>none</code></td>
+<td>合并 QA</td>
+<td>任务必须是开发中，否则置灰</td>
+</tr>
+<tr>
+<td><code>dev_conflict</code></td>
+<td>已解决冲突 · 合并</td>
+<td>任务开发中</td>
+</tr>
+<tr>
+<td><code>dev_merged</code></td>
+<td>打包 QA / 重新合并 QA</td>
+<td>任务开发中</td>
+</tr>
+<tr>
+<td><code>dev_built</code></td>
+<td>自测通过 / 拒绝 / 重新打包</td>
+<td>任务开发中</td>
+</tr>
+<tr>
+<td><code>dev_passed</code></td>
+<td>合并 UAT</td>
+<td>任务必须测试中，否则置灰</td>
+</tr>
+<tr>
+<td><code>test_conflict</code></td>
+<td>已解决冲突 · 合并</td>
+<td>任务测试中</td>
+</tr>
+<tr>
+<td><code>testing</code></td>
+<td>打包 UAT / 合并 Release / 测试不通过</td>
+<td>合并 Release 要求任务待发布且有 UAT 包</td>
+</tr>
+<tr>
+<td><code>release_conflict</code></td>
+<td>已解决冲突 · 合并</td>
+<td>任务待发布</td>
+</tr>
+<tr>
+<td><code>release_check</code></td>
+<td>打包 Release / 验证通过 / 验证不通过</td>
+<td>任务待发布</td>
+</tr>
+<tr>
+<td><code>release_verified</code></td>
+<td>下载产物 / 合回 master</td>
+<td>任务待发布</td>
+</tr>
+<tr>
+<td><code>accept_conflict</code></td>
+<td>已解决冲突 · 合并</td>
+<td>任务待发布</td>
+</tr>
+<tr>
+<td><code>done</code></td>
+<td>下载产物</td>
+<td>任务已结束</td>
+</tr>
+</tbody></table></div>
+<p>流水没有「开始开发」「提测」「开始测试」「进入待发布」「完成发布」按钮。</p>
+<h3 id="sec-43">10.4 合并记录</h3>
+<p><code>pipeline_merges</code>：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>pipeline_id</code></td>
+<td>TEXT</td>
+<td>流水</td>
+</tr>
+<tr>
+<td><code>stage</code></td>
+<td>TEXT</td>
+<td>qa / uat / release / master</td>
+</tr>
+<tr>
+<td><code>from_branch</code></td>
+<td>TEXT</td>
+<td>来源分支</td>
+</tr>
+<tr>
+<td><code>to_branch</code></td>
+<td>TEXT</td>
+<td>目标分支</td>
+</tr>
+<tr>
+<td><code>sha</code></td>
+<td>TEXT</td>
+<td>合并提交</td>
+</tr>
+<tr>
+<td><code>commits</code></td>
+<td>INTEGER</td>
+<td>提交数</td>
+</tr>
+<tr>
+<td><code>operator_id</code></td>
+<td>TEXT</td>
+<td>操作人</td>
+</tr>
+<tr>
+<td><code>merged_at</code></td>
+<td>DATETIME</td>
+<td>合并时间</td>
+</tr>
+<tr>
+<td><code>invalidated_at</code></td>
+<td>DATETIME</td>
+<td>作废时间</td>
+</tr>
+<tr>
+<td><code>invalidated_reason</code></td>
+<td>TEXT</td>
+<td>作废原因</td>
+</tr>
+</tbody></table></div>
+<p>不删除合并记录。自测拒绝、测试不通过、验证不通过时，将对应阶段记录标记作废；产物新鲜度只认 <code>invalidated_at IS NULL</code> 的最新记录。</p>
+<h3 id="sec-44">10.5 冲突处理</h3>
+<p><code>pipeline_conflicts</code>：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>pipeline_id</code></td>
+<td>TEXT</td>
+<td>流水</td>
+</tr>
+<tr>
+<td><code>stage</code></td>
+<td>TEXT</td>
+<td>阶段</td>
+</tr>
+<tr>
+<td><code>temp_branch</code></td>
+<td>TEXT</td>
+<td>临时分支</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>创建时间</td>
+</tr>
+<tr>
+<td><code>resolved_at</code></td>
+<td>DATETIME</td>
+<td>解决时间</td>
+</tr>
+<tr>
+<td><code>resolved_by</code></td>
+<td>TEXT</td>
+<td>解决人</td>
+</tr>
+</tbody></table></div>
+<p><code>pipeline_conflict_files</code>：<code>id</code>、<code>conflict_id</code>、<code>path</code>。</p>
+<p>冲突通知中的「冲突分支」是任务配置的 Feature 分支，不是临时分支。临时分支命名：</p>
+<pre><code class="language-text">temp/Conflict_&lt;目标分支&gt;_feature/&lt;feature&gt;_&lt;yy.MMDD.HHmm.ss&gt;
+</code></pre>
+<p>例：<code>temp/Conflict_qa_feature/transfer-direct-filter_26.1119.0942.31</code></p>
+<p>处理流程：</p>
+<ol>
+<li>合并失败后 <code>git merge --abort</code></li>
+<li>基于 Feature 创建临时分支并推送</li>
+<li>写入冲突记录和冲突文件</li>
+<li>流水进入冲突态</li>
+<li>开发在临时分支解决冲突并推送</li>
+<li>平台点「已解决冲突 · 合并」</li>
+<li>平台 fetch 临时分支，合入目标分支</li>
+<li>标记冲突记录已解决，写入合并记录，继续流程</li>
+</ol>
+<p>冲突态流水只有「已解决冲突 · 合并」一个按钮。</p>
+<h3 id="sec-45">10.6 退回与 rework</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>动作</th>
+<th>结果</th>
+<th>作废合并</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自测拒绝</td>
+<td>流水回 <code>dev_merged</code>，任务保持开发中</td>
+<td>QA 合并</td>
+</tr>
+<tr>
+<td>测试不通过</td>
+<td>流水回 <code>dev_merged</code>，任务回到开发中</td>
+<td>UAT、Release 合并</td>
+</tr>
+<tr>
+<td>Release 验证不通过</td>
+<td>流水回 <code>testing</code>，任务回到测试中</td>
+<td>Release 合并</td>
+</tr>
+</tbody></table></div>
+<p><code>pipelines.rework_*</code> 保存最近一次退回信息；<code>pipeline_events</code> 保存完整历史。</p>
+<h3 id="sec-46">10.7 流水事件</h3>
+<p><code>pipeline_events</code>：<code>id</code>、<code>pipeline_id</code>、<code>type</code>、<code>from_status</code>、<code>to_status</code>、<code>payload_json</code>、<code>actor_id</code>、<code>created_at</code>。</p>
+<p>典型事件：<code>merge_started</code>、<code>merge_succeeded</code>、<code>merge_conflict</code>、<code>conflict_resolved</code>、<code>build_started</code>、<code>build_succeeded</code>、<code>build_failed</code>、<code>qa_passed</code>、<code>qa_rejected</code>、<code>test_rejected</code>、<code>release_verified</code>、<code>release_rejected</code>、<code>master_merged</code>、<code>task_status_changed</code>。</p>
+<h3 id="sec-47">10.8 API 与页面</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>POST</td>
+<td><code>/api/tasks/:id/pipelines</code></td>
+<td>新建流水，body <code>appId / name / branch</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/merge</code></td>
+<td>合并，body <code>{ stage }</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/resolve</code></td>
+<td>冲突已解决</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/build</code></td>
+<td>触发构建</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/qa-verdict</code></td>
+<td>自测通过 / 拒绝</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/verify</code></td>
+<td>验证通过 / 不通过</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/accept</code></td>
+<td>合回 master</td>
+</tr>
+</tbody></table></div>
+<p>页面：任务详情 → CI 流水，展示流水卡片、状态、阶段圆点、动作按钮、打包日志入口。</p>
+<h2 id="sec-48">11. 构建设计</h2>
+<h3 id="sec-49">11.1 builds 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>pipeline_id</code></td>
+<td>TEXT</td>
+<td>流水</td>
+</tr>
+<tr>
+<td><code>stage</code></td>
+<td>TEXT</td>
+<td>构建阶段</td>
+</tr>
+<tr>
+<td><code>merge_sha</code></td>
+<td>TEXT</td>
+<td>对应合并提交</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>running / success / failed</td>
+</tr>
+<tr>
+<td><code>progress</code></td>
+<td>INTEGER</td>
+<td>0~100</td>
+</tr>
+<tr>
+<td><code>started_at</code></td>
+<td>DATETIME</td>
+<td>开始时间</td>
+</tr>
+<tr>
+<td><code>finished_at</code></td>
+<td>DATETIME</td>
+<td>结束时间</td>
+</tr>
+<tr>
+<td><code>duration_ms</code></td>
+<td>INTEGER</td>
+<td>耗时</td>
+</tr>
+<tr>
+<td><code>exit_code</code></td>
+<td>INTEGER</td>
+<td>退出码</td>
+</tr>
+<tr>
+<td><code>fail_reason</code></td>
+<td>TEXT</td>
+<td>失败原因</td>
+</tr>
+<tr>
+<td><code>log_path</code></td>
+<td>TEXT</td>
+<td>日志路径</td>
+</tr>
+<tr>
+<td><code>log_size_bytes</code></td>
+<td>INTEGER</td>
+<td>日志大小</td>
+</tr>
+<tr>
+<td><code>log_tail</code></td>
+<td>TEXT</td>
+<td>最后 200 行</td>
+</tr>
+<tr>
+<td><code>log_truncated</code></td>
+<td>INTEGER</td>
+<td>是否截断</td>
+</tr>
+<tr>
+<td><code>log_deleted_at</code></td>
+<td>DATETIME</td>
+<td>日志清理时间</td>
+</tr>
+<tr>
+<td><code>triggered_by</code></td>
+<td>TEXT</td>
+<td>触发人</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>创建时间</td>
+</tr>
+</tbody></table></div>
+<p>构建在真正开始执行时插入，状态为 <code>running</code>。排队只在内存队列里，不写 <code>builds</code>。</p>
+<h3 id="sec-50">11.2 队列</h3>
+<ul>
+<li>内存 FIFO 队列，单消费者，串行执行</li>
+<li>打包必须排队；合并不排队</li>
+<li>构建期间任何流水禁止切分支合并</li>
+<li>运行中的流水禁止再次点打包</li>
+<li>进程重启后排队任务丢失，需要重新触发；运行中的构建在启动时标记失败</li>
+</ul>
+<h3 id="sec-51">11.3 执行</h3>
+<ul>
+<li>工作目录：<code>workspace/&lt;appId&gt;</code></li>
+<li>命令：<code>bash -lc &lt;buildScript&gt;</code></li>
+<li>超时：默认 30 分钟</li>
+<li>stdout/stderr 按行写入日志文件</li>
+<li>进度根据构建步骤或日志行更新</li>
+<li>成功：扫描产物、校验、入库，状态 <code>success</code></li>
+<li>失败：记录 <code>fail_reason</code>，状态 <code>failed</code>，产物为空</li>
+</ul>
+<h3 id="sec-52">11.4 日志</h3>
+<ul>
+<li>路径：<code>storage/logs/&lt;appId&gt;/&lt;buildId&gt;.log</code></li>
+<li>头部写构建上下文：脚本、工作目录、merge sha、触发人、开始时间</li>
+<li>每行带时间戳和 <code>[stdout]</code> / <code>[stderr]</code></li>
+<li>结束写退出码、耗时、产物路径</li>
+<li><code>builds.log_tail</code> 保存最后 200 行</li>
+<li>运行中：<code>GET /api/builds/:id/log?offset=N</code> 返回增量</li>
+<li>历史：同一接口 offset 0 返回完整日志</li>
+<li>流水卡片有「打包日志」按钮，运行中和失败都能看</li>
+</ul>
+<h3 id="sec-53">11.5 产物页</h3>
+<p><code>/artifacts</code> 按构建展示，包含：</p>
+<ul>
+<li>已入库：成功构建 + 产物</li>
+<li>打包中：运行中构建，显示进度，无产物</li>
+<li>失败：失败构建，显示失败原因，无产物</li>
+</ul>
+<p>点行打开构建详情，再点「查看打包日志」。</p>
+<h3 id="sec-54">11.6 API</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET</td>
+<td><code>/api/artifacts</code></td>
+<td>构建 / 产物列表，含运行中与失败</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/builds/:id</code></td>
+<td>构建详情</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/builds/:id/log</code></td>
+<td>日志，支持 <code>offset</code> 增量</td>
+</tr>
+</tbody></table></div>
+<h2 id="sec-55">12. 打包产物设计</h2>
+<h3 id="sec-56">12.1 artifacts 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>TEXT</td>
+<td>主键</td>
+</tr>
+<tr>
+<td><code>build_id</code></td>
+<td>TEXT</td>
+<td>所属构建</td>
+</tr>
+<tr>
+<td><code>original_name</code></td>
+<td>TEXT</td>
+<td>原始文件名</td>
+</tr>
+<tr>
+<td><code>display_name</code></td>
+<td>TEXT</td>
+<td>平台标准名</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>TEXT</td>
+<td>apk / ipa / jar / war / zip / other</td>
+</tr>
+<tr>
+<td><code>mime_type</code></td>
+<td>TEXT</td>
+<td>Content-Type</td>
+</tr>
+<tr>
+<td><code>size_bytes</code></td>
+<td>INTEGER</td>
+<td>文件大小</td>
+</tr>
+<tr>
+<td><code>sha256</code></td>
+<td>TEXT</td>
+<td>文件哈希</td>
+</tr>
+<tr>
+<td><code>relative_path</code></td>
+<td>TEXT</td>
+<td>相对 <code>storage/artifacts</code> 的路径</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td>available / deleted / missing</td>
+</tr>
+<tr>
+<td><code>download_count</code></td>
+<td>INTEGER</td>
+<td>下载次数</td>
+</tr>
+<tr>
+<td><code>last_downloaded_at</code></td>
+<td>DATETIME</td>
+<td>最近下载</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>入库时间</td>
+</tr>
+<tr>
+<td><code>deleted_at</code></td>
+<td>DATETIME</td>
+<td>软删除时间</td>
+</tr>
+</tbody></table></div>
+<p>约束：<code>(build_id, relative_path)</code> 唯一。</p>
+<h3 id="sec-57">12.2 命名</h3>
+<pre><code class="language-text">&lt;appCode&gt;_&lt;stage&gt;_&lt;yyyyMMdd_HHmmss&gt;_&lt;shortSha&gt;.&lt;ext&gt;
+</code></pre>
+<ul>
+<li><code>shortSha</code> 取该阶段最新有效合并 SHA 前 7 位</li>
+<li><code>original_name</code> 保留原始文件名</li>
+<li>重名追加 <code>_2</code>、<code>_3</code></li>
+<li>总长度超过 120 字符时截断 appCode</li>
+</ul>
+<h3 id="sec-58">12.3 存储</h3>
+<pre><code class="language-text">storage/tmp/&lt;buildId&gt;/                    # 中转
+storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
+</code></pre>
+<ul>
+<li>先写临时目录，校验通过后原子移动</li>
+<li>同一文件系统用 <code>rename</code></li>
+<li>不允许软链接</li>
+<li>可选生成 <code>.sha256</code></li>
+</ul>
+<h3 id="sec-59">12.4 发现与校验</h3>
+<ul>
+<li>以 <code>workspace/&lt;appId&gt;</code> 为根目录</li>
+<li><code>fast-glob</code> 按 <code>artifactPattern</code> 匹配</li>
+<li>不跟随软链接，忽略 <code>.git</code>、<code>node_modules</code></li>
+<li>最多 20 个文件</li>
+<li>校验真实路径在工作区内</li>
+<li>校验普通文件、大小、扩展名、总大小、磁盘空间</li>
+</ul>
+<h3 id="sec-60">12.5 新鲜度</h3>
+<p>有效产物需要：</p>
+<ul>
+<li><code>artifact.status = available</code></li>
+<li>文件存在</li>
+<li>构建 <code>status = success</code></li>
+<li>构建阶段等于目标阶段</li>
+<li><code>build.merge_sha</code> 等于该阶段最新有效合并 SHA</li>
+</ul>
+<p>过期产物仍可下载，但不能通过门禁。</p>
+<h3 id="sec-61">12.6 下载</h3>
+<pre><code class="language-http">GET /api/artifacts/:id/download
+</code></pre>
+<ul>
+<li>按需求不鉴权，可直接分享</li>
+<li>校验 <code>relative_path</code> 位于 <code>storage/artifacts</code> 下</li>
+<li>文件不存在时标记 <code>missing</code>，返回 410</li>
+<li>流式返回，设置 <code>Content-Type</code>、<code>Content-Length</code>、<code>Content-Disposition</code></li>
+<li>异步更新下载次数</li>
+</ul>
+<p>安全说明：正式环境建议改为限时签名链接；一期按需求保持不鉴权。</p>
+<h3 id="sec-62">12.7 清理</h3>
+<ul>
+<li>演示阶段默认全部保留</li>
+<li>后续通过 <code>ARTIFACT_RETENTION_DAYS</code> 清理</li>
+<li>清理只删文件，记录标记为 <code>deleted</code> 并写 <code>deleted_at</code></li>
+<li>启动对账：记录有文件无 → <code>missing</code>；文件有记录无 → 延迟清理</li>
+</ul>
+<h2 id="sec-63">13. API 汇总</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>权限 / 说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>POST</td>
+<td><code>/api/auth/login</code></td>
+<td>登录</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/me</code></td>
+<td>当前用户与权限</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/my-tasks</code></td>
+<td><code>home</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/my-requirements</code></td>
+<td><code>home</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/board</code></td>
+<td><code>board</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/requirements</code></td>
+<td><code>reqs</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/requirements/:id</code></td>
+<td><code>reqs</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/requirements</code></td>
+<td><code>req_create</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/tasks/:id</code></td>
+<td><code>home</code> / <code>board</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/tasks</code></td>
+<td><code>task_create</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/tasks/:id/status</code></td>
+<td>任务状态推进</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/tasks/:id/commits</code></td>
+<td>提交记录</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/tasks/:id</code></td>
+<td><code>task_delete</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/apps</code></td>
+<td><code>apps</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/apps</code></td>
+<td><code>app_edit</code></td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/apps/:id</code></td>
+<td><code>app_edit</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/tasks/:id/pipelines</code></td>
+<td><code>pipe_create</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/merge</code></td>
+<td>合并</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/resolve</code></td>
+<td>冲突已解决</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/build</code></td>
+<td>触发构建</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/qa-verdict</code></td>
+<td>自测通过 / 拒绝</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/verify</code></td>
+<td>验证</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/pipelines/:id/accept</code></td>
+<td>合回 master</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/artifacts</code></td>
+<td>构建 / 产物列表</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/artifacts/:id/download</code></td>
+<td>下载，不鉴权</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/builds/:id</code></td>
+<td>构建详情</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/builds/:id/log</code></td>
+<td>日志增量</td>
+</tr>
+<tr>
+<td>GET/PUT</td>
+<td><code>/api/roles/perms</code></td>
+<td>权限矩阵，仅管理员</td>
+</tr>
+<tr>
+<td>GET/POST/PUT</td>
+<td><code>/api/staff</code></td>
+<td>人员管理，仅管理员</td>
+</tr>
+</tbody></table></div>
+<h2 id="sec-64">14. 页面与路由</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>路由</th>
+<th>页面</th>
+<th>权限</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/login</code></td>
+<td>登录</td>
+<td>公开</td>
+<td>原型选账号；正式账号密码</td>
+</tr>
+<tr>
+<td><code>/home</code></td>
+<td>我的任务</td>
+<td><code>home</code></td>
+<td>三个 tab</td>
+</tr>
+<tr>
+<td><code>/board</code></td>
+<td>任务看板</td>
+<td><code>board</code></td>
+<td>七列状态</td>
+</tr>
+<tr>
+<td><code>/reqs</code></td>
+<td>需求列表</td>
+<td><code>reqs</code></td>
+<td>需求卡片</td>
+</tr>
+<tr>
+<td><code>/reqs/:id</code></td>
+<td>需求详情</td>
+<td><code>reqs</code></td>
+<td>负责人、测试人员、任务</td>
+</tr>
+<tr>
+<td><code>/apps</code></td>
+<td>应用配置</td>
+<td><code>apps</code></td>
+<td>应用卡片</td>
+</tr>
+<tr>
+<td><code>/artifacts</code></td>
+<td>打包产物</td>
+<td><code>artifacts</code></td>
+<td>已入库 / 打包中 / 失败</td>
+</tr>
+<tr>
+<td><code>/roles</code></td>
+<td>角色权限</td>
+<td><code>roles</code></td>
+<td>权限矩阵</td>
+</tr>
+<tr>
+<td><code>/staff</code></td>
+<td>人员管理</td>
+<td><code>staff</code></td>
+<td>人员列表</td>
+</tr>
+<tr>
+<td><code>/spec</code></td>
+<td>需求说明</td>
+<td><code>spec</code></td>
+<td>规则说明</td>
+</tr>
+<tr>
+<td><code>/tasks/:id</code></td>
+<td>任务详情</td>
+<td><code>home</code> / <code>board</code></td>
+<td>状态按钮 + 四个 tab</td>
+</tr>
+</tbody></table></div>
+<h2 id="sec-65">15. 核心时序</h2>
+<div class="mermaid">sequenceDiagram
+    actor Dev as 开发
+    participant Web as Web
+    participant API as API
+    participant DB as SQLite
+    participant Git as Git 仓库
+    participant Runner as BuildRunner
+
+    Dev-&gt;&gt;Web: 任务详情点「开始开发」
+    Web-&gt;&gt;API: POST /api/tasks/:id/status
+    API-&gt;&gt;DB: tasks.status = dev
+    Dev-&gt;&gt;Web: 流水合并 QA
+    Web-&gt;&gt;API: POST /api/pipelines/:id/merge
+    API-&gt;&gt;Git: fetch + merge + push
+    API-&gt;&gt;DB: 合并记录 + 流水状态
+    Dev-&gt;&gt;Web: 打包 QA
+    Web-&gt;&gt;API: POST /api/pipelines/:id/build
+    API-&gt;&gt;Runner: 进入内存队列
+    Runner-&gt;&gt;DB: 创建 build(running)
+    Runner-&gt;&gt;Runner: 执行 buildScript
+    Web-&gt;&gt;API: 轮询 /api/builds/:id/log
+    API--&gt;&gt;Web: 日志增量与进度
+    Runner-&gt;&gt;DB: 产物 + build success
+    Dev-&gt;&gt;Web: 自测通过
+    Dev-&gt;&gt;Web: 任务详情点「提测」
+    Web-&gt;&gt;API: POST /api/tasks/:id/status
+    API-&gt;&gt;DB: tasks.status = ready</div>
+<h2 id="sec-66">16. 测试要点</h2>
+<p>单元测试：</p>
+<ul>
+<li>任务状态推进与门禁：开始开发、提测、开始测试、待发布、结束</li>
+<li>超时归属：开发超时 / 测试超时 / 已结束优先</li>
+<li>需求状态聚合</li>
+<li>流水状态机：合法与非法流转</li>
+<li>流水动作的任务状态校验</li>
+<li>合并记录作废与产物新鲜度</li>
+<li>产物命名、路径校验、重名处理</li>
+<li>权限：菜单按角色 × 级别、动作按角色、admin 绕过</li>
+</ul>
+<p>集成测试：</p>
+<ul>
+<li>登录成功 / 失败 / 停用账号</li>
+<li>需求 → 任务 → 流水 → 合并 → 构建 → 产物全链路</li>
+<li>任务未开始开发时合并 QA 置灰</li>
+<li>任务未开始测试时合并 UAT 置灰</li>
+<li>任务未进入待发布时合并 Release 置灰</li>
+<li>合并冲突 → 临时分支 → 解决 → 合入</li>
+<li>自测拒绝 / 测试不通过 / 验证不通过 → 回到上一节点</li>
+<li>构建排队、运行中禁止重复打包、构建期间禁止合并</li>
+<li>构建失败记录失败原因，产物页可见</li>
+<li>日志轮询增量</li>
+<li>产物下载不鉴权</li>
+<li>软删除任务后历史数据保留</li>
+</ul>
+<p>仓储契约测试：</p>
+<ul>
+<li>唯一约束</li>
+<li>事务回滚</li>
+<li>时间、JSON 字段读写</li>
+<li>软删除过滤</li>
+</ul>
+<h2 id="sec-68">附录 A：完整建表 SQL</h2>
+<blockquote>
+<p>SQLite 语法，用于评审和初始化；正式开发以 Prisma schema 和迁移为准。</p>
+</blockquote>
+<pre><code class="language-sql">PRAGMA foreign_keys = ON;
+
+CREATE TABLE users (
+  id            TEXT PRIMARY KEY,
+  account       TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name          TEXT NOT NULL,
+  role          TEXT NOT NULL,
+  level         TEXT,
+  team          TEXT,
+  active        INTEGER NOT NULL DEFAULT 1,
+  last_login_at DATETIME,
+  created_at    DATETIME NOT NULL,
+  updated_at    DATETIME NOT NULL
+);
+CREATE INDEX idx_users_role_level ON users(role, level);
+CREATE INDEX idx_users_active ON users(active);
+
+CREATE TABLE permission_groups (
+  key         TEXT PRIMARY KEY,
+  label       TEXT NOT NULL,
+  description TEXT,
+  sort        INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE permission_defs (
+  key        TEXT PRIMARY KEY,
+  group_key  TEXT NOT NULL REFERENCES permission_groups(key),
+  label      TEXT NOT NULL,
+  menu       INTEGER NOT NULL DEFAULT 0,
+  hash       TEXT,
+  admin_only INTEGER NOT NULL DEFAULT 0,
+  sort       INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_permission_defs_group ON permission_defs(group_key, sort);
+
+CREATE TABLE role_permissions (
+  role           TEXT NOT NULL,
+  level          TEXT NOT NULL,
+  permission_key TEXT NOT NULL REFERENCES permission_defs(key) ON DELETE CASCADE,
+  PRIMARY KEY (role, level, permission_key)
+);
+CREATE INDEX idx_role_permissions_key ON role_permissions(permission_key);
+
+CREATE TABLE apps (
+  id               TEXT PRIMARY KEY,
+  name             TEXT NOT NULL,
+  platform         TEXT NOT NULL,
+  code             TEXT NOT NULL,
+  repo             TEXT NOT NULL,
+  default_branch   TEXT NOT NULL,
+  build_script     TEXT NOT NULL,
+  artifact_type    TEXT NOT NULL,
+  artifact_pattern TEXT NOT NULL,
+  branches_json    TEXT NOT NULL,
+  machine          TEXT,
+  stack            TEXT,
+  created_at       DATETIME NOT NULL,
+  updated_at       DATETIME NOT NULL,
+  UNIQUE (name, platform)
+);
+CREATE INDEX idx_apps_platform ON apps(platform);
+
+CREATE TABLE requirements (
+  id           TEXT PRIMARY KEY,
+  code         TEXT NOT NULL UNIQUE,
+  title        TEXT NOT NULL,
+  description  TEXT,
+  dev_owner_id TEXT NOT NULL REFERENCES users(id),
+  qa_owner_id  TEXT NOT NULL REFERENCES users(id),
+  pm_owner_id  TEXT NOT NULL REFERENCES users(id),
+  priority     TEXT NOT NULL DEFAULT &#39;P1&#39;,
+  start_at     DATETIME,
+  due_at       DATETIME,
+  created_at   DATETIME NOT NULL,
+  updated_at   DATETIME NOT NULL
+);
+CREATE INDEX idx_requirements_dev_owner ON requirements(dev_owner_id);
+CREATE INDEX idx_requirements_qa_owner ON requirements(qa_owner_id);
+CREATE INDEX idx_requirements_pm_owner ON requirements(pm_owner_id);
+
+CREATE TABLE requirement_qa_members (
+  requirement_id TEXT NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+  user_id        TEXT NOT NULL REFERENCES users(id),
+  PRIMARY KEY (requirement_id, user_id)
+);
+CREATE INDEX idx_requirement_qa_members_user ON requirement_qa_members(user_id);
+
+CREATE TABLE tasks (
+  id          TEXT PRIMARY KEY,
+  req_id      TEXT NOT NULL REFERENCES requirements(id),
+  title       TEXT NOT NULL,
+  description TEXT,
+  owner_id    TEXT NOT NULL REFERENCES users(id),
+  priority    TEXT NOT NULL DEFAULT &#39;P1&#39;,
+  start_at    DATETIME,
+  due_at      DATETIME,
+  status      TEXT NOT NULL DEFAULT &#39;none&#39;,
+  status_at   DATETIME,
+  status_by   TEXT REFERENCES users(id),
+  finished_at DATETIME,
+  created_at  DATETIME NOT NULL,
+  updated_at  DATETIME NOT NULL,
+  deleted_at  DATETIME
+);
+CREATE INDEX idx_tasks_req ON tasks(req_id);
+CREATE INDEX idx_tasks_owner ON tasks(owner_id);
+CREATE INDEX idx_tasks_due ON tasks(due_at);
+CREATE INDEX idx_tasks_status ON tasks(status);
+
+CREATE TABLE pipelines (
+  id            TEXT PRIMARY KEY,
+  task_id       TEXT NOT NULL REFERENCES tasks(id),
+  app_id        TEXT NOT NULL REFERENCES apps(id),
+  name          TEXT NOT NULL,
+  branch        TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT &#39;none&#39;,
+  rework_from   TEXT,
+  rework_reason TEXT,
+  rework_by     TEXT REFERENCES users(id),
+  rework_at     DATETIME,
+  created_at    DATETIME NOT NULL,
+  updated_at    DATETIME NOT NULL,
+  UNIQUE (task_id, app_id, branch)
+);
+CREATE INDEX idx_pipelines_task ON pipelines(task_id);
+CREATE INDEX idx_pipelines_app_status ON pipelines(app_id, status);
+
+CREATE TABLE pipeline_merges (
+  id                 TEXT PRIMARY KEY,
+  pipeline_id        TEXT NOT NULL REFERENCES pipelines(id),
+  stage              TEXT NOT NULL,
+  from_branch        TEXT NOT NULL,
+  to_branch          TEXT NOT NULL,
+  sha                TEXT NOT NULL,
+  commits            INTEGER NOT NULL DEFAULT 0,
+  operator_id        TEXT REFERENCES users(id),
+  merged_at          DATETIME NOT NULL,
+  invalidated_at     DATETIME,
+  invalidated_reason TEXT
+);
+CREATE INDEX idx_merges_pipeline_stage ON pipeline_merges(pipeline_id, stage, merged_at);
+
+CREATE TABLE pipeline_conflicts (
+  id          TEXT PRIMARY KEY,
+  pipeline_id TEXT NOT NULL REFERENCES pipelines(id),
+  stage       TEXT NOT NULL,
+  temp_branch TEXT NOT NULL,
+  created_at  DATETIME NOT NULL,
+  resolved_at DATETIME,
+  resolved_by TEXT REFERENCES users(id)
+);
+CREATE INDEX idx_conflicts_pipeline_stage ON pipeline_conflicts(pipeline_id, stage, created_at);
+
+CREATE TABLE pipeline_conflict_files (
+  id          TEXT PRIMARY KEY,
+  conflict_id TEXT NOT NULL REFERENCES pipeline_conflicts(id) ON DELETE CASCADE,
+  path        TEXT NOT NULL,
+  UNIQUE (conflict_id, path)
+);
+CREATE INDEX idx_conflict_files_conflict ON pipeline_conflict_files(conflict_id);
+
+CREATE TABLE pipeline_events (
+  id           TEXT PRIMARY KEY,
+  pipeline_id  TEXT NOT NULL REFERENCES pipelines(id),
+  type         TEXT NOT NULL,
+  from_status  TEXT,
+  to_status    TEXT,
+  payload_json TEXT,
+  actor_id     TEXT REFERENCES users(id),
+  created_at   DATETIME NOT NULL
+);
+CREATE INDEX idx_pipeline_events_pipeline ON pipeline_events(pipeline_id, created_at);
+
+CREATE TABLE builds (
+  id             TEXT PRIMARY KEY,
+  pipeline_id    TEXT NOT NULL REFERENCES pipelines(id),
+  stage          TEXT NOT NULL,
+  merge_sha      TEXT NOT NULL,
+  status         TEXT NOT NULL DEFAULT &#39;running&#39;,
+  progress       INTEGER NOT NULL DEFAULT 0,
+  started_at     DATETIME,
+  finished_at    DATETIME,
+  duration_ms    INTEGER,
+  exit_code      INTEGER,
+  fail_reason    TEXT,
+  log_path       TEXT,
+  log_size_bytes INTEGER NOT NULL DEFAULT 0,
+  log_tail       TEXT,
+  log_truncated  INTEGER NOT NULL DEFAULT 0,
+  log_deleted_at DATETIME,
+  triggered_by   TEXT REFERENCES users(id),
+  created_at     DATETIME NOT NULL
+);
+CREATE INDEX idx_builds_pipeline_stage ON builds(pipeline_id, stage, created_at);
+CREATE INDEX idx_builds_status ON builds(status, created_at);
+
+CREATE TABLE artifacts (
+  id                 TEXT PRIMARY KEY,
+  build_id           TEXT NOT NULL REFERENCES builds(id),
+  original_name      TEXT NOT NULL,
+  display_name       TEXT NOT NULL,
+  type               TEXT NOT NULL,
+  mime_type          TEXT NOT NULL,
+  size_bytes         INTEGER NOT NULL,
+  sha256             TEXT NOT NULL,
+  relative_path      TEXT NOT NULL,
+  status             TEXT NOT NULL DEFAULT &#39;available&#39;,
+  download_count     INTEGER NOT NULL DEFAULT 0,
+  last_downloaded_at DATETIME,
+  created_at         DATETIME NOT NULL,
+  deleted_at         DATETIME,
+  UNIQUE (build_id, relative_path)
+);
+CREATE INDEX idx_artifacts_build ON artifacts(build_id);
+CREATE INDEX idx_artifacts_status_created ON artifacts(status, created_at);
+CREATE INDEX idx_artifacts_sha ON artifacts(sha256);
+</code></pre>
+
+
+    </article>
+    <footer class="doc-footer">
+      <span>ShipFlow · 内部研发交付平台</span>
+      <span><a href="./index.html">返回首页</a> · <a href="./代码合并与打包平台-原型.html">查看交互原型</a></span>
+    </footer>
+  </main>
+</div>
+<button class="to-top" type="button" aria-label="回到顶部">↑</button>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/lib/common.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="./assets/docs.js"></script>
+</body>
+</html>
