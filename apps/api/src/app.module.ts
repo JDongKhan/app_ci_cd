@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { AppsModule } from "./apps/apps.module";
 import { AuthModule } from "./auth/auth.module";
 import { HealthController } from "./health/health.controller";
+import { PipelinesModule } from "./pipelines/pipelines.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RequirementsModule } from "./requirements/requirements.module";
 import { RolesModule } from "./roles/roles.module";
@@ -21,7 +22,8 @@ import { UsersModule } from "./users/users.module";
     RolesModule,
     AppsModule,
     RequirementsModule,
-    TasksModule
+    TasksModule,
+    PipelinesModule
   ],
   controllers: [HealthController]
 })

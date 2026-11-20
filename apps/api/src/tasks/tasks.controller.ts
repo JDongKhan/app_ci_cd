@@ -10,10 +10,12 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { AdminGuard } from "../common/admin.guard";
+import { CurrentUser } from "../common/current-user.decorator";
+import { AuthUser } from "../common/auth-user.interface";
 import { JwtAuthGuard } from "../common/jwt-auth.guard";
 import { RequirePermissions } from "../common/permissions.decorator";
 import { PermissionsGuard } from "../common/permissions.guard";
-import { CreateTaskDto, UpdateTaskDto } from "./dto/task.dto";
+import { AdvanceTaskStatusDto, CreateTaskDto, UpdateTaskDto } from "./dto/task.dto";
 import { TasksService } from "./tasks.service";
 
 @ApiTags("tasks")
@@ -38,6 +40,15 @@ export class TasksController {
   @RequirePermissions("task_create")
   update(@Param("id") id: string, @Body() dto: UpdateTaskDto) {
     return this.tasksService.update(id, dto);
+  }
+
+  @Post(":id/status")
+  advanceStatus(
+    @Param("id") id: string,
+    @Body() dto: AdvanceTaskStatusDto,
+    @CurrentUser() user: AuthUser
+  ) {
+    return this.tasksService.advanceStatus(id, dto.status, user);
   }
 
   @Delete(":id")

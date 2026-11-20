@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuthUser } from "../common/auth-user.interface";
+import { averageProgress } from "../common/pipeline-status";
 import {
   summarizeRequirement,
   taskOverdueType,
@@ -27,7 +28,10 @@ const REQUIREMENT_INCLUDE = {
   },
   tasks: {
     where: { deletedAt: null },
-    include: { owner: { select: PERSON_SELECT } },
+    include: {
+      owner: { select: PERSON_SELECT },
+      pipelines: { include: { merges: true } }
+    },
     orderBy: { createdAt: "asc" }
   }
 } as const;
@@ -290,8 +294,8 @@ export class RequirementsService {
         startAt: task.startAt,
         dueAt: task.dueAt,
         overdueType: taskOverdueType(task),
-        pipelineCount: 0,
-        progress: 0
+        pipelineCount: task.pipelines.length,
+        progress: averageProgress(task.pipelines)
       }))
     };
   }

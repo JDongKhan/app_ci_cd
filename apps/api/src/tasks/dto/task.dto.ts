@@ -6,7 +6,7 @@ import {
   MaxLength,
   MinLength
 } from "class-validator";
-import { PRIORITIES } from "../../common/constants";
+import { PRIORITIES, TASK_STATUSES } from "../../common/constants";
 
 export class CreateTaskDto {
   @IsString()
@@ -61,4 +61,9 @@ export class UpdateTaskDto {
 
   @IsDateString()
   dueAt: string;
+}
+
+export class AdvanceTaskStatusDto {
+  @IsIn(TASK_STATUSES)
+  status: string;
 }

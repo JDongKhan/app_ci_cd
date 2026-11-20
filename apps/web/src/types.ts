@@ -155,7 +155,71 @@ export interface TaskDetail extends TaskSummary {
   finishedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  pipelines: unknown[];
+  pipelines: Pipeline[];
+}
+
+export interface PipelineMerge {
+  id: string;
+  stage: string;
+  fromBranch: string;
+  toBranch: string;
+  sha: string;
+  commits: number;
+  operatorId: string | null;
+  mergedAt: string;
+  invalidatedAt: string | null;
+  invalidatedReason: string | null;
+}
+
+export interface PipelineConflict {
+  id: string;
+  stage: string;
+  tempBranch: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  files: string[];
+}
+
+export interface PipelineEvent {
+  id: string;
+  type: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  payload: Record<string, unknown> | null;
+  actorId: string | null;
+  createdAt: string;
+}
+
+export interface Pipeline {
+  id: string;
+  taskId: string;
+  appId: string;
+  name: string;
+  branch: string;
+  status: string;
+  statusLabel: string;
+  progress: number;
+  app: {
+    id: string;
+    name: string;
+    platform: AppPlatform;
+    artifactType: ArtifactType;
+    repo: string;
+    branches: AppBranches;
+  };
+  rework: { from: string; reason: string | null; by: string | null; at: string | null } | null;
+  merges: PipelineMerge[];
+  conflicts: PipelineConflict[];
+  events: PipelineEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PipelinePayload {
+  appId: string;
+  name?: string;
+  branch: string;
 }
 
 export interface TaskPayload {

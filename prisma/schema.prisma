@@ -56,6 +56,8 @@ model App {
 
   @@unique([name, platform])
   @@map("apps")
+
+  pipelines Pipeline[]
 }
 
 model Requirement {
@@ -111,9 +113,97 @@ model Task {
 
   requirement Requirement @relation(fields: [reqId], references: [id])
   owner       User        @relation("TaskOwner", fields: [ownerId], references: [id])
+  pipelines   Pipeline[]
 
   @@index([reqId])
   @@index([ownerId])
   @@index([status])
   @@map("tasks")
+}
+
+model Pipeline {
+  id           String    @id @default(uuid())
+  taskId       String    @map("task_id")
+  appId        String    @map("app_id")
+  name         String
+  branch       String
+  status       String    @default("none")
+  reworkFrom   String?   @map("rework_from")
+  reworkReason String?   @map("rework_reason")
+  reworkBy     String?   @map("rework_by")
+  reworkAt     DateTime? @map("rework_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  task      Task               @relation(fields: [taskId], references: [id])
+  app       App                @relation(fields: [appId], references: [id])
+  merges    PipelineMerge[]
+  conflicts PipelineConflict[]
+  events    PipelineEvent[]
+  builds    Build[]
+
+  @@unique([taskId, appId, branch])
+  @@index([taskId])
+  @@map("pipelines")
+}
+
+model PipelineMerge {
+  id                String    @id @default(uuid())
+  pipelineId        String    @map("pipeline_id")
+  stage             String
+  fromBranch        String    @map("from_branch")
+  toBranch          String    @map("to_branch")
+  sha               String
+  commits           Int       @default(0)
+  operatorId        String?   @map("operator_id")
+  mergedAt          DateTime  @default(now()) @map("merged_at")
+  invalidatedAt     DateTime? @map("invalidated_at")
+  invalidatedReason String?   @map("invalidated_reason")
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineId])
+  @@map("pipeline_merges")
+}
+
+model PipelineConflict {
+  id          String    @id @default(uuid())
+  pipelineId  String    @map("pipeline_id")
+  stage       String
+  tempBranch  String    @map("temp_branch")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  resolvedAt  DateTime? @map("resolved_at")
+  resolvedBy  String?   @map("resolved_by")
+
+  pipeline Pipeline               @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  files    PipelineConflictFile[]
+
+  @@index([pipelineId])
+  @@map("pipeline_conflicts")
+}
+
+model PipelineConflictFile {
+  id         String @id @default(uuid())
+  conflictId String @map("conflict_id")
+  path       String
+
+  conflict PipelineConflict @relation(fields: [conflictId], references: [id], onDelete: Cascade)
+
+  @@map("pipeline_conflict_files")
+}
+
+model PipelineEvent {
+  id         String   @id @default(uuid())
+  pipelineId String   @map("pipeline_id")
+  type       String
+  fromStatus String?  @map("from_status")
+  toStatus   String?  @map("to_status")
+  payloadJson String? @map("payload_json")
+  actorId    String?  @map("actor_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineId])
+  @@map("pipeline_events")
 }

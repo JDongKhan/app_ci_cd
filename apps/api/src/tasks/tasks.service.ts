@@ -1,11 +1,15 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { AuthUser } from "../common/auth-user.interface";
+import { averageProgress } from "../common/pipeline-status";
 import { PrismaService } from "../prisma/prisma.service";
 import { taskOverdueType, taskStatusLabel } from "../common/task-status";
+import { PipelinesService } from "../pipelines/pipelines.service";
 import { CreateTaskDto, UpdateTaskDto } from "./dto/task.dto";
 
 const PERSON_SELECT = {
@@ -20,6 +24,10 @@ const TASK_DETAIL_INCLUDE = {
   owner: { select: PERSON_SELECT },
   requirement: {
     select: { id: true, code: true, title: true }
+  },
+  pipelines: {
+    include: { merges: true },
+    orderBy: { createdAt: "asc" }
   }
 } as const;
 
@@ -27,9 +35,28 @@ type TaskWithRelations = Prisma.TaskGetPayload<{
   include: typeof TASK_DETAIL_INCLUDE;
 }>;
 
+const STATUS_FLOW: Record<string, string> = {
+  none: "dev",
+  dev: "ready",
+  ready: "testing",
+  testing: "release",
+  release: "done"
+};
+
+const STATUS_ACTOR: Record<string, string> = {
+  dev: "dev",
+  ready: "dev",
+  testing: "qa",
+  release: "qa",
+  done: "qa"
+};
+
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pipelinesService: PipelinesService
+  ) {}
 
   async detail(id: string) {
     const task = await this.prisma.task.findFirst({
@@ -41,13 +68,15 @@ export class TasksService {
       throw new NotFoundException("任务不存在");
     }
 
-    return this.sanitizeDetail(task);
-  }
+    return await this.sanitizeDetail(task);  }
 
   async listByRequirement(reqId: string) {
     const tasks = await this.prisma.task.findMany({
       where: { reqId, deletedAt: null },
-      include: { owner: { select: PERSON_SELECT } },
+      include: {
+        owner: { select: PERSON_SELECT },
+        pipelines: { include: { merges: true } }
+      },
       orderBy: { createdAt: "asc" }
     });
 
@@ -79,8 +108,7 @@ export class TasksService {
       include: TASK_DETAIL_INCLUDE
     });
 
-    return this.sanitizeDetail(task);
-  }
+    return await this.sanitizeDetail(task);  }
 
   async update(id: string, dto: UpdateTaskDto) {
     const task = await this.prisma.task.findFirst({
@@ -108,7 +136,7 @@ export class TasksService {
       include: TASK_DETAIL_INCLUDE
     });
 
-    return this.sanitizeDetail(updated);
+    return await this.sanitizeDetail(updated);
   }
 
   async remove(id: string) {
@@ -128,6 +156,78 @@ export class TasksService {
     return { ok: true };
   }
 
+  async advanceStatus(id: string, status: string, user: AuthUser) {
+    const task = await this.prisma.task.findFirst({
+      where: { id, deletedAt: null },
+      include: { pipelines: true }
+    });
+
+    if (!task) {
+      throw new NotFoundException("任务不存在");
+    }
+
+    const expected = STATUS_FLOW[task.status];
+    if (!expected || expected !== status) {
+      throw new BadRequestException("任务状态只能按顺序推进");
+    }
+
+    const actorRole = STATUS_ACTOR[status];
+    if (user.role !== "admin" && user.role !== actorRole) {
+      throw new ForbiddenException(
+        actorRole === "dev" ? "该步骤只能由开发执行" : "该步骤只能由测试执行"
+      );
+    }
+
+    await this.assertStatusGate(id, task.status, status);
+
+    const updated = await this.prisma.task.update({
+      where: { id },
+      data: {
+        status,
+        statusAt: new Date(),
+        statusBy: user.id,
+        finishedAt: status === "done" ? new Date() : task.finishedAt
+      },
+      include: TASK_DETAIL_INCLUDE
+    });
+
+    return await this.sanitizeDetail(updated);
+  }
+
+  private async assertStatusGate(taskId: string, from: string, to: string) {
+    if (to === "dev") return;
+
+    const pipelines = await this.prisma.pipeline.findMany({
+      where: { taskId },
+      select: { status: true }
+    });
+
+    if (to === "ready" || to === "testing") {
+      const passed = pipelines.some((pipeline) => pipeline.status === "dev_passed");
+      if (!passed) {
+        throw new BadRequestException("至少需要一条流水完成自测通过");
+      }
+      return;
+    }
+
+    if (to === "release") {
+      const uatReady = pipelines.some((pipeline) => pipeline.status === "testing");
+      if (!uatReady) {
+        throw new BadRequestException("至少需要一条流水完成 UAT 合并");
+      }
+      return;
+    }
+
+    if (to === "done") {
+      const finished = pipelines.some((pipeline) =>
+        ["release_verified", "done"].includes(pipeline.status)
+      );
+      if (!finished) {
+        throw new BadRequestException("至少需要一条流水验证通过或已合入 master");
+      }
+    }
+  }
+
   private async assertActiveDev(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || user.role !== "dev" || !user.active) {
@@ -135,8 +235,9 @@ export class TasksService {
     }
   }
 
-  private sanitizeDetail(task: TaskWithRelations) {
+  private async sanitizeDetail(task: TaskWithRelations) {
     const overdueType = taskOverdueType(task);
+    const pipelines = await this.pipelinesService.listByTask(task.id);
 
     return {
       ...this.sanitizeSummary(task),
@@ -148,8 +249,8 @@ export class TasksService {
       finishedAt: task.finishedAt,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
-      pipelineCount: 0,
-      pipelines: []
+      pipelineCount: pipelines.length,
+      pipelines
     };
   }
 
@@ -168,7 +269,10 @@ export class TasksService {
     status: string;
     startAt: Date;
     dueAt: Date;
+    pipelines?: { merges: { stage: string; invalidatedAt: Date | null }[] }[];
   }) {
+    const pipelines = task.pipelines ?? [];
+
     return {
       id: task.id,
       reqId: task.reqId,
@@ -180,8 +284,8 @@ export class TasksService {
       startAt: task.startAt,
       dueAt: task.dueAt,
       overdueType: taskOverdueType(task),
-      pipelineCount: 0,
-      progress: 0
+      pipelineCount: pipelines.length,
+      progress: averageProgress(pipelines)
     };
   }
 }
