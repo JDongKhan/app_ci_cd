@@ -219,8 +219,12 @@ onMounted(load);
 
           <div class="app-facts">
             <span>产物 <b>{{ app.artifactType }}</b></span>
-            <span>脚本 <b>{{ app.buildScript }}</b></span>
             <span>路径 <b>{{ patternSummary(app.artifactPattern) }}</b></span>
+          </div>
+
+          <div class="app-script">
+            <span class="script-label">构建脚本</span>
+            <pre class="script-code">{{ app.buildScript }}</pre>
           </div>
 
           <div class="branch-line">
@@ -289,8 +293,15 @@ onMounted(load);
             <el-input v-model="form.repo" placeholder="git@git.example.com:travel/app.git" />
           </el-form-item>
 
-          <el-form-item label="构建脚本">
-            <el-input v-model="form.buildScript" placeholder="./build_app" />
+          <el-form-item class="full-span" label="构建脚本">
+            <el-input
+              v-model="form.buildScript"
+              type="textarea"
+              :autosize="{ minRows: 4, maxRows: 12 }"
+              class="script-input"
+              placeholder="支持多行命令，例如：&#10;set -e&#10;./build_app"
+            />
+            <span class="field-hint">脚本按多行原样用 bash 执行，支持 set -e、变量与管道等 shell 语法。</span>
           </el-form-item>
 
           <el-form-item label="产物类型" prop="artifactType">
@@ -462,6 +473,39 @@ onMounted(load);
   font-weight: 500;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
+}
+
+.app-script {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.script-label {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.script-code {
+  margin: 0;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.script-input :deep(.el-textarea__inner) {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .branch-line {

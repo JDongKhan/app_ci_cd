@@ -34,7 +34,7 @@ export class CreateAppDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(4000)
   buildScript?: string;
 
   @IsIn(ARTIFACT_TYPES)
