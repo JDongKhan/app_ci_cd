@@ -19,8 +19,9 @@ http.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("shipflow_token");
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      // hash 路由下用 hash 跳转，避免请求 /login 触发静态托管的 404
+      if (window.location.hash !== "#/login") {
+        window.location.hash = "#/login";
       }
     }
     return Promise.reject(error);

@@ -9,5 +9,5 @@ export async function listArtifacts(status?: string): Promise<BuildRecord[]> {
 }
 
 export function artifactDownloadUrl(id: string): string {
-  return `/api/artifacts/${id}/download`;
+  return `${__API_BASE_URL__}/artifacts/${id}/download`;
 }

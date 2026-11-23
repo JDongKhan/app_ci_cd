@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import AppLayout from "@/layouts/AppLayout.vue";
 import LoginView from "@/views/LoginView.vue";
@@ -15,7 +15,8 @@ import PlaceholderView from "@/views/PlaceholderView.vue";
 import ForbiddenView from "@/views/ForbiddenView.vue";
 
 const router = createRouter({
-  history: createWebHistory(),
+  // 静态托管不支持 SPA 重写，使用 hash 路由保证子路由刷新/直链可用
+  history: createWebHashHistory(),
   routes: [
     {
       path: "/login",
