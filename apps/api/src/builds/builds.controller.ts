@@ -6,6 +6,7 @@ import { JwtAuthGuard } from "../common/jwt-auth.guard";
 import { RequirePermissions } from "../common/permissions.decorator";
 import { PermissionsGuard } from "../common/permissions.guard";
 import { BuildsService } from "./builds.service";
+import { TriggerBuildDto } from "./dto/build.dto";
 
 @ApiTags("builds")
 @ApiBearerAuth()
@@ -16,8 +17,12 @@ export class BuildsController {
 
   @Post("pipelines/:id/build")
   @RequirePermissions("build_run")
-  trigger(@Param("id") pipelineId: string, @CurrentUser() user: AuthUser) {
-    return this.buildsService.trigger(pipelineId, user);
+  trigger(
+    @Param("id") pipelineId: string,
+    @Body() dto: TriggerBuildDto,
+    @CurrentUser() user: AuthUser
+  ) {
+    return this.buildsService.trigger(pipelineId, user, dto);
   }
 
   @Get("tasks/:id/builds")

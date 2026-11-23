@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
         <el-table-column label="版本 / Build" width="140">
           <template #default="{ row }">
             <div>{{ row.versionName || "—" }}</div>
-            <div class="art-sub">#{{ row.buildNumber }}</div>
+            <div class="art-sub">#{{ row.buildNumber }} · {{ row.channel || "—" }}</div>
           </template>
         </el-table-column>
 

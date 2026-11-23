@@ -15,6 +15,7 @@ import { GitService } from "../common/git.service";
 import { pipelineBuildStage } from "../common/pipeline-status";
 import { projectRoot, storageRoot, workspaceRoot } from "../common/storage";
 import { PrismaService } from "../prisma/prisma.service";
+import { TriggerBuildDto } from "./dto/build.dto";
 
 type BuildStage = "qa" | "uat" | "release";
 
@@ -45,6 +46,7 @@ type BuildWithPipeline = {
   buildNumber: number;
   versionName: string | null;
   versionCode: number | null;
+  channel: string | null;
   mergeSha: string | null;
   status: string;
   progress: number;
@@ -129,7 +131,7 @@ export class BuildsService implements OnModuleInit {
     return this.running || this.queue.length > 0;
   }
 
-  async trigger(pipelineId: string, user: AuthUser) {
+  async trigger(pipelineId: string, user: AuthUser, dto: TriggerBuildDto = {}) {
     const pipeline = await this.prisma.pipeline.findUnique({
       where: { id: pipelineId },
       include: { app: true }
@@ -168,16 +170,40 @@ export class BuildsService implements OnModuleInit {
       orderBy: { mergedAt: "desc" }
     });
 
-    const buildNumber =
+    const autoBuildNumber =
       (await this.prisma.build.count({
         where: { pipeline: { appId: pipeline.appId } }
       })) + 1;
+
+    const versionName = dto.versionName?.trim() || null;
+    const buildNumber = dto.buildNumber ?? autoBuildNumber;
+    const channel = dto.channel?.trim() || null;
+    const allowedChannels = (pipeline.app.channels ?? "")
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (!Number.isInteger(buildNumber) || buildNumber < 1) {
+      throw new BadRequestException("Build 号必须是大于 0 的整数");
+    }
+
+    if (allowedChannels.length) {
+      if (!channel) {
+        throw new BadRequestException("请选择渠道");
+      }
+      if (!allowedChannels.includes(channel)) {
+        throw new BadRequestException("渠道不在应用配置的渠道列表中");
+      }
+    }
 
     const build = await this.prisma.build.create({
       data: {
         pipelineId,
         stage,
         buildNumber,
+        versionName,
+        versionCode: dto.buildNumber ? buildNumber : null,
+        channel,
         mergeSha: latestMerge?.sha ?? null,
         status: "running",
         progress: 0,
@@ -360,8 +386,8 @@ export class BuildsService implements OnModuleInit {
       build.stage
     );
     const version = await this.readVersion(cwd);
-    const versionName = version.versionName ?? "0.0.0";
-    const versionCode = version.versionCode ?? build.buildNumber;
+    const versionName = build.versionName ?? version.versionName ?? "0.0.0";
+    const versionCode = build.versionCode ?? version.versionCode ?? build.buildNumber;
 
     if (versionName !== build.versionName || versionCode !== build.versionCode) {
       await this.prisma.build.update({
@@ -381,7 +407,7 @@ export class BuildsService implements OnModuleInit {
 
     await this.appendLog(
       logPath,
-      `构建参数：VERSION_NAME=${versionName} VERSION_CODE=${versionCode} BUILD_NUMBER=${build.buildNumber}`
+      `构建参数：VERSION_NAME=${versionName} VERSION_CODE=${versionCode} BUILD_NUMBER=${build.buildNumber} CHANNEL=${build.channel ?? "—"}`
     );
     await this.appendLog(
       logPath,
@@ -540,10 +566,10 @@ export class BuildsService implements OnModuleInit {
       BUILD_NUMBER: String(build.buildNumber),
       VERSION_NAME: versionName,
       VERSION_CODE: String(versionCode),
+      CHANNEL: build.channel ?? "",
       TRIGGERED_BY: triggeredByName,
       WORKSPACE: cwd,
-      PROJECT_ROOT: projectRoot(),
-      DOWNLOAD_DIR: path.join(projectRoot(), "download")
+      PROJECT_ROOT: projectRoot()
     };
 
     const env: NodeJS.ProcessEnv = { ...process.env };
@@ -819,6 +845,7 @@ export class BuildsService implements OnModuleInit {
       buildNumber: build.buildNumber,
       versionName: build.versionName,
       versionCode: build.versionCode,
+      channel: build.channel,
       mergeSha: build.mergeSha,
       status: build.status,
       statusLabel: BUILD_STATUS_LABELS[build.status] ?? build.status,

@@ -5,7 +5,9 @@ dist/
 !.env.example
 data/*.db
 data/*.db-journal
+prisma/init/schema.db
 storage/
 workspace/
 .DS_Store
 *.log
+.trae-html-share-packages

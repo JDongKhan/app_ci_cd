@@ -991,12 +991,14 @@ function seed(){
       repo:'git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git',
       defaultBranch:'main', buildScript:'./build_app',
       artifactType:'apk', artifactPattern:'build/app/outputs/**/*.apk',
+      channels:'official,googleplay,huawei',
       stack:'Flutter 3.24', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
       machine:'builder-01', createdAt:'2026-06-12' },
     { id:'a1i', name:'出行 App', platform:'ios', code:'virtual_com.travel.overseas.app',
       repo:'git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git',
       defaultBranch:'main', buildScript:'./build_app',
       artifactType:'ipa', artifactPattern:'build/ios/ipa/*.ipa',
+      channels:'appstore,enterprise',
       stack:'Flutter 3.24 / Xcode 15', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
       machine:'builder-02', createdAt:'2026-06-12' },
     { id:'a2', name:'订单中心', platform:'server', code:'order-center',
@@ -1205,6 +1207,9 @@ function save(){
 /* ---------- 查询 ---------- */
 function appById(id){ return state.apps.find(function(a){ return a.id === id; }); }
 function appOf(p){ return p ? appById(p.appId) : null; }
+function parseChannels(raw){
+  return String(raw || '').split(/[,，]/).map(function(x){ return x.trim(); }).filter(Boolean);
+}
 var PLATFORMS = { android:'Android', ios:'iOS', server:'服务端', web:'Web', other:'其他' };
 function platformLabel(p){ return PLATFORMS[p] || '其他'; }
 function platformPill(a){ return '<span class="plat plat-'+(a&&a.platform||'other')+'">'+esc(platformLabel(a?a.platform:''))+'</span>'; }
@@ -1213,7 +1218,8 @@ function appFacts(a){
   return '<span class="fact"><b>'+esc(platformLabel(a.platform))+'</b></span>'+
     '<span class="fact">产物 '+esc(a.artifactType)+'</span>'+
     '<span class="fact">脚本 <code>'+esc(a.buildScript)+'</code></span>'+
-    '<span class="fact">产物路径 '+esc(a.artifactPattern||'—')+'</span>';
+    '<span class="fact">产物路径 '+esc(a.artifactPattern||'—')+'</span>'+
+    '<span class="fact">渠道 '+esc(parseChannels(a.channels).join('、')||'—')+'</span>';
 }
 function reqOf(t){ return t ? state.reqs.find(function(r){ return r.id === t.reqId; }) : null; }
 function taskOf(id){ return state.tasks.find(function(t){ return t.id === id; }); }
@@ -1567,16 +1573,30 @@ function runBuild(pid){
   if(runtime.busy || isQueued(p)){ toast('该流水已在打包队列中','warn'); return; }
   var rb = latestBuildOf(p);
   if(rb && rb.status === 'running'){ toast('这条流水的 '+stageLabel(rb.stage)+' 包正在打包中，等它结束再操作','warn'); return; }
-  if(runtime.busy || runtime.queue.length){ runtime.queue.push({ pipelineId:p.id, stage:stage }); save(); render(); toast('已加入打包队列（第 '+runtime.queue.length+' 位）','info'); }
-  else startBuild(p, stage);
+  ui.modal = { type:'build', pipelineId:p.id, stage:stage };
+  renderModal();
 }
-function startBuild(p, stage){
+function enqueueOrStartBuild(p, stage, params){
+  if(runtime.busy || runtime.queue.length){
+    runtime.queue.push({ pipelineId:p.id, stage:stage, params:params });
+    save(); render();
+    toast('已加入打包队列（第 '+runtime.queue.length+' 位）','info');
+  } else {
+    startBuild(p, stage, params);
+  }
+}
+function startBuild(p, stage, params){
+  params = params || {};
   var app = appOf(p);
+  var versionName = params.versionName || '1.0.0';
+  var buildNumber = params.buildNumber || 1;
+  var channel = params.channel || parseChannels(app && app.channels)[0] || 'official';
   var mergeSha = ((p.merges||[]).filter(function(m){ return m.stage === stage; }).slice(-1)[0]||{}).sha || 'unknown';
   var b = {
     id: uid('b'), pipelineId:p.id, stage:stage, mergeSha:mergeSha, status:'running',
+    versionName:versionName, buildNumber:buildNumber, channel:channel,
     startedAt: fmtNow(), duration:'—', progress:0,
-    artifact:null, log:[ '$ git fetch origin', '$ git checkout '+branchName(p,stage), '$ ./build_app --flavor '+stage+'' ]
+    artifact:null, log:[ '$ git checkout '+branchName(p,stage), '$ VERSION_NAME='+versionName+' BUILD_NUMBER='+buildNumber+' CHANNEL='+channel+' ./build_app --flavor '+stage ]
   };
   state.builds.push(b);
   p.buildId = b.id;
@@ -1600,7 +1620,7 @@ function startBuild(p, stage){
   setTimeout(function(){
     if(b.status !== 'running') return;
     var type = p.artifactType || (app?app.artifactType:'apk');
-    var name = (app?app.code:'app') + '_' + stage + '_' + String(fmtNow()).replace(/[-: ]/g,'').slice(0,12) + '.' + type;
+    var name = (app?app.code:'app') + '_' + stage + '_' + channel + '_' + versionName + '_' + buildNumber + '.' + type;
     b.status = 'success';
     b.progress = 100;
     b.duration = '2m 51s';
@@ -1621,7 +1641,7 @@ function drainQueue(){
     var p = pipeOf(q.pipelineId);
     if(!p) continue;
     if(buildAllowed(p) !== q.stage) continue;
-    startBuild(p, q.stage);
+    startBuild(p, q.stage, q.params);
     return;
   }
   save(); render();
@@ -2167,7 +2187,7 @@ function viewApps(){
         '<span class="pill pill-soft">'+esc(a.artifactType)+'</span></div>'+
       '<div class="ac-repo mono">'+esc(a.repo)+'</div>'+
       '<div class="ac-meta"><span>'+esc(a.stack)+'</span><span>'+esc(a.machine)+'</span><span>'+reqCount+' 条流水</span></div>'+
-      '<div class="ac-facts"><span>产物 <b>'+esc(a.artifactType)+'</b></span><span>脚本 <b>'+esc(a.buildScript)+'</b></span><span>路径 <b>'+esc(a.artifactPattern||'—')+'</b></span></div>'+
+      '<div class="ac-facts"><span>产物 <b>'+esc(a.artifactType)+'</b></span><span>脚本 <b>'+esc(a.buildScript)+'</b></span><span>路径 <b>'+esc(a.artifactPattern||'—')+'</b></span><span>渠道 <b>'+esc(parseChannels(a.channels).join('、')||'—')+'</b></span></div>'+
       '<div class="branchline"><div class="tg-line"><span class="bl-k">分支</span>'+['qa','uat','release','master'].map(function(k){
           return '<span class="bchip '+k+'">'+esc(a.branches[k])+'</span>';
         }).join('')+'</div></div>'+
@@ -2921,6 +2941,7 @@ function renderModal(){
             ['apk','ipa','jar','war'].map(function(x){ return '<option'+(a&&a.artifactType===x?' selected':'')+'>'+x+'</option>'; }).join('')+'</select></div>'+
           '<div class="field"><label>构建机</label><input name="machine" value="'+esc(a?a.machine:'builder-01')+'"></div>'+
           '<div class="field"><label>产物路径</label><input name="artifactPattern" value="'+esc(a?a.artifactPattern:'')+'" placeholder="例如 build/app/outputs/**/*.apk"></div>'+
+          '<div class="field"><label>渠道</label><input name="channels" value="'+esc(a?a.channels:'official,googleplay')+'" placeholder="多个渠道用逗号隔开，如 official,googleplay,huawei"><span class="fx">打包弹窗的渠道下拉从这里读取，支持多个，逗号分隔</span></div>'+
           '<div class="field full"><div class="inline4">'+
             ['qa','uat','release','master'].map(function(k){
               return '<div><span class="lb">'+k.toUpperCase()+'</span><input name="'+k+'" value="'+esc(br[k]||k)+'"></div>';
@@ -2928,6 +2949,34 @@ function renderModal(){
         '</div></div>'+
         '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
           '<button type="submit" class="btn btn-primary">'+(a?'保存配置':'创建应用')+'</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'build'){
+    var bp = pipeOf(ui.modal.pipelineId);
+    if(!bp){ root.innerHTML = ''; return; }
+    var bapp = appOf(bp);
+    var bstage = ui.modal.stage;
+    var chs = parseChannels(bapp && bapp.channels);
+    if(!chs.length) chs = ['official'];
+    var lastB = latestBuildOf(bp);
+    var defVer = (lastB && lastB.versionName) || '1.0.0';
+    var defBn = lastB && lastB.buildNumber ? (lastB.buildNumber + 1) : 1;
+    var chOpts = chs.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:480px">'+
+      '<form data-form="build" data-pipe="'+esc(bp.id)+'" data-stage="'+esc(bstage)+'">'+
+        '<div class="modal-head"><div><h3>打包 '+esc(stageLabel(bstage))+'</h3>'+
+          '<p>'+esc(bp.name)+' · 填写版本号、Build 号并选择渠道</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field"><label>版本号<span class="req-star">*</span></label><input name="versionName" value="'+esc(defVer)+'" placeholder="例如 3.2.0"></div>'+
+          '<div class="field"><label>Build 号<span class="req-star">*</span></label><input name="buildNumber" type="number" min="1" value="'+defBn+'"></div>'+
+          '<div class="field full"><label>渠道<span class="req-star">*</span></label><select name="channel">'+chOpts+'</select>'+
+            '<span class="fx">渠道在「应用配置 → 渠道」维护，多个用逗号隔开</span></div>'+
+        '</div></div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button type="submit" class="btn btn-primary">开始打包</button></div>'+
       '</form></div></div>';
     return;
   }
@@ -3391,6 +3440,7 @@ document.addEventListener('submit', function(e){
       buildScript:(fd.get('buildScript')||'./build_app').trim(),
       artifactType:fd.get('artifactType')||'apk',
       artifactPattern:(fd.get('artifactPattern')||'').trim() || ('build/**/*.'+(fd.get('artifactType')||'apk')),
+      channels:(fd.get('channels')||'').trim(),
       stack:'—', machine:(fd.get('machine')||'builder-01').trim(),
       branches:{ qa:fd.get('qa')||'qa', uat:fd.get('uat')||'uat', release:fd.get('release')||'release', master:fd.get('master')||'master' }
     };
@@ -3405,6 +3455,21 @@ document.addEventListener('submit', function(e){
       toast('应用已创建','success');
     }
     ui.modal = null; save(); render(); return;
+  }
+
+  if(kind === 'build'){
+    var bp = pipeOf(form.dataset.pipe);
+    var bstage = form.dataset.stage;
+    if(!bp){ ui.modal = null; renderModal(); return; }
+    var verName = (fd.get('versionName')||'').trim();
+    var bnNum = parseInt(fd.get('buildNumber'), 10);
+    var chSel = fd.get('channel') || '';
+    if(!verName){ toast('请填写版本号','error'); return; }
+    if(!bnNum || bnNum < 1){ toast('请填写正确的 Build 号','error'); return; }
+    if(!chSel){ toast('请选择渠道','error'); return; }
+    ui.modal = null; renderModal();
+    enqueueOrStartBuild(bp, bstage, { versionName:verName, buildNumber:bnNum, channel:chSel });
+    return;
   }
 
   if(kind === 'req'){

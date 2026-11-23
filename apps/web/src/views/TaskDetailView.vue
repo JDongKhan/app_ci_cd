@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { ArrowLeft, Delete, Edit, Plus } from "@element-plus/icons-vue";
@@ -49,6 +49,13 @@ const builds = ref<BuildRecord[]>([]);
 const buildingPipelineId = ref("");
 const buildLogVisible = ref(false);
 const activeBuild = ref<BuildRecord | null>(null);
+const buildDialogVisible = ref(false);
+const buildTarget = ref<Pipeline | null>(null);
+const buildForm = reactive({
+  versionName: "",
+  buildNumber: 1,
+  channel: ""
+});
 const commits = ref<TaskCommit[]>([]);
 let buildsTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -119,8 +126,11 @@ function canMerge(pipeline: Pipeline, stage: string): boolean {
 
   if (stage === "qa") {
     if (pipeline.status === "none") return true;
-    // 自测不通过后会带上 rework，需要先重新合并 QA；合并完成后才显示打包
-    if (pipeline.status === "dev_merged") return Boolean(pipeline.rework);
+    // 自测不通过 / 打包失败后需要先重新合并 QA；合并完成后才显示打包
+    if (pipeline.status === "dev_merged") {
+      return Boolean(pipeline.rework) || failedQaBuild(pipeline);
+    }
+    if (pipeline.status === "dev_built") return failedQaBuild(pipeline);
     return false;
   }
 
@@ -156,6 +166,28 @@ function hasStage(pipeline: Pipeline, stage: string): boolean {
   return pipeline.merges.some((merge) => merge.stage === stage && !merge.invalidatedAt);
 }
 
+// 最近一次 QA 打包失败且仍对应当前 QA 合并；失败后重新合并过即视为过期，可以再打包
+function failedQaBuild(pipeline: Pipeline): boolean {
+  const latest = pipeline.latestBuild;
+  if (!latest || latest.stage !== "qa" || latest.status !== "failed") return false;
+
+  const qaMerges = pipeline.merges.filter(
+    (merge) => merge.stage === "qa" && !merge.invalidatedAt
+  );
+  if (!qaMerges.length) return true;
+
+  const latestMerge = qaMerges[qaMerges.length - 1];
+  if (new Date(latestMerge.mergedAt).getTime() > new Date(latest.createdAt).getTime()) {
+    return false;
+  }
+
+  return !(
+    latestMerge.sha &&
+    latest.mergeSha &&
+    latest.mergeSha !== latestMerge.sha
+  );
+}
+
 const BUILD_LABEL: Record<string, string> = {
   dev_merged: "打包 QA",
   dev_built: "重新打包",
@@ -164,8 +196,11 @@ const BUILD_LABEL: Record<string, string> = {
 };
 
 function buildStageFor(pipeline: Pipeline): string | null {
-  if (pipeline.status === "dev_merged" && !pipeline.rework) return "qa";
-  if (pipeline.status === "dev_built" && pipeline.latestBuild?.status === "failed") {
+  if (
+    pipeline.status === "dev_merged" &&
+    !pipeline.rework &&
+    !failedQaBuild(pipeline)
+  ) {
     return "qa";
   }
   if (pipeline.status === "testing" && taskStatus.value === "testing") return "uat";
@@ -315,13 +350,69 @@ async function resolve(pipeline: Pipeline) {
   }
 }
 
+function parseChannels(raw: string | null | undefined): string[] {
+  return (raw ?? "")
+    .split(/[,，]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+const buildChannelOptions = computed(() =>
+  buildTarget.value ? parseChannels(buildTarget.value.app.channels) : []
+);
+
+const buildDialogTitle = computed(() => {
+  if (!buildTarget.value) return "打包参数";
+  const stage = buildStageFor(buildTarget.value);
+  const label =
+    stage === "qa" ? "QA" : stage === "uat" ? "UAT" : stage === "release" ? "Release" : "";
+  return label ? `打包 ${label}` : "打包参数";
+});
+
+function openBuildDialog(pipeline: Pipeline) {
+  buildTarget.value = pipeline;
+  const last = pipeline.latestBuild;
+  const channels = parseChannels(pipeline.app.channels);
+  buildForm.versionName = last?.versionName || "1.0.0";
+  buildForm.buildNumber = (last?.buildNumber ?? 0) + 1;
+  buildForm.channel =
+    last?.channel && channels.includes(last.channel) ? last.channel : channels[0] ?? "";
+  buildDialogVisible.value = true;
+}
+
+function submitBuildDialog() {
+  if (!buildTarget.value) return;
+
+  if (!buildForm.versionName.trim()) {
+    ElMessage.warning("请填写版本号");
+    return;
+  }
+
+  if (!Number.isInteger(buildForm.buildNumber) || buildForm.buildNumber < 1) {
+    ElMessage.warning("请填写正确的 Build 号");
+    return;
+  }
+
+  if (buildChannelOptions.value.length && !buildForm.channel) {
+    ElMessage.warning("请选择渠道");
+    return;
+  }
+
+  void build(buildTarget.value);
+}
+
 async function build(pipeline: Pipeline) {
   buildingPipelineId.value = pipeline.id;
   try {
-    const record = await triggerBuild(pipeline.id);
+    const record = await triggerBuild(pipeline.id, {
+      versionName: buildForm.versionName.trim(),
+      buildNumber: buildForm.buildNumber,
+      channel: buildForm.channel
+    });
     ElMessage.success("已进入打包队列");
     activeBuild.value = record;
     buildLogVisible.value = true;
+    buildDialogVisible.value = false;
     await load();
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "触发打包失败"));
@@ -681,7 +772,7 @@ onBeforeUnmount(() => {
                     v-if="canBuild(pipeline) && !isBuildRunning(pipeline)"
                     size="small"
                     :loading="buildingPipelineId === pipeline.id"
-                    @click="build(pipeline)"
+                    @click="openBuildDialog(pipeline)"
                   >
                     {{ BUILD_LABEL[pipeline.status] }}
                   </el-button>
@@ -720,7 +811,7 @@ onBeforeUnmount(() => {
                     class="stage-hint build-failed-hint"
                   >
                     最近一次打包失败：{{ pipeline.latestBuild?.failReason || "未知原因" }}，
-                    请修复后重新合并 / 重新打包
+                    请修复后{{ failedQaBuild(pipeline) ? "重新合并 QA，再打包" : "重新打包" }}
                   </span>
 
                   <span v-if="pipeline.status === 'none'" class="stage-hint">
@@ -733,7 +824,11 @@ onBeforeUnmount(() => {
                     自测不通过或测试退回：修复代码后先重新合并 QA
                   </span>
                   <span
-                    v-else-if="pipeline.status === 'dev_merged' && !pipeline.rework"
+                    v-else-if="
+                      pipeline.status === 'dev_merged' &&
+                      !pipeline.rework &&
+                      !failedQaBuild(pipeline)
+                    "
                     class="stage-hint"
                   >
                     已合入 QA，可以打包
@@ -896,6 +991,60 @@ onBeforeUnmount(() => {
       <TaskFormDialog v-model="editVisible" :task="task" @saved="onSaved" />
       <PipelineFormDialog v-model="pipelineVisible" :task="task" @saved="onPipelineSaved" />
       <BuildLogDialog v-model="buildLogVisible" :build="activeBuild" />
+
+      <el-dialog
+        v-model="buildDialogVisible"
+        :title="buildDialogTitle"
+        width="460px"
+        append-to-body
+        destroy-on-close
+      >
+        <el-form label-position="top">
+          <el-form-item label="版本号" required>
+            <el-input v-model="buildForm.versionName" placeholder="例如 3.2.0" />
+          </el-form-item>
+          <el-form-item label="Build 号" required>
+            <el-input-number
+              v-model="buildForm.buildNumber"
+              :min="1"
+              :step="1"
+              step-strictly
+              class="full-width"
+            />
+          </el-form-item>
+          <el-form-item label="渠道" :required="buildChannelOptions.length > 0">
+            <el-select
+              v-model="buildForm.channel"
+              class="full-width"
+              :placeholder="buildChannelOptions.length ? '选择渠道' : '应用未配置渠道'"
+              :disabled="!buildChannelOptions.length"
+            >
+              <el-option
+                v-for="channel in buildChannelOptions"
+                :key="channel"
+                :label="channel"
+                :value="channel"
+              />
+            </el-select>
+            <span v-if="!buildChannelOptions.length" class="field-hint">
+              应用配置里还没有渠道，可在「应用配置 → 编辑配置」中维护，多个用逗号隔开。
+            </span>
+          </el-form-item>
+        </el-form>
+        <p class="dialog-hint">
+          版本号、Build 号与渠道会注入构建脚本（VERSION_NAME / BUILD_NUMBER / CHANNEL）。
+        </p>
+        <template #footer>
+          <el-button @click="buildDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            :loading="buildingPipelineId === buildTarget?.id"
+            @click="submitBuildDialog"
+          >
+            开始打包
+          </el-button>
+        </template>
+      </el-dialog>
     </template>
 
     <section v-else-if="!loading" class="empty-card">

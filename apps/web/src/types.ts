@@ -78,6 +78,7 @@ export interface AppRecord {
   buildScript: string;
   artifactType: ArtifactType;
   artifactPattern: string | null;
+  channels: string | null;
   branches: AppBranches;
   machine: string;
   stack: string | null;
@@ -94,6 +95,7 @@ export interface AppPayload {
   buildScript?: string;
   artifactType: ArtifactType;
   artifactPattern?: string | null;
+  channels?: string | null;
   branches?: Partial<AppBranches>;
   machine?: string;
   stack?: string | null;
@@ -217,6 +219,7 @@ export interface Pipeline {
     buildNumber: number;
     versionName: string | null;
     versionCode: number | null;
+    channel: string | null;
     mergeSha: string | null;
     failReason: string | null;
     createdAt: string;
@@ -227,6 +230,7 @@ export interface Pipeline {
     platform: AppPlatform;
     artifactType: ArtifactType;
     repo: string;
+    channels: string | null;
     branches: AppBranches;
   };
   rework: { from: string; reason: string | null; by: string | null; at: string | null } | null;
@@ -263,6 +267,7 @@ export interface BuildRecord {
   buildNumber: number;
   versionName: string | null;
   versionCode: number | null;
+  channel: string | null;
   mergeSha: string | null;
   status: string;
   statusLabel: string;

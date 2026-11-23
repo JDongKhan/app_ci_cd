@@ -43,6 +43,7 @@ type PipelineWithRelations = {
     platform: string;
     artifactType: string;
     repo: string;
+    channels: string | null;
     branchesJson: string;
   };
   merges: {
@@ -86,6 +87,7 @@ type PipelineLatestBuild = {
   buildNumber: number;
   versionName: string | null;
   versionCode: number | null;
+  channel: string | null;
   mergeSha: string | null;
   failReason: string | null;
   createdAt: Date;
@@ -723,6 +725,7 @@ export class PipelinesService {
     buildNumber: number;
     versionName: string | null;
     versionCode: number | null;
+    channel: string | null;
     mergeSha: string | null;
     failReason: string | null;
     createdAt: Date;
@@ -742,6 +745,7 @@ export class PipelinesService {
       buildNumber: build.buildNumber,
       versionName: build.versionName,
       versionCode: build.versionCode,
+      channel: build.channel,
       mergeSha: build.mergeSha,
       failReason: build.failReason,
       createdAt: build.createdAt
@@ -768,6 +772,7 @@ export class PipelinesService {
         platform: pipeline.app.platform,
         artifactType: pipeline.app.artifactType,
         repo: pipeline.app.repo,
+        channels: pipeline.app.channels,
         branches: this.parseBranches(pipeline.app.branchesJson)
       },
       rework: pipeline.reworkFrom

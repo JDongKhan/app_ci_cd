@@ -12,6 +12,7 @@
     "dev:web": "pnpm --filter @shipflow/web dev",
     "build": "pnpm --filter @shipflow/api build && pnpm --filter @shipflow/web build",
     "prisma:generate": "prisma generate",
+    "db:schema": "DATABASE_URL='file:./init/schema.db' prisma db push --skip-generate",
     "db:migrate": "prisma migrate dev",
     "db:init": "prisma migrate deploy && prisma db seed",
     "db:reset": "prisma migrate reset --force",

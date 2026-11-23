@@ -93,11 +93,11 @@
 <tbody>
 <tr><td>账号 Account</td><td><code>id / name / role / level / account / password / team / active</code></td><td>角色 dev / qa / admin / pm；admin 不设 level；<code>active=false</code> 不出现在登录页</td></tr>
 <tr><td>角色权限 Perm</td><td><code>perms['role/level'] = [menuKey]</code></td><td>以「角色/级别」为键存菜单 key 数组；admin 固定全量、不可编辑</td></tr>
-<tr><td>应用 App</td><td><code>name / platform(android|ios|server|web) / code / repo / buildScript / artifactType / artifactPattern / branches{qa,uat,release,master} / machine</code></td><td>按平台拆分：Android 与 iOS 是两个应用；产物类型与构建脚本在应用里固定，流水不单独选择</td></tr>
+<tr><td>应用 App</td><td><code>name / platform(android|ios|server|web) / code / repo / buildScript / artifactType / artifactPattern / channels / branches{qa,uat,release,master} / machine</code></td><td>按平台拆分：Android 与 iOS 是两个应用；产物类型与构建脚本在应用里固定，流水不单独选择；<code>channels</code> 为渠道白名单（逗号分隔多个），打包时作为渠道下拉选项</td></tr>
 <tr><td>需求 Requirement</td><td><code>code / title / desc / devOwner / qaOwner / qaMembers[] / pmOwner / priority / start / due</code></td><td>不关联应用；三个负责人分别对应开发、测试、产品；qaMembers 是测试负责人登记的测试人员，同样参与「我的需求」可见范围；priority 取 P0 / P1 / P2（P0 最高）</td></tr>
 <tr><td>任务 Task</td><td><code>reqId / title / desc / ownerId / priority / start / due / status(none|dev|ready|testing|release|done)</code></td><td>计划开始 <code>start</code> / 结束 <code>due</code>；<code>status</code> 由任务详情的推进按钮修改，超时按 <code>due</code> 与 <code>status</code> 派生</td></tr>
 <tr><td>CI 流水 Pipeline</td><td><code>taskId / appId / name / branch / status / merges[] / conflicts{} / rework{} / buildId</code></td><td>真正执行合并与打包的单元；产物类型与构建脚本来自所关联的应用</td></tr>
-<tr><td>构建 Build</td><td><code>pipelineId / stage / mergeSha / status(success|running|failed) / progress / startedAt / duration / failReason / artifact{name,size,type,url}</code></td><td><code>mergeSha</code> 判断包是否对应最新合并；队列串行执行；打包中带实时进度，失败记 <code>failReason</code>、产物为空</td></tr>
+<tr><td>构建 Build</td><td><code>pipelineId / stage / mergeSha / versionName / versionCode / buildNumber / channel / status(success|running|failed) / progress / startedAt / duration / failReason / artifact{name,size,type,url}</code></td><td><code>mergeSha</code> 判断包是否对应最新合并；<code>versionName / buildNumber / channel</code> 由打包弹窗填写 / 选择；队列串行执行；打包中带实时进度，失败记 <code>failReason</code>、产物为空</td></tr>
 </tbody>
 </table></div>
 
@@ -258,7 +258,7 @@
 <tr><td>POST</td><td><code>/api/tasks/:id/pipelines</code></td><td>body <code>appId / name / branch / artifactType</code>，创建 CI 流水</td></tr>
 <tr><td>POST</td><td><code>/api/tasks/:id/status</code></td><td>body <code>status</code>，推进任务状态（开始开发 / 提测 / 开始测试 / 进入待发布 / 完成发布），服务端校验门禁</td></tr>
 <tr><td>POST</td><td><code>/api/pipelines/:id/merge</code></td><td>body <code>stage</code>，建临时分支或直接合入目标分支</td></tr>
-<tr><td>POST</td><td><code>/api/pipelines/:id/build</code></td><td>执行构建脚本，进入单机队列</td></tr>
+<tr><td>POST</td><td><code>/api/pipelines/:id/build</code></td><td>body <code>versionName / buildNumber / channel</code>（版本号、Build 号必填，渠道从应用配置的 <code>channels</code> 中选择），执行构建脚本并进入单机队列</td></tr>
 <tr><td>POST</td><td><code>/api/pipelines/:id/qa-verdict</code></td><td>自测通过 / 拒绝</td></tr>
 <tr><td>POST</td><td><code>/api/pipelines/:id/verify | accept</code></td><td>验证通过 / 合回 master</td></tr>
 <tr><td>GET</td><td><code>/api/artifacts</code></td><td>产物 / 构建列表（含打包中与失败），下载直链不鉴权</td></tr>
@@ -277,6 +277,7 @@
 <li><strong>合并无需排队，打包必须排队</strong>：打包机只有一份 clone，构建期间任何流水都禁止切分支合并；产物长期保留、下载不鉴权。</li>
 <li><strong>打包日志随时可查</strong>：流水卡片有「打包日志」按钮，正在打包与失败也能看；产物页除已入库外还列打包中（带进度）与失败（带原因），点行看构建详情与完整日志；运行中的流水禁止再次点打包。</li>
 <li><strong>流水不管任务开始，任务状态由任务按钮推进</strong>：流水只有合并 / 冲突待解决 / 已解决冲突 / 打包 QA·UAT·Release / 通过 / 拒绝；开始开发、提测、开始测试、进入待发布、完成发布都在任务详情上点。</li>
+<li><strong>打包前先填参数</strong>：点「打包 QA / UAT / Release」先弹窗填写版本号、Build 号并选择渠道；渠道选项来自应用配置（多个渠道用逗号分隔），版本号与 Build 号随构建入库并注入构建脚本环境变量。</li>
 <li><strong>一个任务的提交记录只有一份</strong>：多条流水共用同一仓库与 Feature 分支，不分应用；任务详情「提交记录」显示该分支最近 20 条提交。</li>
 <li><strong>产物类型与构建脚本在应用里配置</strong>：应用按 Android / iOS 分开，流水只是选择应用 + 填 Feature 分支。</li>
 </ol>

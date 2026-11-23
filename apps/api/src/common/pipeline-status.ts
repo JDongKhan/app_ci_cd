@@ -52,7 +52,7 @@ export const MERGE_PLAN: Record<
     success: "dev_merged",
     permission: "merge_qa",
     taskStatus: "dev",
-    allowedFrom: ["none", "dev_conflict", "dev_merged"]
+    allowedFrom: ["none", "dev_conflict", "dev_merged", "dev_built"]
   },
   uat: {
     label: "合并 UAT",

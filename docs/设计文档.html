@@ -783,6 +783,11 @@ User 1 ── N Task（开发负责人）
 <td>产物匹配 glob</td>
 </tr>
 <tr>
+<td><code>channels</code></td>
+<td>TEXT</td>
+<td>渠道白名单，逗号分隔（如 official,googleplay,huawei）；打包弹窗的下拉选项来源</td>
+</tr>
+<tr>
 <td><code>branches_json</code></td>
 <td>TEXT</td>
 <td>QA/UAT/Release/master 分支映射</td>
@@ -1762,7 +1767,7 @@ User 1 ── N Task（开发负责人）
 <tr>
 <td>POST</td>
 <td><code>/api/pipelines/:id/build</code></td>
-<td>触发构建</td>
+<td>触发构建，body <code>{ versionName, buildNumber, channel }</code></td>
 </tr>
 <tr>
 <td>POST</td>
@@ -1810,6 +1815,26 @@ User 1 ── N Task（开发负责人）
 <td><code>merge_sha</code></td>
 <td>TEXT</td>
 <td>对应合并提交</td>
+</tr>
+<tr>
+<td><code>version_name</code></td>
+<td>TEXT</td>
+<td>打包弹窗填写的版本号</td>
+</tr>
+<tr>
+<td><code>version_code</code></td>
+<td>INTEGER</td>
+<td>版本序号，缺省取 Build 号</td>
+</tr>
+<tr>
+<td><code>build_number</code></td>
+<td>INTEGER</td>
+<td>打包弹窗填写的 Build 号（按应用递增，可手改）</td>
+</tr>
+<tr>
+<td><code>channel</code></td>
+<td>TEXT</td>
+<td>渠道，来自应用配置 channels 的下拉选择</td>
 </tr>
 <tr>
 <td><code>status</code></td>
@@ -1895,6 +1920,7 @@ User 1 ── N Task（开发负责人）
 <ul>
 <li>工作目录：<code>workspace/&lt;appId&gt;</code></li>
 <li>命令：<code>bash -lc &lt;buildScript&gt;</code></li>
+<li>构建参数：把 <code>VERSION_NAME / VERSION_CODE / BUILD_NUMBER / CHANNEL</code>（同时提供 <code>SHIPFLOW_</code> 前缀版本）注入脚本环境</li>
 <li>超时：默认 30 分钟</li>
 <li>stdout/stderr 按行写入日志文件</li>
 <li>进度根据构建步骤或日志行更新</li>
@@ -2190,7 +2216,7 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <tr>
 <td>POST</td>
 <td><code>/api/pipelines/:id/build</code></td>
-<td>触发构建</td>
+<td>触发构建，body <code>{ versionName, buildNumber, channel }</code></td>
 </tr>
 <tr>
 <td>POST</td>

@@ -1,8 +1,20 @@
 import { http } from "./http";
 import type { BuildLogChunk, BuildRecord, Pipeline } from "@/types";
 
-export async function triggerBuild(pipelineId: string): Promise<BuildRecord> {
-  const { data } = await http.post<BuildRecord>(`/pipelines/${pipelineId}/build`);
+export interface TriggerBuildPayload {
+  versionName: string;
+  buildNumber: number;
+  channel: string;
+}
+
+export async function triggerBuild(
+  pipelineId: string,
+  payload: TriggerBuildPayload
+): Promise<BuildRecord> {
+  const { data } = await http.post<BuildRecord>(
+    `/pipelines/${pipelineId}/build`,
+    payload
+  );
   return data;
 }
 

@@ -56,6 +56,7 @@ const form = reactive({
   buildScript: "./build_app",
   artifactType: "apk" as ArtifactType,
   artifactPattern: "",
+  channels: "",
   machine: "builder-01",
   stack: "",
   branches: { ...DEFAULT_BRANCHES } as AppBranches
@@ -88,6 +89,15 @@ function patternSummary(pattern: string | null): string {
   return list.length ? list.join("、") : "—";
 }
 
+function channelSummary(channels: string | null): string {
+  if (!channels) return "—";
+  const list = channels
+    .split(/[,，]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return list.length ? list.join("、") : "—";
+}
+
 async function load() {
   loading.value = true;
   try {
@@ -110,6 +120,7 @@ function openCreate() {
   form.buildScript = "./build_app";
   form.artifactType = "apk";
   form.artifactPattern = "";
+  form.channels = "";
   form.machine = "builder-01";
   form.stack = "";
   form.branches = { ...DEFAULT_BRANCHES };
@@ -128,6 +139,7 @@ function openEdit(app: AppRecord) {
   form.buildScript = app.buildScript;
   form.artifactType = app.artifactType;
   form.artifactPattern = app.artifactPattern ?? "";
+  form.channels = app.channels ?? "";
   form.machine = app.machine;
   form.stack = app.stack ?? "";
   form.branches = { ...app.branches };
@@ -150,6 +162,7 @@ async function submit() {
     buildScript: form.buildScript.trim() || "./build_app",
     artifactType: form.artifactType,
     artifactPattern: form.artifactPattern.trim() || null,
+    channels: form.channels.trim() || null,
     branches: { ...form.branches },
     machine: form.machine.trim() || "builder-01",
     stack: form.stack.trim() || null
@@ -220,6 +233,7 @@ onMounted(load);
           <div class="app-facts">
             <span>产物 <b>{{ app.artifactType }}</b></span>
             <span>路径 <b>{{ patternSummary(app.artifactPattern) }}</b></span>
+            <span>渠道 <b>{{ channelSummary(app.channels) }}</b></span>
           </div>
 
           <div class="app-script">
@@ -329,6 +343,14 @@ onMounted(load);
             <span class="field-hint">
               支持多个匹配规则，每行一个（也可用逗号分隔）；留空时按产物类型使用默认规则。
             </span>
+          </el-form-item>
+
+          <el-form-item label="渠道">
+            <el-input
+              v-model="form.channels"
+              placeholder="多个渠道用逗号隔开，如 official,googleplay,huawei"
+            />
+            <span class="field-hint">打包弹窗的渠道下拉从这里读取，支持多个，逗号分隔。</span>
           </el-form-item>
 
           <el-form-item label="技术栈">

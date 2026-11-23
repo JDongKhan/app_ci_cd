@@ -92,7 +92,7 @@ export class GitService {
           "-m",
           `Merge branch '${featureBranch}' into ${targetBranch}`
         ]);
-      } catch {
+      } catch (error) {
         const conflicts = await this.git(appId, [
           "diff",
           "--name-only",
@@ -103,7 +103,20 @@ export class GitService {
         await this.git(appId, ["merge", "--abort"]).catch(() => {});
 
         if (files.length === 0) {
-          return { mode: "error", message: "Git 合并失败，未识别到冲突文件" };
+          const detail =
+            error && typeof error === "object" && "stderr" in error
+              ? String((error as { stderr?: unknown }).stderr || "").trim()
+              : "";
+          const lastLine = detail
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .pop();
+
+          return {
+            mode: "error",
+            message: lastLine ? `Git 合并失败：${lastLine}` : "Git 合并失败，未识别到冲突文件"
+          };
         }
 
         await this.git(appId, ["branch", "-f", tempBranch, featureRef]);
@@ -271,7 +284,15 @@ export class GitService {
 
   private git(appId: string, args: string[]) {
     return execFileAsync("git", ["-C", this.workspacePath(appId), ...args], {
-      maxBuffer: 4 * 1024 * 1024
+      maxBuffer: 4 * 1024 * 1024,
+      env: {
+        ...process.env,
+        // 服务器环境通常没有配置 git 身份，合并提交会因缺少 author 而失败
+        GIT_AUTHOR_NAME: process.env.GIT_AUTHOR_NAME ?? "ShipFlow",
+        GIT_AUTHOR_EMAIL: process.env.GIT_AUTHOR_EMAIL ?? "shipflow@local",
+        GIT_COMMITTER_NAME: process.env.GIT_COMMITTER_NAME ?? "ShipFlow",
+        GIT_COMMITTER_EMAIL: process.env.GIT_COMMITTER_EMAIL ?? "shipflow@local"
+      }
     });
   }
 }

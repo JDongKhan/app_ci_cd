@@ -37,6 +37,11 @@ export class CreateAppDto {
   @MaxLength(4000)
   buildScript?: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  channels?: string | null;
+
   @IsIn(ARTIFACT_TYPES)
   artifactType: string;
 

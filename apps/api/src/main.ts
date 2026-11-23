@@ -2,7 +2,20 @@ import "reflect-metadata";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { config as loadEnv } from "dotenv";
+import * as path from "node:path";
 import { AppModule } from "./app.module";
+import { ensureDatabaseInitialized } from "./database/database-init";
+
+// 与 ConfigModule 的加载顺序保持一致：仓库根目录 .env，其次当前目录 .env
+function loadEnvironmentFiles(): void {
+  for (const file of [
+    path.resolve(process.cwd(), "../../.env"),
+    path.resolve(process.cwd(), ".env")
+  ]) {
+    loadEnv({ path: file });
+  }
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -36,4 +49,14 @@ async function bootstrap() {
   console.log(`ShipFlow API listening on http://localhost:${port}/api`);
 }
 
-bootstrap();
+async function main() {
+  loadEnvironmentFiles();
+  // 必须在 Nest 初始化之前完成建库与初始化数据，避免模块初始化并发查询空库
+  await ensureDatabaseInitialized();
+  await bootstrap();
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

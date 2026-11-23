@@ -12,8 +12,14 @@ export function projectRoot(): string {
   return process.cwd();
 }
 
+// 部署环境（如云函数）的应用目录只读，需要通过环境变量把可写目录指向临时目录。
+function envRoot(name: string): string | null {
+  const value = process.env[name];
+  return value && value.trim() ? path.resolve(value) : null;
+}
+
 export function storageRoot(): string {
-  return path.join(projectRoot(), "storage");
+  return envRoot("STORAGE_ROOT") ?? path.join(projectRoot(), "storage");
 }
 
 export function artifactsRoot(): string {
@@ -21,5 +27,5 @@ export function artifactsRoot(): string {
 }
 
 export function workspaceRoot(): string {
-  return path.join(projectRoot(), "workspace");
+  return envRoot("WORKSPACE_ROOT") ?? path.join(projectRoot(), "workspace");
 }

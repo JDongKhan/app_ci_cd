@@ -49,6 +49,7 @@ model App {
   buildScript     String   @default("./build_app") @map("build_script")
   artifactType    String   @map("artifact_type")
   artifactPattern String?  @map("artifact_pattern")
+  channels        String?
   branchesJson    String   @map("branches_json")
   machine         String   @default("builder-01")
   stack           String?
@@ -216,6 +217,7 @@ model Build {
   buildNumber  Int       @default(0) @map("build_number")
   versionName  String?   @map("version_name")
   versionCode  Int?      @map("version_code")
+  channel      String?
   mergeSha     String?   @map("merge_sha")
   status       String    @default("running")
   progress     Int       @default(0)
