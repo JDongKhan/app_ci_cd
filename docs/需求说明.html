@@ -93,10 +93,11 @@
 <tbody>
 <tr><td>账号 Account</td><td><code>id / name / role / level / account / password / team / active</code></td><td>角色 dev / qa / admin / pm；admin 不设 level；<code>active=false</code> 不出现在登录页</td></tr>
 <tr><td>角色权限 Perm</td><td><code>perms['role/level'] = [menuKey]</code></td><td>以「角色/级别」为键存菜单 key 数组；admin 固定全量、不可编辑</td></tr>
-<tr><td>应用 App</td><td><code>name / platform(android|ios|server|web) / code / repo / buildScript / artifactType / artifactPattern / channels / branches{qa,uat,release,master} / machine</code></td><td>按平台拆分：Android 与 iOS 是两个应用；产物类型与构建脚本在应用里固定，流水不单独选择；<code>channels</code> 为渠道白名单（逗号分隔多个），打包时作为渠道下拉选项</td></tr>
+<tr><td>应用 App</td><td><code>name / platform(android|ios|server|web) / code / repo / buildScript / artifactType / artifactPattern / channels / isComponent / branches{qa,uat,release,master} / machine</code></td><td>按平台拆分：Android 与 iOS 是两个应用；产物类型与构建脚本在应用里固定，流水不单独选择；<code>channels</code> 为渠道白名单（逗号分隔多个），打包时作为渠道下拉选项；<code>isComponent=true</code> 表示该应用是组件（module），不产出安装包</td></tr>
 <tr><td>需求 Requirement</td><td><code>code / title / desc / devOwner / qaOwner / qaMembers[] / pmOwner / priority / start / due</code></td><td>不关联应用；三个负责人分别对应开发、测试、产品；qaMembers 是测试负责人登记的测试人员，同样参与「我的需求」可见范围；priority 取 P0 / P1 / P2（P0 最高）</td></tr>
 <tr><td>任务 Task</td><td><code>reqId / title / desc / ownerId / priority / start / due / status(none|dev|ready|testing|release|done)</code></td><td>计划开始 <code>start</code> / 结束 <code>due</code>；<code>status</code> 由任务详情的推进按钮修改，超时按 <code>due</code> 与 <code>status</code> 派生</td></tr>
 <tr><td>CI 流水 Pipeline</td><td><code>taskId / appId / name / branch / status / merges[] / conflicts{} / rework{} / buildId</code></td><td>真正执行合并与打包的单元；产物类型与构建脚本来自所关联的应用</td></tr>
+<tr><td>组件映射 AppComponent</td><td><code>appId / componentAppId / version / createdAt</code></td><td>普通应用（<code>isComponent=false</code>）与组件应用（<code>isComponent=true</code>）的依赖关系；同一应用下组件唯一；<code>version</code> 为添加时读取的组件版本，供组件列表与版本接口使用</td></tr>
 <tr><td>构建 Build</td><td><code>pipelineId / stage / mergeSha / versionName / versionCode / buildNumber / channel / status(success|running|failed) / progress / startedAt / duration / failReason / artifact{name,size,type,url}</code></td><td><code>mergeSha</code> 判断包是否对应最新合并；<code>versionName / buildNumber / channel</code> 由打包弹窗填写 / 选择；队列串行执行；打包中带实时进度，失败记 <code>failReason</code>、产物为空</td></tr>
 </tbody>
 </table></div>
@@ -248,6 +249,16 @@
 <li>「角色权限」「人员管理」只有管理员可见；非管理员访问未授权地址显示无权限提示。</li>
 </ul>
 
+<h2 id="sec-12a">6A. 组件管理</h2>
+<p>组件（module）是应用依赖的代码库，不产出安装包；组件与应用是多对多关系，一个应用可以依赖多个组件，一个组件也可以被多个应用复用。</p>
+<ul>
+<li><strong>应用侧开关</strong>：应用配置新增「组件」勾选框，默认关闭。勾选后表示该应用是组件应用，<strong>产物类型、产物扫描目录、渠道</strong>三项隐藏（组件不打包安装包），保存后该应用不再作为可打包应用出现在流水/构建里。</li>
+<li><strong>组件管理页</strong>：左侧菜单新增「组件管理」，受菜单权限控制。页面顶部下拉选择应用（只列出<strong>未勾选组件</strong>的应用），下方列表展示该应用依赖的组件：组件名称、应用标识、仓库地址、版本号、添加时间，行尾可移除。</li>
+<li><strong>新增组件</strong>：页头右侧「新增组件」按钮打开弹窗；先选择应用（未勾选组件的应用），再从组件列表中勾选一个或多个组件应用（已添加的置灰），保存后写入组件映射表。</li>
+<li><strong>版本来源</strong>：添加组件时读取组件应用仓库的版本文件（优先 <code>pubspec.yaml</code> 的 <code>version</code>，其次 <code>package.json</code> 的 <code>version</code>），读不到时记为 <code>—</code>；版本用于组件列表展示与版本接口返回。</li>
+<li><strong>版本接口说明</strong>：组件管理页右上角提供「获取版本接口」按钮，点击弹窗展示调用方式：构建脚本可用应用标识拉取组件与版本 <code>GET /api/components?appCode={应用标识}</code>，返回 <code>{ appCode, appName, components: [{ name, code, repo, version }] }</code>；组件合并代码并推送仓库后，可调用 <code>POST /api/components/version</code>（body <code>appCode / componentCode / version</code>）更新版本号。</li>
+</ul>
+
 <h2 id="sec-13">7. 接口草案</h2>
 <div class="table-wrap"><table>
 <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
@@ -261,6 +272,11 @@
 <tr><td>POST</td><td><code>/api/pipelines/:id/build</code></td><td>body <code>versionName / buildNumber / channel</code>（版本号、Build 号必填，渠道从应用配置的 <code>channels</code> 中选择），执行构建脚本并进入单机队列</td></tr>
 <tr><td>POST</td><td><code>/api/pipelines/:id/qa-verdict</code></td><td>自测通过 / 拒绝</td></tr>
 <tr><td>POST</td><td><code>/api/pipelines/:id/verify | accept</code></td><td>验证通过 / 合回 master</td></tr>
+<tr><td>GET</td><td><code>/api/components?appCode=xxx</code></td><td>按应用标识获取组件列表与版本（供构建脚本 / 外部集成读取）</td></tr>
+<tr><td>POST</td><td><code>/api/components/version</code></td><td>body <code>appCode / componentCode / version</code>，组件推送仓库后更新版本号</td></tr>
+<tr><td>GET</td><td><code>/api/apps/:id/components</code></td><td>组件管理列表（按应用筛选）</td></tr>
+<tr><td>POST</td><td><code>/api/apps/:id/components</code></td><td>body <code>componentAppIds[]</code>，为应用添加组件</td></tr>
+<tr><td>DELETE</td><td><code>/api/apps/:id/components/:componentAppId</code></td><td>移除应用下的组件</td></tr>
 <tr><td>GET</td><td><code>/api/artifacts</code></td><td>产物 / 构建列表（含打包中与失败），下载直链不鉴权</td></tr>
 <tr><td>GET</td><td><code>/api/builds/:id</code></td><td>单次构建详情（状态、进度、失败原因、产物）</td></tr>
 <tr><td>GET</td><td><code>/api/builds/:id/log</code></td><td>打包日志，运行中可轮询增量</td></tr>
@@ -278,6 +294,7 @@
 <li><strong>打包日志随时可查</strong>：流水卡片有「打包日志」按钮，正在打包与失败也能看；产物页除已入库外还列打包中（带进度）与失败（带原因），点行看构建详情与完整日志；运行中的流水禁止再次点打包。</li>
 <li><strong>流水不管任务开始，任务状态由任务按钮推进</strong>：流水只有合并 / 冲突待解决 / 已解决冲突 / 打包 QA·UAT·Release / 通过 / 拒绝；开始开发、提测、开始测试、进入待发布、完成发布都在任务详情上点。</li>
 <li><strong>打包前先填参数</strong>：点「打包 QA / UAT / Release」先弹窗填写版本号、Build 号并选择渠道；渠道选项来自应用配置（多个渠道用逗号分隔），版本号与 Build 号随构建入库并注入构建脚本环境变量。</li>
+<li><strong>组件的两种形态</strong>：应用勾选「组件」后只作为依赖被引用，不参与打包；组件管理页只为未勾选组件的应用维护组件列表，组件版本随映射保存并提供查询接口。</li>
 <li><strong>一个任务的提交记录只有一份</strong>：多条流水共用同一仓库与 Feature 分支，不分应用；任务详情「提交记录」显示该分支最近 20 条提交。</li>
 <li><strong>产物类型与构建脚本在应用里配置</strong>：应用按 Android / iOS 分开，流水只是选择应用 + 填 Feature 分支。</li>
 </ol>
@@ -289,6 +306,7 @@
 <li>任务详情：状态推进按钮 + tabs（概览 / CI 流水 / 提交记录 / 构建记录）。</li>
 <li>CI 流水卡片：合并 QA → 打包 → 自测通过 →（任务提测）→ 合并 UAT → 打包 → 合并 Release → 打包 → 验证通过 → 合回 master。</li>
 <li>打包产物页：已入库 / 打包中 / 失败三态，点行看构建详情与打包日志。</li>
+<li>应用配置勾选「组件」后，产物类型 / 产物扫描目录 / 渠道自动隐藏；组件管理页选择应用 → 查看组件与版本 → 新增组件弹窗勾选组件应用。</li>
 </ol>
 <blockquote>
 <p>原型是本地模拟：数据存在 localStorage，不接真实 Git 与构建脚本，冲突与日志为演示数据。</p>

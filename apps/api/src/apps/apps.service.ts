@@ -15,6 +15,7 @@ type AppRecord = {
   artifactType: string;
   artifactPattern: string | null;
   channels: string | null;
+  isComponent: boolean;
   branchesJson: string;
   machine: string;
   stack: string | null;
@@ -84,6 +85,7 @@ export class AppsService {
       artifactType: dto.artifactType,
       artifactPattern: dto.artifactPattern?.trim() || null,
       channels: dto.channels?.trim() || null,
+      isComponent: Boolean(dto.isComponent),
       branchesJson: JSON.stringify(this.normalizeBranches(dto.branches)),
       machine: dto.machine?.trim() || "builder-01",
       stack: dto.stack?.trim() || null
@@ -126,6 +128,7 @@ export class AppsService {
       artifactType: app.artifactType,
       artifactPattern: app.artifactPattern,
       channels: app.channels,
+      isComponent: app.isComponent,
       branches: this.parseBranches(app.branchesJson),
       machine: app.machine,
       stack: app.stack,

@@ -44,6 +44,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     permissions: [
       { key: "apps", label: "应用配置", menu: true, hash: "/apps" },
       { key: "app_edit", label: "新建 / 编辑应用" },
+      { key: "components", label: "组件管理", menu: true, hash: "/components" },
+      { key: "component_edit", label: "新增 / 移除组件" },
       { key: "artifacts", label: "打包产物", menu: true, hash: "/artifacts" },
       { key: "artifact_download", label: "下载产物" }
     ]
@@ -121,6 +123,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { key: "board", label: "任务看板", route: "/board", description: "按任务状态查看交付进展" },
   { key: "reqs", label: "需求管理", route: "/reqs", description: "需求、负责人和任务拆分" },
   { key: "apps", label: "应用配置", route: "/apps", description: "仓库、分支、构建脚本与产物配置" },
+  { key: "components", label: "组件管理", route: "/components", description: "应用依赖的组件与版本" },
   { key: "artifacts", label: "打包产物", route: "/artifacts", description: "已入库、打包中与失败的构建" },
   { key: "roles", label: "角色权限", route: "/roles", description: "角色与级别的菜单权限矩阵" },
   { key: "staff", label: "人员管理", route: "/staff", description: "账号、角色、级别与启停" },

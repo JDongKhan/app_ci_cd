@@ -499,6 +499,18 @@ User 1 ── N Task（开发负责人）
 </tr>
 <tr>
 <td>应用与产物</td>
+<td><code>components</code></td>
+<td>组件管理</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>应用与产物</td>
+<td><code>component_edit</code></td>
+<td>新增 / 移除组件</td>
+<td>操作</td>
+</tr>
+<tr>
+<td>应用与产物</td>
 <td><code>artifacts</code></td>
 <td>打包产物</td>
 <td>菜单</td>
@@ -803,6 +815,11 @@ User 1 ── N Task（开发负责人）
 <td>技术栈说明</td>
 </tr>
 <tr>
+<td><code>is_component</code></td>
+<td>INTEGER</td>
+<td>是否组件应用（0/1，默认 0）；组件不产出安装包，不可建流水</td>
+</tr>
+<tr>
 <td><code>created_at</code></td>
 <td>DATETIME</td>
 <td>创建时间</td>
@@ -814,6 +831,24 @@ User 1 ── N Task（开发负责人）
 </tr>
 </tbody></table></div>
 <p>唯一约束：<code>(name, platform)</code>。Android 和 iOS 可以同名同 code，但平台不同。</p>
+<h3 id="sec-19a">7.1A app_components 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><code>id</code></td><td>TEXT</td><td>主键</td></tr>
+<tr><td><code>app_id</code></td><td>TEXT</td><td>宿主应用（is_component=0）</td></tr>
+<tr><td><code>component_app_id</code></td><td>TEXT</td><td>组件应用（is_component=1）</td></tr>
+<tr><td><code>version</code></td><td>TEXT</td><td>添加时读取的组件版本，读不到为 <code>—</code></td></tr>
+<tr><td><code>created_by</code></td><td>TEXT</td><td>添加人</td></tr>
+<tr><td><code>created_at</code></td><td>DATETIME</td><td>添加时间</td></tr>
+</tbody></table></div>
+<p>唯一约束：<code>(app_id, component_app_id)</code>；<code>component_app_id</code> 建索引。删除应用时级联删除。</p>
 <h3 id="sec-19">7.2 平台配置</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -886,8 +921,33 @@ User 1 ── N Task（开发负责人）
 <td><code>/api/apps/:id</code></td>
 <td><code>app_edit</code></td>
 </tr>
+<tr>
+<td>GET</td>
+<td><code>/api/components</code></td>
+<td>公开（按 <code>appCode</code> 获取组件与版本）</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/components/version</code></td>
+<td>公开，body <code>appCode / componentCode / version</code>，组件合并后更新版本</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/apps/:id/components</code></td>
+<td><code>components</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/apps/:id/components</code></td>
+<td><code>component_edit</code></td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/apps/:id/components/:componentAppId</code></td>
+<td><code>component_edit</code></td>
+</tr>
 </tbody></table></div>
-<p>页面：<code>/apps</code>，卡片展示平台、仓库、分支、产物配置。</p>
+<p>页面：<code>/apps</code>，卡片展示平台、仓库、分支、产物配置；勾选「组件」后隐藏产物类型 / 产物扫描目录 / 渠道。组件管理页 <code>/components</code> 按应用维护组件列表，并提供版本查询接口说明。</p>
 <h2 id="sec-23">8. 需求设计</h2>
 <h3 id="sec-24">8.1 requirements 表</h3>
 <div class="table-wrap"><table>
@@ -2197,6 +2257,31 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <td>PUT</td>
 <td><code>/api/apps/:id</code></td>
 <td><code>app_edit</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/components</code></td>
+<td>公开（按 <code>appCode</code> 获取组件与版本）</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/components/version</code></td>
+<td>公开，body <code>appCode / componentCode / version</code>，组件合并后更新版本</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/apps/:id/components</code></td>
+<td><code>components</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/apps/:id/components</code></td>
+<td><code>component_edit</code></td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/apps/:id/components/:componentAppId</code></td>
+<td><code>component_edit</code></td>
 </tr>
 <tr>
 <td>POST</td>

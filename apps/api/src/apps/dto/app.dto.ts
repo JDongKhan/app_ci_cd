@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsIn,
   IsObject,
   IsOptional,
@@ -41,6 +42,10 @@ export class CreateAppDto {
   @IsString()
   @MaxLength(2000)
   channels?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  isComponent?: boolean;
 
   @IsIn(ARTIFACT_TYPES)
   artifactType: string;

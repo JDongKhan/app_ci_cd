@@ -723,6 +723,14 @@ table.grid tbody tr:hover{background:#fbfcfe}
 .pill-verify{background:#fff6e8;color:#a16207}
 .pill-verified{background:#eefaf2;color:#15803d}
 .pill-soft{background:#f4f6f9;color:#4a5768}
+.pill-comp{background:#eef4ff;color:#1d4ed8;border:1px solid #d6e4ff}
+.component-toggle{display:flex;align-items:center;gap:6px;font-weight:600;color:#16202e}
+.component-toggle input[type="checkbox"]{width:15px;height:15px;accent-color:var(--blue)}
+.comp-hint{padding:14px 16px;margin-bottom:14px}
+.comp-hint .card-head{margin-bottom:10px}
+.comp-api code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:11.5px;color:#1d4ed8}
+.comp-api pre{margin:8px 0 0;padding:10px 12px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;
+  font-family:var(--mono);font-size:11px;line-height:1.55;color:#334155;overflow:auto;max-height:220px}
 
 </style>
 </head>
@@ -737,8 +745,8 @@ table.grid tbody tr:hover{background:#fbfcfe}
 
 <script type="application/json" id="perm-config">
 {
-  "version": 2,
-  "updatedAt": "2026-11-20",
+  "version": 3,
+  "updatedAt": "2026-11-24",
   "note": "权限配置文件：新增权限只改这里，刷新页面即生效；也可在「角色权限」页导入 JSON 覆盖。menu=true 的项会同时控制左侧菜单可见性。",
   "groups": [
     { "key": "workbench", "label": "工作台", "desc": "首页与看板",
@@ -758,6 +766,8 @@ table.grid tbody tr:hover{background:#fbfcfe}
       "perms": [
         { "key": "apps",              "label": "应用配置", "menu": true, "hash": "#/apps" },
         { "key": "app_edit",          "label": "新建 / 编辑应用" },
+        { "key": "components",        "label": "组件管理", "menu": true, "hash": "#/components" },
+        { "key": "component_edit",    "label": "新增 / 移除组件" },
         { "key": "artifacts",         "label": "打包产物", "menu": true, "hash": "#/artifacts" },
         { "key": "artifact_download", "label": "下载产物" }
       ] },
@@ -794,7 +804,7 @@ table.grid tbody tr:hover{background:#fbfcfe}
 
 var LS_KEY = 'shipflow_proto_v8a';
 var USER_KEY = 'shipflow_user_v7';
-var PROTO_V = 8;
+var PROTO_V = 9;
 
 /* ---------- 通用工具 ---------- */
 function byId(id){ return document.getElementById(id); }
@@ -849,6 +859,7 @@ var MENUS = [
   { key:'board',     label:'任务看板',       short:'看板', hash:'#/board' },
   { key:'reqs',      label:'需求管理',       short:'需求', hash:'#/reqs' },
   { key:'apps',      label:'应用配置',       short:'应用', hash:'#/apps' },
+  { key:'components',label:'组件管理',       short:'组件', hash:'#/components' },
   { key:'artifacts', label:'打包产物',       short:'产物', hash:'#/artifacts' },
   { key:'roles',     label:'角色权限',       short:'角色', hash:'#/roles', adminOnly:true },
   { key:'staff',     label:'人员管理',       short:'人员', hash:'#/staff', adminOnly:true },
@@ -859,6 +870,7 @@ function routeKey(h){
   if(h.indexOf('#/staff') === 0) return 'staff';
   if(h.indexOf('#/board') === 0) return 'board';
   if(h.indexOf('#/apps') === 0) return 'apps';
+  if(h.indexOf('#/components') === 0) return 'components';
   if(h.indexOf('#/artifacts') === 0) return 'artifacts';
   if(h.indexOf('#/spec') === 0) return 'spec';
   if(h.indexOf('#/reqs') === 0 || /^#\/req\//.test(h || '')) return 'reqs';
@@ -911,10 +923,10 @@ function roleLevelKeys(){
 var DEFAULT_PERMS = {
   'dev/l1': ['home','board','spec'],
   'dev/l2': ['home','board','reqs','spec','pipe_create','merge_qa','build_run'],
-  'dev/l3': ['home','board','reqs','apps','artifacts','spec','pipe_create','merge_qa','build_run','task_create','artifact_download'],
+  'dev/l3': ['home','board','reqs','apps','components','component_edit','artifacts','spec','pipe_create','merge_qa','build_run','task_create','artifact_download'],
   'qa/l1':  ['home','board','reqs','spec','req_member'],
   'qa/l2':  ['home','board','reqs','artifacts','spec','req_member','test_run','merge_uat','verify','accept','merge_release','merge_master'],
-  'qa/l3':  ['home','board','reqs','artifacts','spec','req_member','test_run','merge_uat','verify','accept','merge_release','merge_master','build_run','artifact_download'],
+  'qa/l3':  ['home','board','reqs','components','artifacts','spec','req_member','test_run','merge_uat','verify','accept','merge_release','merge_master','build_run','artifact_download'],
   'pm/l1':  ['home','reqs','spec','req_create'],
   'pm/l2':  ['home','reqs','board','artifacts','spec','req_create'],
   'pm/l3':  ['home','reqs','board','artifacts','spec','req_create','artifact_download']
@@ -989,30 +1001,53 @@ function seed(){
   var apps = [
     { id:'a1', name:'出行 App', platform:'android', code:'virtual_com.travel.overseas.app',
       repo:'git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git',
-      defaultBranch:'main', buildScript:'./build_app',
+      defaultBranch:'main', buildScript:'./build_app', isComponent:false,
       artifactType:'apk', artifactPattern:'build/app/outputs/**/*.apk',
       channels:'official,googleplay,huawei',
       stack:'Flutter 3.24', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
       machine:'builder-01', createdAt:'2026-06-12' },
     { id:'a1i', name:'出行 App', platform:'ios', code:'virtual_com.travel.overseas.app',
       repo:'git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git',
-      defaultBranch:'main', buildScript:'./build_app',
+      defaultBranch:'main', buildScript:'./build_app', isComponent:false,
       artifactType:'ipa', artifactPattern:'build/ios/ipa/*.ipa',
       channels:'appstore,enterprise',
       stack:'Flutter 3.24 / Xcode 15', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
       machine:'builder-02', createdAt:'2026-06-12' },
     { id:'a2', name:'订单中心', platform:'server', code:'order-center',
       repo:'https://gitlab.corp.com/backend/order-center.git',
-      defaultBranch:'main', buildScript:'./build_app',
+      defaultBranch:'main', buildScript:'./build_app', isComponent:false,
       artifactType:'jar', artifactPattern:'target/order-center-*.jar',
       stack:'Spring Boot 3.2 / JDK 17', branches:{qa:'qa',uat:'uat',release:'release',master:'master'},
       machine:'builder-02', createdAt:'2026-08-03' },
     { id:'a3', name:'商家工作台', platform:'web', code:'merchant-web',
       repo:'git@gitlab.corp.com:web/merchant-web.git',
-      defaultBranch:'main', buildScript:'./build_app',
+      defaultBranch:'main', buildScript:'./build_app', isComponent:false,
       artifactType:'war', artifactPattern:'dist/merchant-web.war',
       stack:'React 18 / Node 20', branches:{qa:'qa-test',uat:'uat-test',release:'release',master:'master'},
-      machine:'builder-03', createdAt:'2026-10-02' }
+      machine:'builder-03', createdAt:'2026-10-02' },
+    { id:'c1', name:'网络请求库', platform:'android', code:'virtual_com.travel.network',
+      repo:'git@git.17usoft.com:flutter-overseas-app/network_kit.git',
+      defaultBranch:'main', buildScript:'./build_app', isComponent:true, version:'1.4.2',
+      artifactType:'apk', artifactPattern:'', channels:'',
+      stack:'Flutter 3.24 / Dio', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
+      machine:'builder-01', createdAt:'2026-09-01' },
+    { id:'c2', name:'UI 组件库', platform:'android', code:'virtual_com.travel.ui',
+      repo:'git@git.17usoft.com:flutter-overseas-app/ui_kit.git',
+      defaultBranch:'main', buildScript:'./build_app', isComponent:true, version:'2.1.0',
+      artifactType:'apk', artifactPattern:'', channels:'',
+      stack:'Flutter 3.24', branches:{qa:'qa',uat:'uat',release:'Release',master:'master'},
+      machine:'builder-01', createdAt:'2026-09-12' },
+    { id:'c3', name:'公共工具包', platform:'server', code:'common-utils',
+      repo:'https://gitlab.corp.com/backend/common-utils.git',
+      defaultBranch:'main', buildScript:'./build_app', isComponent:true, version:'0.9.6',
+      artifactType:'jar', artifactPattern:'', channels:'',
+      stack:'JDK 17', branches:{qa:'qa',uat:'uat',release:'release',master:'master'},
+      machine:'builder-02', createdAt:'2026-09-20' }
+  ];
+  var components = [
+    { id:'cp1', appId:'a1', componentAppId:'c1', version:'1.4.2', createdAt:'2026-09-02' },
+    { id:'cp2', appId:'a1', componentAppId:'c2', version:'2.1.0', createdAt:'2026-09-12' },
+    { id:'cp3', appId:'a2', componentAppId:'c3', version:'0.9.6', createdAt:'2026-09-21' }
   ];
   var reqs = [
     { id:'r1', code:'REQ-1042', title:'【出行日本】乘换方案增加无需换乘字段信息', devOwner:'u1', qaOwner:'u2', qaMembers:['u2'], pmOwner:'u4', priority:'P0',
@@ -1147,7 +1182,7 @@ function seed(){
       startedAt:'2026-11-20 10:21', duration:'—', progress:62, artifact:null,
       log:['$ git fetch origin','$ git checkout qa','$ ./build_app --flavor qa','Building JAR …','> Task :app:compileKotlin'] }
   ];
-  return { v: PROTO_V, apps:apps, reqs:reqs, tasks:tasks, pipelines:pipelines, builds:builds,
+  return { v: PROTO_V, apps:apps, components:components, reqs:reqs, tasks:tasks, pipelines:pipelines, builds:builds,
     accounts:ACCOUNTS.map(function(a){ return JSON.parse(JSON.stringify(a)); }),
     perms:JSON.parse(JSON.stringify(DEFAULT_PERMS)),
     permCfg:JSON.parse(JSON.stringify(PERM_CONFIG)) };
@@ -1185,6 +1220,7 @@ function loadState(){
       if(!r.qaMembers || !r.qaMembers.length) r.qaMembers = [r.qaOwner];
       if(['高','中','低'].indexOf(r.priority) >= 0) r.priority = ({'高':'P0','中':'P1','低':'P2'})[r.priority];
     });
+    if(!st.components) st.components = [];
     if(!st.perms) st.perms = JSON.parse(JSON.stringify(DEFAULT_PERMS));
     if(!st.permCfg || !st.permCfg.groups || !st.permCfg.groups.length
        || (st.permCfg.version||0) < (PERM_CONFIG.version||0)){
@@ -1779,6 +1815,7 @@ var NAV = [
   { key:'board',     hash:'#/board',     label:'任务看板',       icon:'M4 5h6v6H4zM14 5h6v4h-6zM4 15h6v4H4zM14 13h6v6h-6z' },
   { key:'reqs',      hash:'#/reqs',      label:'需求管理',       icon:'M6 3h9l5 5v13H6zM14 3v6h6' },
   { key:'apps',      hash:'#/apps',      label:'应用配置',       icon:'M4 7h16M4 12h16M4 17h10' },
+  { key:'components',hash:'#/components',label:'组件管理',       icon:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
   { key:'artifacts', hash:'#/artifacts', label:'打包产物',       icon:'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14' },
   { key:'roles',     hash:'#/roles',     label:'角色权限',       icon:'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z' },
   { key:'staff',     hash:'#/staff',     label:'人员管理',       icon:'M8 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 2-5 5-5s5 2 5 5M16 8h5M16 12h5M16 16h3' },
@@ -2182,21 +2219,67 @@ function stageDots(t){
 function viewApps(){
   var cards = state.apps.map(function(a){
     var reqCount = state.pipelines.filter(function(p){ return p.appId === a.id; }).length;
+    var compTag = a.isComponent ? '<span class="pill pill-comp">组件</span>' : platformPill(a);
     return '<div class="app-card">'+
-      '<div class="ac-top"><div><div class="ac-name">'+esc(a.name)+' '+platformPill(a)+'</div><div class="ac-code mono">'+esc(a.code)+'</div></div>'+
-        '<span class="pill pill-soft">'+esc(a.artifactType)+'</span></div>'+
+      '<div class="ac-top"><div><div class="ac-name">'+esc(a.name)+' '+compTag+'</div><div class="ac-code mono">'+esc(a.code)+'</div></div>'+
+        '<span class="pill pill-soft">'+(a.isComponent ? (a.version||'—') : esc(a.artifactType))+'</span></div>'+
       '<div class="ac-repo mono">'+esc(a.repo)+'</div>'+
       '<div class="ac-meta"><span>'+esc(a.stack)+'</span><span>'+esc(a.machine)+'</span><span>'+reqCount+' 条流水</span></div>'+
-      '<div class="ac-facts"><span>产物 <b>'+esc(a.artifactType)+'</b></span><span>脚本 <b>'+esc(a.buildScript)+'</b></span><span>路径 <b>'+esc(a.artifactPattern||'—')+'</b></span><span>渠道 <b>'+esc(parseChannels(a.channels).join('、')||'—')+'</b></span></div>'+
+      (a.isComponent
+        ? '<div class="ac-facts"><span>类型 <b>组件</b></span><span>版本 <b>'+esc(a.version||'—')+'</b></span><span>组件不产出安装包</span></div>'
+        : '<div class="ac-facts"><span>产物 <b>'+esc(a.artifactType)+'</b></span><span>脚本 <b>'+esc(a.buildScript)+'</b></span><span>路径 <b>'+esc(a.artifactPattern||'—')+'</b></span><span>渠道 <b>'+esc(parseChannels(a.channels).join('、')||'—')+'</b></span></div>')+
       '<div class="branchline"><div class="tg-line"><span class="bl-k">分支</span>'+['qa','uat','release','master'].map(function(k){
           return '<span class="bchip '+k+'">'+esc(a.branches[k])+'</span>';
         }).join('')+'</div></div>'+
       '<div class="ac-foot"><button type="button" class="btn btn-sm" data-act="edit-app" data-id="'+a.id+'">编辑配置</button></div>'+
     '</div>';
   }).join('');
-  return '<div class="page-head"><div><h1>应用配置</h1><p class="sub">应用按平台分开建（Android / iOS 各一个），仓库、分支、产物类型与构建脚本都在这配置；流水只选应用</p></div>'+
+  return '<div class="page-head"><div><h1>应用配置</h1><p class="sub">应用按平台分开建（Android / iOS 各一个），仓库、分支、产物类型与构建脚本都在这配置；勾选「组件」后该应用只作为依赖，不产出安装包</p></div>'+
       '<div class="head-actions"><button class="btn btn-primary" data-act="new-app">+ 新建应用</button></div></div>'+
     '<div class="app-grid">'+cards+'</div>';
+}
+
+/* ---------- 视图：组件管理 ---------- */
+function hostApps(){ return state.apps.filter(function(a){ return !a.isComponent; }); }
+function componentApps(){ return state.apps.filter(function(a){ return !!a.isComponent; }); }
+function componentsOf(appId){
+  return (state.components || []).filter(function(c){ return c.appId === appId; });
+}
+function viewComponents(){
+  var hosts = hostApps();
+  var selected = hosts.some(function(a){ return a.id === ui.compApp; }) ? ui.compApp : (hosts[0] ? hosts[0].id : '');
+  ui.compApp = selected;
+  var app = appById(selected);
+  var list = componentsOf(selected);
+  var canEdit = canMenu('component_edit');
+
+  var appSel = '<select data-role="comp-app">'+
+    (hosts.length ? hosts.map(function(a){
+      return '<option value="'+esc(a.id)+'"'+(a.id===selected?' selected':'')+'>'+esc(a.name)+' · '+esc(a.code)+'</option>';
+    }).join('') : '<option value="">暂无可用应用</option>')+'</select>';
+
+  var rows = list.map(function(cp){
+    var ca = appById(cp.componentAppId);
+    return '<tr>'+
+      '<td><div class="u-name">'+esc(ca?ca.name:'—')+'</div><div class="t-sub mono">'+esc(ca?ca.code:'—')+'</div></td>'+
+      '<td class="mono" style="font-size:11.5px">'+esc(ca?ca.repo:'—')+'</td>'+
+      '<td><span class="pill pill-soft">'+esc(cp.version || (ca && ca.version) || '—')+'</span></td>'+
+      '<td class="muted">'+esc(cp.createdAt||'—')+'</td>'+
+      '<td style="text-align:right;white-space:nowrap">'+
+        (canEdit ? '<button type="button" class="btn btn-sm btn-ghost" data-act="del-component" data-app="'+esc(selected)+'" data-id="'+esc(cp.id)+'">移除</button>' : '')+
+      '</td></tr>';
+  }).join('');
+
+  return '<div class="page-head"><div><h1>组件管理</h1>'+
+      '<p class="sub">按应用维护组件列表；在「应用配置」勾选「组件」的应用只作为依赖，不产出安装包</p></div>'+
+      '<div class="head-actions"><button class="btn" data-act="component-api">获取版本接口</button>'+
+        (canEdit ? '<button class="btn btn-primary" data-act="new-component">+ 新增组件</button>' : '')+'</div></div>'+
+    '<div class="req-toolbar">'+appSel+'<span class="muted">'+list.length+' 个组件</span></div>'+
+    (list.length
+      ? '<div class="card" style="padding:0;overflow:hidden"><table class="grid">'+
+          '<thead><tr><th style="width:26%">组件名称</th><th style="width:34%">仓库地址</th><th style="width:12%">版本号</th><th style="width:16%">添加时间</th><th style="width:12%"></th></tr></thead>'+
+          '<tbody>'+rows+'</tbody></table></div>'
+      : '<div class="card"><div class="empty"><div class="big">该应用还没有组件</div>点右上角「新增组件」选择应用与组件应用</div></div>');
 }
 
 /* ---------- 视图：需求列表 ---------- */
@@ -2924,11 +3007,15 @@ function renderModal(){
   if(type === 'app'){
     var a = ui.modal.id ? appById(ui.modal.id) : null;
     var br = (a && a.branches) || { qa:'qa', uat:'uat', release:'release', master:'master' };
+    var isComp = !!(a && a.isComponent);
+    var hideArtifact = isComp ? ' style="display:none"' : '';
     root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal">'+
       '<form data-form="app" data-id="'+(a?a.id:'')+'">'+
-        '<div class="modal-head"><div><h3>'+(a?'编辑应用配置':'新建应用')+'</h3><p>应用只描述仓库、构建脚本与产物，被流水引用</p></div>'+
+        '<div class="modal-head"><div><h3>'+(a?'编辑应用配置':'新建应用')+'</h3><p>应用只描述仓库、构建脚本与产物，被流水引用；组件不产出安装包</p></div>'+
           '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
         '<div class="modal-body"><div class="form-grid">'+
+          '<div class="field full"><label class="component-toggle"><input type="checkbox" name="isComponent" data-role="app-component"'+(isComp?' checked':'')+'> 组件（module）'+
+            '<span class="fx" style="margin-left:8px">勾选后该应用只作为依赖，产物类型 / 扫描目录 / 渠道自动隐藏</span></label></div>'+
           '<div class="field"><label>应用名称<span class="req-star">*</span></label><input name="name" value="'+esc(a?a.name:'')+'" placeholder="例如 出行 App"></div>'+
           '<div class="field"><label>平台<span class="req-star">*</span></label><select name="platform" data-role="app-platform">'+
             ['android','ios','server','web'].map(function(x){ return '<option value="'+x+'"'+((a?a.platform:'android')===x?' selected':'')+'>'+esc(platformLabel(x))+'</option>'; }).join('')+
@@ -2937,11 +3024,11 @@ function renderModal(){
           '<div class="field"><label>默认分支</label><input name="defaultBranch" value="'+esc(a?a.defaultBranch:'main')+'"></div>'+
           '<div class="field full"><label>Git 仓库地址<span class="req-star">*</span></label><input name="repo" value="'+esc(a?a.repo:'')+'" placeholder="git@git.17usoft.com:flutter-overseas-app/flutter_travel_overseas_app.git"></div>'+
           '<div class="field"><label>构建脚本</label><input name="buildScript" value="'+esc(a?a.buildScript:'./build_app')+'"></div>'+
-          '<div class="field"><label>产物类型</label><select name="artifactType">'+
+          '<div class="field artifact-only"'+hideArtifact+'><label>产物类型</label><select name="artifactType">'+
             ['apk','ipa','jar','war'].map(function(x){ return '<option'+(a&&a.artifactType===x?' selected':'')+'>'+x+'</option>'; }).join('')+'</select></div>'+
           '<div class="field"><label>构建机</label><input name="machine" value="'+esc(a?a.machine:'builder-01')+'"></div>'+
-          '<div class="field"><label>产物路径</label><input name="artifactPattern" value="'+esc(a?a.artifactPattern:'')+'" placeholder="例如 build/app/outputs/**/*.apk"></div>'+
-          '<div class="field"><label>渠道</label><input name="channels" value="'+esc(a?a.channels:'official,googleplay')+'" placeholder="多个渠道用逗号隔开，如 official,googleplay,huawei"><span class="fx">打包弹窗的渠道下拉从这里读取，支持多个，逗号分隔</span></div>'+
+          '<div class="field artifact-only"'+hideArtifact+'><label>产物路径</label><input name="artifactPattern" value="'+esc(a?a.artifactPattern:'')+'" placeholder="例如 build/app/outputs/**/*.apk"></div>'+
+          '<div class="field artifact-only"'+hideArtifact+'><label>渠道</label><input name="channels" value="'+esc(a?a.channels:'official,googleplay')+'" placeholder="多个渠道用逗号隔开，如 official,googleplay,huawei"><span class="fx">打包弹窗的渠道下拉从这里读取，支持多个，逗号分隔</span></div>'+
           '<div class="field full"><div class="inline4">'+
             ['qa','uat','release','master'].map(function(k){
               return '<div><span class="lb">'+k.toUpperCase()+'</span><input name="'+k+'" value="'+esc(br[k]||k)+'"></div>';
@@ -2949,6 +3036,72 @@ function renderModal(){
         '</div></div>'+
         '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
           '<button type="submit" class="btn btn-primary">'+(a?'保存配置':'创建应用')+'</button></div>'+
+      '</form></div></div>';
+    return;
+  }
+
+  if(type === 'componentApi'){
+    var capi = appById(ui.modal.appId);
+    var clist = componentsOf(ui.modal.appId);
+    var firstCp = clist[0];
+    var firstCa = firstCp ? appById(firstCp.componentAppId) : null;
+    var sample = {
+      appCode: capi ? capi.code : '',
+      appName: capi ? capi.name : '',
+      components: clist.map(function(cp){
+        var ca = appById(cp.componentAppId);
+        return { name: ca?ca.name:'', code: ca?ca.code:'', repo: ca?ca.repo:'', version: cp.version || (ca && ca.version) || '' };
+      })
+    };
+    var versionSample = {
+      appCode: capi ? capi.code : '{应用标识}',
+      componentCode: firstCa ? firstCa.code : '{组件标识}',
+      version: (firstCp && firstCp.version) || '1.0.0'
+    };
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:560px">'+
+      '<div class="modal-head"><div><h3>获取组件版本</h3><p>构建脚本按应用标识拉取组件列表与版本</p></div>'+
+        '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+      '<div class="modal-body"><div class="comp-api">'+
+        '<code>GET /api/components?appCode='+esc(capi?capi.code:'{应用标识}')+'</code>'+
+        '<pre>'+esc(JSON.stringify(sample, null, 2))+'</pre>'+
+        '<p class="hint" style="margin:14px 0 6px">组件合并代码并推送仓库后，调用下面接口更新版本号：</p>'+
+        '<pre>POST /api/components/version\nContent-Type: application/json\n\n'+esc(JSON.stringify(versionSample, null, 2))+'</pre>'+
+      '</div></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">关闭</button></div>'+
+    '</div></div>';
+    return;
+  }
+
+  if(type === 'component'){
+    var hosts = hostApps();
+    var sel = hosts.some(function(a){ return a.id === ui.modal.appId; }) ? ui.modal.appId : (hosts[0] ? hosts[0].id : '');
+    ui.modal.appId = sel;
+    var added = componentsOf(sel).map(function(c){ return c.componentAppId; });
+    var compList = componentApps();
+    var hostOpts = hosts.map(function(a){
+      return '<option value="'+esc(a.id)+'"'+(a.id===sel?' selected':'')+'>'+esc(a.name)+' · '+esc(a.code)+'</option>';
+    }).join('');
+    var picks = compList.map(function(ca){
+      var on = added.indexOf(ca.id) >= 0;
+      return '<label class="qa-ck'+(on?' locked':'')+'">'+
+        '<input type="checkbox" name="components" value="'+esc(ca.id)+'"'+(on?' disabled':'')+'>'+
+        '<span class="qa-ck-n">'+esc(ca.name)+'</span>'+
+        '<span class="qa-ck-t">'+esc(ca.code)+' · v'+esc(ca.version||'—')+'</span></label>';
+    }).join('');
+    root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:560px">'+
+      '<form data-form="component">'+
+        '<div class="modal-head"><div><h3>新增组件</h3><p>先选择应用，再勾选要依赖的组件应用</p></div>'+
+          '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
+        '<div class="modal-body">'+
+          '<div class="field full"><label>应用<span class="req-star">*</span></label>'+
+            '<select name="appId" data-role="comp-modal-app">'+hostOpts+'</select>'+
+            '<span class="fx">只列出未勾选「组件」的应用</span></div>'+
+          '<div class="field full" style="margin-top:12px"><label>组件列表<span class="req-star">*</span></label>'+
+            '<span class="fx">已添加的组件置灰；组件应用可在「应用配置」勾选「组件」后创建</span>'+
+            '<div class="qa-pool">'+(picks || '<div class="muted" style="padding:10px 0">暂无组件应用，请先在应用配置里勾选「组件」</div>')+'</div></div>'+
+        '</div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">取消</button>'+
+          '<button type="submit" class="btn btn-primary">保存</button></div>'+
       '</form></div></div>';
     return;
   }
@@ -3054,7 +3207,7 @@ function renderModal(){
 
   if(type === 'pipe'){
     var tk = taskOf(ui.modal.taskId);
-    var appOpts = state.apps.map(function(a){ return '<option value="'+a.id+'">'+esc(a.name)+'（'+esc(platformLabel(a.platform))+' · '+esc(a.artifactType)+'）</option>'; }).join('');
+    var appOpts = state.apps.filter(function(a){ return !a.isComponent; }).map(function(a){ return '<option value="'+a.id+'">'+esc(a.name)+'（'+esc(platformLabel(a.platform))+' · '+esc(a.artifactType)+'）</option>'; }).join('');
     var firstApp = state.apps[0] || {};
     root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal">'+
       '<form data-form="pipe" data-task="'+esc(ui.modal.taskId)+'">'+
@@ -3277,6 +3430,13 @@ document.addEventListener('click', function(e){
   if(act === 'new-req'){ ui.modal = { type:'req' }; renderModal(); return; }
   if(act === 'new-app'){ ui.modal = { type:'app' }; renderModal(); return; }
   if(act === 'edit-app'){ ui.modal = { type:'app', id:id }; renderModal(); return; }
+  if(act === 'new-component'){ ui.modal = { type:'component', appId: ui.compApp }; renderModal(); return; }
+  if(act === 'component-api'){ ui.modal = { type:'componentApi', appId: ui.compApp }; renderModal(); return; }
+  if(act === 'del-component'){
+    var hostId = el.dataset.app, cid = el.dataset.id;
+    state.components = (state.components||[]).filter(function(c){ return c.id !== cid; });
+    save(); render(); toast('组件已移除','success'); return;
+  }
   if(act === 'copy'){
     var txt = el.dataset.copy || '';
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -3334,10 +3494,25 @@ document.addEventListener('input', function(e){
 document.addEventListener('change', function(e){
   var role = e.target.dataset.role;
   if(role === 'artifact-app'){ ui.artifactApp = e.target.value; render(); }
+  if(role === 'comp-app'){ ui.compApp = e.target.value; render(); }
+  if(role === 'comp-modal-app'){
+    ui.modal = ui.modal || { type:'component' };
+    ui.modal.appId = e.target.value;
+    renderModal();
+  }
   if(role === 'staff-role'){
     var sf = e.target.closest('form');
     var sw = sf && sf.querySelector('[data-role="staff-level-wrap"]');
     if(sw) sw.innerHTML = levelOptions(e.target.value, 'l1');
+  }
+  if(role === 'app-component'){
+    var cf = e.target.closest('form');
+    if(cf){
+      var show = !e.target.checked;
+      [].slice.call(cf.querySelectorAll('.artifact-only')).forEach(function(el){
+        el.style.display = show ? '' : 'none';
+      });
+    }
   }
   if(role === 'app-platform'){
     var pf = e.target.value, form0 = e.target.closest('form');
@@ -3438,6 +3613,7 @@ document.addEventListener('submit', function(e){
       platform:(fd.get('platform')||'android'),
       defaultBranch:(fd.get('defaultBranch')||'main').trim(),
       buildScript:(fd.get('buildScript')||'./build_app').trim(),
+      isComponent:!!fd.get('isComponent'),
       artifactType:fd.get('artifactType')||'apk',
       artifactPattern:(fd.get('artifactPattern')||'').trim() || ('build/**/*.'+(fd.get('artifactType')||'apk')),
       channels:(fd.get('channels')||'').trim(),
@@ -3469,6 +3645,26 @@ document.addEventListener('submit', function(e){
     if(!chSel){ toast('请选择渠道','error'); return; }
     ui.modal = null; renderModal();
     enqueueOrStartBuild(bp, bstage, { versionName:verName, buildNumber:bnNum, channel:chSel });
+    return;
+  }
+
+  if(kind === 'component'){
+    var hostId = fd.get('appId');
+    var hostApp = appById(hostId);
+    if(!hostApp){ toast('请选择应用','error'); return; }
+    var picked = [].slice.call(form.querySelectorAll('input[name="components"]:checked')).map(function(x){ return x.value; });
+    if(!picked.length){ toast('请至少选择一个组件','error'); return; }
+    var existing = componentsOf(hostId).map(function(c){ return c.componentAppId; });
+    var addedCount = 0;
+    picked.forEach(function(cid){
+      if(existing.indexOf(cid) >= 0) return;
+      var ca = appById(cid);
+      state.components.push({ id:uid('cp'), appId:hostId, componentAppId:cid, version:(ca && ca.version) || '—', createdAt:fmtNow() });
+      addedCount++;
+    });
+    ui.compApp = hostId;
+    ui.modal = null; save(); render();
+    toast('已添加 '+addedCount+' 个组件','success');
     return;
   }
 
@@ -3567,6 +3763,8 @@ function render(){
     content = viewReqs();
   } else if(h.indexOf('#/board') === 0){
     content = viewBoard();
+  } else if(h.indexOf('#/components') === 0){
+    content = viewComponents();
   } else if(h.indexOf('#/apps') === 0){
     content = viewApps();
   } else if(h.indexOf('#/reqs') === 0){

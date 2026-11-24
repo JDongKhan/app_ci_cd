@@ -19,7 +19,8 @@ export const ACTION_ROLES: Record<string, readonly Role[]> = {
   accept: ["qa"],
   artifact_download: ["dev", "qa", "pm"],
   task_delete: ["admin"],
-  app_edit: ["admin"]
+  app_edit: ["admin"],
+  component_edit: ["admin", "dev"]
 };
 
 export function isActionPermission(key: string): boolean {

@@ -50,6 +50,7 @@ model App {
   artifactType    String   @map("artifact_type")
   artifactPattern String?  @map("artifact_pattern")
   channels        String?
+  isComponent     Boolean  @default(false) @map("is_component")
   branchesJson    String   @map("branches_json")
   machine         String   @default("builder-01")
   stack           String?
@@ -59,7 +60,25 @@ model App {
   @@unique([name, platform])
   @@map("apps")
 
-  pipelines Pipeline[]
+  pipelines       Pipeline[]
+  components      AppComponent[] @relation("HostAppComponents")
+  usedAsComponent AppComponent[] @relation("ComponentApps")
+}
+
+model AppComponent {
+  id             String   @id @default(uuid())
+  appId          String   @map("app_id")
+  componentAppId String   @map("component_app_id")
+  version        String?
+  createdBy      String?  @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  app          App @relation("HostAppComponents", fields: [appId], references: [id], onDelete: Cascade)
+  componentApp App @relation("ComponentApps", fields: [componentAppId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, componentAppId])
+  @@index([componentAppId])
+  @@map("app_components")
 }
 
 model Requirement {

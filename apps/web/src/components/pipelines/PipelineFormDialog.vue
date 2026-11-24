@@ -51,7 +51,7 @@ function defaultBranch(task: TaskDetail | null | undefined): string {
 async function load() {
   loading.value = true;
   try {
-    apps.value = await listApps();
+    apps.value = (await listApps()).filter((app) => !app.isComponent);
     const first = existing.value;
     form.branch = first?.branch ?? defaultBranch(props.task);
     form.appId = apps.value[0]?.id ?? "";

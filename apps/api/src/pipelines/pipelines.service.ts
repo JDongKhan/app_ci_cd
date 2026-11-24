@@ -135,6 +135,10 @@ export class PipelinesService {
       throw new BadRequestException("应用不存在");
     }
 
+    if (app.isComponent) {
+      throw new BadRequestException("组件应用不能建 CI 流水");
+    }
+
     const branch = dto.branch.trim();
 
     const existing = await this.prisma.pipeline.findMany({

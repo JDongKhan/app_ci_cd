@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import {
   Box,
   Document,
+  Files,
   Grid,
   HomeFilled,
   Lock,
@@ -27,6 +28,7 @@ const iconMap: Record<string, Component> = {
   board: Grid,
   reqs: Document,
   apps: Monitor,
+  components: Files,
   artifacts: Box,
   roles: Lock,
   staff: User,

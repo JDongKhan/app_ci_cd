@@ -57,6 +57,7 @@ const form = reactive({
   artifactType: "apk" as ArtifactType,
   artifactPattern: "",
   channels: "",
+  isComponent: false,
   machine: "builder-01",
   stack: "",
   branches: { ...DEFAULT_BRANCHES } as AppBranches
@@ -121,6 +122,7 @@ function openCreate() {
   form.artifactType = "apk";
   form.artifactPattern = "";
   form.channels = "";
+  form.isComponent = false;
   form.machine = "builder-01";
   form.stack = "";
   form.branches = { ...DEFAULT_BRANCHES };
@@ -140,6 +142,7 @@ function openEdit(app: AppRecord) {
   form.artifactType = app.artifactType;
   form.artifactPattern = app.artifactPattern ?? "";
   form.channels = app.channels ?? "";
+  form.isComponent = app.isComponent;
   form.machine = app.machine;
   form.stack = app.stack ?? "";
   form.branches = { ...app.branches };
@@ -163,6 +166,7 @@ async function submit() {
     artifactType: form.artifactType,
     artifactPattern: form.artifactPattern.trim() || null,
     channels: form.channels.trim() || null,
+    isComponent: form.isComponent,
     branches: { ...form.branches },
     machine: form.machine.trim() || "builder-01",
     stack: form.stack.trim() || null
@@ -219,7 +223,9 @@ onMounted(load);
               </div>
               <div class="app-code">{{ app.code }}</div>
             </div>
-            <span class="artifact-pill">{{ app.artifactType }}</span>
+            <span class="artifact-pill" :class="{ 'component-pill': app.isComponent }">
+              {{ app.isComponent ? "组件" : app.artifactType }}
+            </span>
           </div>
 
           <div class="app-repo" :title="app.repo">{{ app.repo }}</div>
@@ -231,9 +237,15 @@ onMounted(load);
           </div>
 
           <div class="app-facts">
-            <span>产物 <b>{{ app.artifactType }}</b></span>
-            <span>路径 <b>{{ patternSummary(app.artifactPattern) }}</b></span>
-            <span>渠道 <b>{{ channelSummary(app.channels) }}</b></span>
+            <template v-if="app.isComponent">
+              <span>类型 <b>组件</b></span>
+              <span>组件应用不产出安装包</span>
+            </template>
+            <template v-else>
+              <span>产物 <b>{{ app.artifactType }}</b></span>
+              <span>路径 <b>{{ patternSummary(app.artifactPattern) }}</b></span>
+              <span>渠道 <b>{{ channelSummary(app.channels) }}</b></span>
+            </template>
           </div>
 
           <div class="app-script">
@@ -280,6 +292,15 @@ onMounted(load);
       <p class="dialog-hint">应用只描述仓库、构建脚本与产物，被流水引用；构建脚本等同执行任意命令，仅管理员可改。</p>
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <div class="form-grid">
+          <el-form-item class="full-span">
+            <el-checkbox v-model="form.isComponent">
+              组件（module）
+            </el-checkbox>
+            <span class="field-hint component-hint">
+              勾选后该应用只作为依赖，不产出安装包；产物类型、产物扫描目录、渠道将隐藏。
+            </span>
+          </el-form-item>
+
           <el-form-item label="应用名称" prop="name">
             <el-input v-model="form.name" placeholder="例如 出行 App" />
           </el-form-item>
@@ -318,7 +339,7 @@ onMounted(load);
             <span class="field-hint">脚本按多行原样用 bash 执行，支持 set -e、变量与管道等 shell 语法。</span>
           </el-form-item>
 
-          <el-form-item label="产物类型" prop="artifactType">
+          <el-form-item v-if="!form.isComponent" label="产物类型" prop="artifactType">
             <el-select v-model="form.artifactType" class="full-width">
               <el-option
                 v-for="type in ARTIFACT_OPTIONS"
@@ -333,7 +354,7 @@ onMounted(load);
             <el-input v-model="form.machine" placeholder="builder-01" />
           </el-form-item>
 
-          <el-form-item label="产物扫描目录">
+          <el-form-item v-if="!form.isComponent" label="产物扫描目录">
             <el-input
               v-model="form.artifactPattern"
               type="textarea"
@@ -345,7 +366,7 @@ onMounted(load);
             </span>
           </el-form-item>
 
-          <el-form-item label="渠道">
+          <el-form-item v-if="!form.isComponent" label="渠道">
             <el-input
               v-model="form.channels"
               placeholder="多个渠道用逗号隔开，如 official,googleplay,huawei"
@@ -522,6 +543,15 @@ onMounted(load);
   word-break: break-all;
   max-height: 180px;
   overflow: auto;
+}
+
+.component-hint {
+  margin-left: 8px;
+}
+
+.component-pill {
+  background: #eef4ff;
+  color: #1d4ed8;
 }
 
 .script-input :deep(.el-textarea__inner) {

@@ -79,6 +79,7 @@ export interface AppRecord {
   artifactType: ArtifactType;
   artifactPattern: string | null;
   channels: string | null;
+  isComponent: boolean;
   branches: AppBranches;
   machine: string;
   stack: string | null;
@@ -96,9 +97,36 @@ export interface AppPayload {
   artifactType: ArtifactType;
   artifactPattern?: string | null;
   channels?: string | null;
+  isComponent?: boolean;
   branches?: Partial<AppBranches>;
   machine?: string;
   stack?: string | null;
+}
+
+export interface AppComponentRecord {
+  id: string;
+  version: string | null;
+  createdAt: string;
+  component: {
+    id: string;
+    name: string;
+    code: string;
+    repo: string;
+    platform: AppPlatform;
+    isComponent: boolean;
+  };
+}
+
+export interface ComponentVersionResponse {
+  appId: string;
+  appCode: string;
+  appName: string;
+  components: {
+    name: string;
+    code: string;
+    repo: string;
+    version: string;
+  }[];
 }
 
 export type RequirementPriority = "P0" | "P1" | "P2";

@@ -6,6 +6,7 @@ import HomeView from "@/views/HomeView.vue";
 import RolesView from "@/views/RolesView.vue";
 import StaffView from "@/views/StaffView.vue";
 import AppsView from "@/views/AppsView.vue";
+import ComponentsView from "@/views/ComponentsView.vue";
 import ArtifactsView from "@/views/ArtifactsView.vue";
 import BoardView from "@/views/BoardView.vue";
 import ReqsView from "@/views/ReqsView.vue";
@@ -69,6 +70,12 @@ const router = createRouter({
           name: "apps",
           component: AppsView,
           meta: { title: "应用配置", description: "仓库、分支、构建脚本与产物配置", permission: "apps" }
+        },
+        {
+          path: "components",
+          name: "components",
+          component: ComponentsView,
+          meta: { title: "组件管理", description: "应用依赖的组件与版本", permission: "components" }
         },
         {
           path: "artifacts",
