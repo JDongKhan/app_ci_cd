@@ -282,3 +282,25 @@ model Artifact {
   @@index([status, createdAt])
   @@map("artifacts")
 }
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorId      String?  @map("actor_id")
+  actorName    String   @map("actor_name")
+  actorAccount String?  @map("actor_account")
+  actorRole    String?  @map("actor_role")
+  action       String
+  module       String
+  summary      String
+  method       String
+  path         String
+  statusCode   Int      @map("status_code")
+  payload      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([action])
+  @@index([module])
+  @@map("audit_logs")
+}

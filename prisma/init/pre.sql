@@ -1,16 +1,16 @@
--- 由 data/shipflow.db 导出的演示数据；新增数据直接改本文件即可
+-- 由 data/shipflow-qa.db 导出的演示数据；新增数据直接改本文件即可
 
 -- 环境：pre（预发布）
 
 -- users: 6 rows
 INSERT INTO "users" ("id", "account", "password_hash", "name", "role", "level", "team", "active", "last_login_at", "created_at", "updated_at") VALUES ('u1', 'chenmo', '$2a$10$6G72JJbgy5fhlnjTYgDhK.WvPhJYitquJX9VrtZ4idPXvtKCJT/jC', '陈默', 'dev', 'l3', '出行 App 组', 1, 1795160615063, 1795153354408, 1795160615063);
 INSERT INTO "users" ("id", "account", "password_hash", "name", "role", "level", "team", "active", "last_login_at", "created_at", "updated_at") VALUES ('u2', 'linxiao', '$2a$10$6G72JJbgy5fhlnjTYgDhK.WvPhJYitquJX9VrtZ4idPXvtKCJT/jC', '林晓', 'qa', 'l2', '质量保障组', 1, 1795157623779, 1795153354410, 1795157623779);
-INSERT INTO "users" ("id", "account", "password_hash", "name", "role", "level", "team", "active", "last_login_at", "created_at", "updated_at") VALUES ('u3', 'wangqiang', '$2a$10$6G72JJbgy5fhlnjTYgDhK.WvPhJYitquJX9VrtZ4idPXvtKCJT/jC', '王强', 'admin', NULL, '研发效能', 1, 1795391451900, 1795153354410, 1795391451901);
+INSERT INTO "users" ("id", "account", "password_hash", "name", "role", "level", "team", "active", "last_login_at", "created_at", "updated_at") VALUES ('u3', 'wangqiang', '$2a$10$6G72JJbgy5fhlnjTYgDhK.WvPhJYitquJX9VrtZ4idPXvtKCJT/jC', '王强', 'admin', NULL, '研发效能', 1, 1795527384369, 1795153354410, 1795527384370);
 INSERT INTO "users" ("id", "account", "password_hash", "name", "role", "level", "team", "active", "last_login_at", "created_at", "updated_at") VALUES ('u4', 'suqing', '$2a$10$6G72JJbgy5fhlnjTYgDhK.WvPhJYitquJX9VrtZ4idPXvtKCJT/jC', '苏晴', 'pm', 'l1', '海外产品', 1, 1795157669087, 1795153354411, 1795157669088);
 INSERT INTO "users" ("id", "account", "password_hash", "name", "role", "level", "team", "active", "last_login_at", "created_at", "updated_at") VALUES ('u5', 'zhouran', '$2a$10$6G72JJbgy5fhlnjTYgDhK.WvPhJYitquJX9VrtZ4idPXvtKCJT/jC', '周然', 'dev', 'l2', '商家工作台', 1, 1795156457986, 1795153354413, 1795156457987);
 INSERT INTO "users" ("id", "account", "password_hash", "name", "role", "level", "team", "active", "last_login_at", "created_at", "updated_at") VALUES ('3d7367e4-bac8-41d7-99f1-94ed0a427659', '123', '$2a$10$I2qZubc.gNeXHRn71.zfK..RlZHpR70H/KT8fko8Hxg6nkfVkOEBS', 'JD', 'dev', 'l1', NULL, 1, 1795160025320, 1795153816446, 1795160025321);
 
--- role_permissions: 76 rows
+-- role_permissions: 79 rows
 INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('dev', 'l1', 'home');
 INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('dev', 'l1', 'board');
 INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('dev', 'l1', 'artifacts');
@@ -87,9 +87,16 @@ INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('pm',
 INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('pm', 'l3', 'artifacts');
 INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('pm', 'l3', 'artifact_download');
 INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('pm', 'l3', 'spec');
+INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('dev', 'l3', 'components');
+INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('dev', 'l3', 'component_edit');
+INSERT INTO "role_permissions" ("role", "level", "permission_key") VALUES ('qa', 'l3', 'components');
 
--- apps: 1 rows
-INSERT INTO "apps" ("id", "name", "platform", "code", "repo", "default_branch", "build_script", "artifact_type", "artifact_pattern", "branches_json", "machine", "stack", "created_at", "updated_at", "channels") VALUES ('b62905f4-22ef-4cf5-9715-2f8dcf297d53', '出行 App', 'android', 'com.travel.overseas.app', 'https://gitee.com/wangjindong/teaching.git', 'master', './build_app', 'apk', 'build/**/*.apk', '{"qa":"qa","uat":"uat","release":"release","master":"master"}', 'builder-01', 'Flutter', 1795154372188, 1795391179882, 'official,googleplay,huawei');
+-- apps: 2 rows
+INSERT INTO "apps" ("id", "name", "platform", "code", "repo", "default_branch", "build_script", "artifact_type", "artifact_pattern", "branches_json", "machine", "stack", "created_at", "updated_at", "channels", "is_component") VALUES ('b62905f4-22ef-4cf5-9715-2f8dcf297d53', '出行 App', 'android', 'com.travel.overseas.app', 'https://gitee.com/wangjindong/teaching.git', 'master', './build_app', 'apk', 'build/**/*.apk', '{"qa":"qa","uat":"uat","release":"release","master":"master"}', 'builder-01', 'Flutter', 1795154372188, 1795391179882, 'official,googleplay,huawei', 0);
+INSERT INTO "apps" ("id", "name", "platform", "code", "repo", "default_branch", "build_script", "artifact_type", "artifact_pattern", "branches_json", "machine", "stack", "created_at", "updated_at", "channels", "is_component") VALUES ('8c46f9f4-7a2d-40ed-a3f5-bed6eff26030', '订单', 'android', 'com.travel.order', 'https://gitee.com/wangjindong/teaching.git', 'main', './build_app', 'apk', NULL, '{"qa":"qa","uat":"uat","release":"release","master":"master"}', 'builder-01', NULL, 1795526980663, 1795526980663, NULL, 1);
+
+-- app_components: 1 rows
+INSERT INTO "app_components" ("id", "app_id", "component_app_id", "version", "created_by", "created_at") VALUES ('98dce864-4cee-4d92-bb92-b9c169b59a5c', 'b62905f4-22ef-4cf5-9715-2f8dcf297d53', '8c46f9f4-7a2d-40ed-a3f5-bed6eff26030', NULL, 'u3', 1795526994577);
 
 -- requirements: 2 rows
 INSERT INTO "requirements" ("id", "code", "title", "description", "dev_owner_id", "qa_owner_id", "pm_owner_id", "priority", "start_at", "due_at", "created_at", "updated_at") VALUES ('b8b635dd-58a1-4c49-9cb9-cd6e539daa4c', 'REQ-1045', '海外出行首页改版', '首页信息流与推荐位改版，覆盖 Android / iOS。', 'u1', 'u2', 'u4', 'P1', 1795132800000, 1796428800000, 1795154583492, 1795154583492);

@@ -69,8 +69,9 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: "system",
     label: "系统管理",
-    description: "角色、人员与说明",
+    description: "角色、人员、日志与说明",
     permissions: [
+      { key: "logs", label: "操作日志", menu: true, hash: "/logs" },
       { key: "roles", label: "角色权限", menu: true, hash: "/roles", adminOnly: true },
       { key: "staff", label: "人员管理", menu: true, hash: "/staff", adminOnly: true },
       { key: "spec", label: "需求说明", menu: true, hash: "/spec" }
@@ -125,6 +126,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { key: "apps", label: "应用配置", route: "/apps", description: "仓库、分支、构建脚本与产物配置" },
   { key: "components", label: "组件管理", route: "/components", description: "应用依赖的组件与版本" },
   { key: "artifacts", label: "打包产物", route: "/artifacts", description: "已入库、打包中与失败的构建" },
+  { key: "logs", label: "操作日志", route: "/logs", description: "关键操作的执行人与内容留痕" },
   { key: "roles", label: "角色权限", route: "/roles", description: "角色与级别的菜单权限矩阵" },
   { key: "staff", label: "人员管理", route: "/staff", description: "账号、角色、级别与启停" },
   { key: "spec", label: "需求说明", route: "/spec", description: "一期范围、状态机与已确认规则" }

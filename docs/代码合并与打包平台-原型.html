@@ -783,8 +783,9 @@ table.grid tbody tr:hover{background:#fbfcfe}
         { "key": "merge_master",  "label": "合回 master" },
         { "key": "accept",        "label": "验收归档" }
       ] },
-    { "key": "system", "label": "系统管理", "desc": "角色、人员与说明",
+    { "key": "system", "label": "系统管理", "desc": "角色、人员、日志与说明",
       "perms": [
+        { "key": "logs",  "label": "操作日志", "menu": true, "hash": "#/logs" },
         { "key": "roles", "label": "角色权限", "menu": true, "hash": "#/roles", "adminOnly": true },
         { "key": "staff", "label": "人员管理", "menu": true, "hash": "#/staff", "adminOnly": true },
         { "key": "spec",  "label": "需求说明", "menu": true, "hash": "#/spec" }
@@ -861,6 +862,7 @@ var MENUS = [
   { key:'apps',      label:'应用配置',       short:'应用', hash:'#/apps' },
   { key:'components',label:'组件管理',       short:'组件', hash:'#/components' },
   { key:'artifacts', label:'打包产物',       short:'产物', hash:'#/artifacts' },
+  { key:'logs',      label:'操作日志',       short:'日志', hash:'#/logs' },
   { key:'roles',     label:'角色权限',       short:'角色', hash:'#/roles', adminOnly:true },
   { key:'staff',     label:'人员管理',       short:'人员', hash:'#/staff', adminOnly:true },
   { key:'spec',      label:'需求说明',       short:'说明', hash:'#/spec' }
@@ -872,6 +874,7 @@ function routeKey(h){
   if(h.indexOf('#/apps') === 0) return 'apps';
   if(h.indexOf('#/components') === 0) return 'components';
   if(h.indexOf('#/artifacts') === 0) return 'artifacts';
+  if(h.indexOf('#/logs') === 0) return 'logs';
   if(h.indexOf('#/spec') === 0) return 'spec';
   if(h.indexOf('#/reqs') === 0 || /^#\/req\//.test(h || '')) return 'reqs';
   return 'home';
@@ -991,7 +994,8 @@ var ui = {
   taskId: null, pipeId: null, buildId: null, logBuildId: null, reqId: null,
   tab: 'overview', modal: null,
   reqQ: '', boardFilter: 'all', artifactApp: 'all',
-  taskQ: '', permQ: '', permCollapsed: {}, homeTab: 'active'
+  taskQ: '', permQ: '', permCollapsed: {}, homeTab: 'active',
+  logAction: 'all', logModule: 'all', logQ: ''
 };
 /* 打包机运行时（不持久化）：单 clone，构建期间禁止切分支合并 */
 var runtime = { busy: null, queue: [] };
@@ -1817,6 +1821,7 @@ var NAV = [
   { key:'apps',      hash:'#/apps',      label:'应用配置',       icon:'M4 7h16M4 12h16M4 17h10' },
   { key:'components',hash:'#/components',label:'组件管理',       icon:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
   { key:'artifacts', hash:'#/artifacts', label:'打包产物',       icon:'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14' },
+  { key:'logs',      hash:'#/logs',      label:'操作日志',       icon:'M6 4h12v16H6zM9 9h6M9 13h6M9 17h4' },
   { key:'roles',     hash:'#/roles',     label:'角色权限',       icon:'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z' },
   { key:'staff',     hash:'#/staff',     label:'人员管理',       icon:'M8 11a3 3 0 100-6 3 3 0 000 6zM3 20c0-3 2-5 5-5s5 2 5 5M16 8h5M16 12h5M16 16h3' },
   { key:'spec',      hash:'#/spec',      label:'需求说明',       icon:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h4' }
@@ -2282,6 +2287,68 @@ function viewComponents(){
       : '<div class="card"><div class="empty"><div class="big">该应用还没有组件</div>点右上角「新增组件」选择应用与组件应用</div></div>');
 }
 
+/* ---------- 视图：操作日志 ---------- */
+var DEMO_LOGS = [
+  { id:'lg1', time:'2026-11-24 21:42', actor:'王强', account:'wangqiang', role:'admin', action:'update', module:'应用配置', summary:'更新应用「出行 App」', method:'PUT', path:'/apps/a1', status:200, payload:'{"name":"出行 App","platform":"android","repo":"git@git.example.com:travel/app.git"}' },
+  { id:'lg2', time:'2026-11-24 21:30', actor:'陈默', account:'chenmo', role:'dev', action:'create', module:'CI 流水', summary:'新建 CI 流水「Android 包」', method:'POST', path:'/tasks/t1/pipelines', status:200, payload:'{"appId":"a1","branch":"feature/task-1a2b3c4d"}' },
+  { id:'lg3', time:'2026-11-24 21:12', actor:'林晓', account:'linxiao', role:'qa', action:'update', module:'CI 流水', summary:'合并分支「出行 App」', method:'POST', path:'/pipelines/p1/merge', status:200, payload:'{"stage":"qa"}' },
+  { id:'lg4', time:'2026-11-24 20:55', actor:'王强', account:'wangqiang', role:'admin', action:'delete', module:'任务管理', summary:'删除任务「订单列表埋点」', method:'DELETE', path:'/tasks/t9', status:200, payload:'' },
+  { id:'lg5', time:'2026-11-24 20:40', actor:'王强', account:'wangqiang', role:'admin', action:'create', module:'组件管理', summary:'添加组件「网络库」', method:'POST', path:'/apps/a1/components', status:200, payload:'{"componentAppIds":["a7"]}' },
+  { id:'lg6', time:'2026-11-24 20:26', actor:'陈默', account:'chenmo', role:'dev', action:'update', module:'任务管理', summary:'推进任务状态「订单列表埋点」', method:'POST', path:'/tasks/t1/status', status:200, payload:'{"status":"ready"}' },
+  { id:'lg7', time:'2026-11-24 20:10', actor:'王强', account:'wangqiang', role:'admin', action:'update', module:'人员管理', summary:'重置密码「周然」', method:'PUT', path:'/staff/u5/password', status:200, payload:'{"password":"***"}' }
+];
+var LOG_ACTION_META = {
+  create:{ label:'新增', cls:'pill-done' },
+  update:{ label:'更新', cls:'pill-merged' },
+  delete:{ label:'删除', cls:'pill-failed' }
+};
+function viewLogs(){
+  var actions = [ {key:'all',label:'全部动作'}, {key:'create',label:'新增'}, {key:'update',label:'更新'}, {key:'delete',label:'删除'} ];
+  var modules = ['all'].concat(DEMO_LOGS.map(function(l){ return l.module; }).filter(function(v,i,a){ return a.indexOf(v) === i; }));
+  var q = (ui.logQ || '').trim().toLowerCase();
+
+  var list = DEMO_LOGS.filter(function(l){
+    if(ui.logAction !== 'all' && l.action !== ui.logAction) return false;
+    if(ui.logModule !== 'all' && l.module !== ui.logModule) return false;
+    if(q && (l.actor + ' ' + l.account + ' ' + l.summary + ' ' + l.module).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+
+  var chips = actions.map(function(a){
+    return '<button type="button" class="htab'+(ui.logAction===a.key?' on':'')+'" data-act="log-action" data-id="'+a.key+'">'+a.label+'</button>';
+  }).join('');
+
+  var modSel = '<select data-role="log-module">'+modules.map(function(m){
+    return '<option value="'+esc(m)+'"'+(ui.logModule===m?' selected':'')+'>'+(m==='all'?'全部模块':esc(m))+'</option>';
+  }).join('')+'</select>';
+
+  var rows = list.map(function(l){
+    var meta = LOG_ACTION_META[l.action] || { label:l.action, cls:'pill-idle' };
+    return '<tr>'+
+      '<td class="mono" style="font-size:11.5px;white-space:nowrap">'+esc(l.time)+'</td>'+
+      '<td><div class="u-name">'+esc(l.actor)+'</div><div class="t-sub">'+esc(l.account)+' · '+esc(roleLabel(l.role))+'</div></td>'+
+      '<td><span class="pill '+meta.cls+'">'+meta.label+'</span></td>'+
+      '<td>'+esc(l.module)+'</td>'+
+      '<td>'+esc(l.summary)+'</td>'+
+      '<td><span class="pill '+(l.status < 400 ? 'pill-done' : 'pill-failed')+'">'+(l.status < 400 ? '成功' : '失败')+'</span></td>'+
+      '</tr>';
+  }).join('');
+
+  var body = list.length
+    ? '<div class="card" style="padding:0;overflow:hidden"><table class="grid">'+
+        '<thead><tr><th style="width:15%">时间</th><th style="width:16%">操作人</th><th style="width:8%">动作</th><th style="width:10%">模块</th><th style="width:33%">操作内容</th><th style="width:8%">结果</th></tr></thead>'+
+        '<tbody>'+rows+'</tbody></table></div>'+
+        '<div class="req-toolbar" style="justify-content:flex-end;margin-top:12px"><span class="muted">共 '+list.length+' 条 · 第 1 / 1 页</span></div>'
+    : '<div class="card"><div class="empty"><div class="big">暂无操作日志</div>新增、更新、删除等关键操作后，这里会出现记录</div></div>';
+
+  return '<div class="page-head"><div><h1>操作日志</h1>'+
+      '<p class="sub">记录服务端关键操作（新增、更新、删除）的执行人、内容与结果；查询类操作不记录</p></div></div>'+
+    '<div class="req-toolbar">'+chips+modSel+
+      '<input data-role="log-q" placeholder="操作人 / 内容 / 模块" value="'+esc(ui.logQ)+'" style="width:220px">'+
+      '<span class="muted" style="margin-left:auto">共 '+list.length+' 条</span></div>'+
+    body;
+}
+
 /* ---------- 视图：需求列表 ---------- */
 function reqStatus(r){
   var ts = tasksOf(r.id);
@@ -2499,7 +2566,7 @@ function viewSpec(){
         '<tr><td>产品 pm</td><td>需求与任务进度</td><td>只读：提需求、看进度，不操作代码与打包</td></tr>'+
       '</table>'+
       '<div class="fnote">角色级别：开发 / 测试 / 产品各分 L1 初级、L2 中级、L3 高级；级别只决定菜单可见范围，具体可执行动作仍由角色决定。管理员不设级别，固定拥有全部菜单。</div>'+
-      '<div class="fnote">权限配置：权限项定义在页面内 perm-config JSON 文件块里（当前 5 组 22 项），每项含 key / label / menu / hash。menu=true 的 8 项同时控制左侧菜单；其余为操作类权限（新建流水、合并、打包、验证等）。新增权限只改配置或在「角色权限」页导入 JSON，矩阵自动多一行，无需改代码。</div>'+
+      '<div class="fnote">权限配置：权限项定义在页面内 perm-config JSON 文件块里（当前 5 组 28 项），每项含 key / label / menu / hash。menu=true 的项同时控制左侧菜单；其余为操作类权限（新建流水、合并、打包、验证等）。新增权限只改配置或在「角色权限」页导入 JSON，矩阵自动多一行，无需改代码。</div>'+
       '<div class="fnote">「角色权限」「人员管理」只有管理员可见；非管理员直接访问未授权地址会显示无权限提示。操作类权限已落库，动作级校验待接入。</div>'+
       '<h2><span class="n">06</span>接口草案</h2>'+
       '<table><tr><th style="width:8%">方法</th><th style="width:34%">路径</th><th>说明</th></tr>'+
@@ -2517,6 +2584,8 @@ function viewSpec(){
         '<tr><td>GET</td><td class="mono">/api/builds/:id/log</td><td>打包日志，运行中可轮询增量</td></tr>'+
         '<tr><td>GET/PUT</td><td class="mono">/api/roles/perms</td><td>读取 / 保存「角色 × 级别」菜单权限（仅管理员）</td></tr>'+
         '<tr><td>GET/POST/PUT</td><td class="mono">/api/staff</td><td>人员列表 / 新增（账号 + 初始密码 + 角色 + 级别）/ 编辑（仅管理员）</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/logs</td><td>操作日志分页查询，支持 page / pageSize / action / module / keyword；需 logs 权限</td></tr>'+
+        '<tr><td>GET</td><td class="mono">/api/logs/modules</td><td>日志中出现过的模块选项；需 logs 权限</td></tr>'+
       '</table>'+
       '<h2><span class="n">07</span>已确认规则</h2>'+
       '<div class="todo"><span class="num">01</span><div><span class="q">提测、合并 Release、验收都要先打包成功</span><span class="a">提测要 QA 包且自测通过，合并 Release 要 UAT 包，验收要 Release 包；包必须对应最新一次该阶段合并。</span></div></div>'+
@@ -3058,6 +3127,21 @@ function renderModal(){
       componentCode: firstCa ? firstCa.code : '{组件标识}',
       version: (firstCp && firstCp.version) || '1.0.0'
     };
+    var versionResponse = {
+      appCode: capi ? capi.code : '{应用标识}',
+      appName: capi ? capi.name : '{应用名称}',
+      componentCode: firstCa ? firstCa.code : '{组件标识}',
+      componentName: firstCa ? firstCa.name : '{组件名称}',
+      version: (firstCp && firstCp.version) || '1.0.0',
+      component: {
+        id: firstCa ? firstCa.id : '{组件应用ID}',
+        name: firstCa ? firstCa.name : '{组件名称}',
+        code: firstCa ? firstCa.code : '{组件标识}',
+        repo: firstCa ? firstCa.repo : '{项目地址}',
+        platform: firstCa ? firstCa.platform : '{平台}',
+        isComponent: true
+      }
+    };
     root.innerHTML = '<div class="overlay" data-act="overlay"><div class="modal" style="width:560px">'+
       '<div class="modal-head"><div><h3>获取组件版本</h3><p>构建脚本按应用标识拉取组件列表与版本</p></div>'+
         '<button type="button" class="icon-btn" data-act="close-modal">×</button></div>'+
@@ -3066,6 +3150,8 @@ function renderModal(){
         '<pre>'+esc(JSON.stringify(sample, null, 2))+'</pre>'+
         '<p class="hint" style="margin:14px 0 6px">组件合并代码并推送仓库后，调用下面接口更新版本号：</p>'+
         '<pre>POST /api/components/version\nContent-Type: application/json\n\n'+esc(JSON.stringify(versionSample, null, 2))+'</pre>'+
+        '<p class="hint" style="margin:6px 0">返回更新后的版本与组件应用信息（含项目地址）：</p>'+
+        '<pre>'+esc(JSON.stringify(versionResponse, null, 2))+'</pre>'+
       '</div></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-act="close-modal">关闭</button></div>'+
     '</div></div>';
@@ -3307,6 +3393,7 @@ document.addEventListener('click', function(e){
   }
   if(act === 'close-modal'){ ui.modal = null; renderModal(); return; }
   if(act === 'home-tab'){ ui.homeTab = id; render(); return; }
+  if(act === 'log-action'){ ui.logAction = id; render(); return; }
   if(act === 'perm-col'){
     var rk = id, pr = rk.split('/'), role = pr[0], lv = pr[1];
     var cols = permColKeys(), have = permsFor(role, lv);
@@ -3481,6 +3568,12 @@ document.addEventListener('click', function(e){
 document.addEventListener('input', function(e){
   var role = e.target.dataset.role;
   if(role === 'req-q'){ ui.reqQ = e.target.value; render(); }
+  if(role === 'log-q'){
+    ui.logQ = e.target.value;
+    render();
+    var lq = document.querySelector('[data-role="log-q"]');
+    if(lq){ lq.focus(); try{ lq.setSelectionRange(lq.value.length, lq.value.length); }catch(err){} }
+  }
 });
 
 document.addEventListener('input', function(e){
@@ -3494,6 +3587,7 @@ document.addEventListener('input', function(e){
 document.addEventListener('change', function(e){
   var role = e.target.dataset.role;
   if(role === 'artifact-app'){ ui.artifactApp = e.target.value; render(); }
+  if(role === 'log-module'){ ui.logModule = e.target.value; render(); }
   if(role === 'comp-app'){ ui.compApp = e.target.value; render(); }
   if(role === 'comp-modal-app'){
     ui.modal = ui.modal || { type:'component' };
@@ -3771,6 +3865,8 @@ function render(){
     content = viewReqs();
   } else if(h.indexOf('#/artifacts') === 0){
     content = viewArtifacts();
+  } else if(h.indexOf('#/logs') === 0){
+    content = viewLogs();
   } else if(h.indexOf('#/roles') === 0){
     content = viewRoles();
   } else if(h.indexOf('#/staff') === 0){

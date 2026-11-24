@@ -171,14 +171,17 @@ export class ComponentsService {
 
     const updated = await this.prisma.appComponent.update({
       where: { id: row.id },
-      data: { version }
+      data: { version },
+      include: { componentApp: { select: COMPONENT_APP_SELECT } }
     });
 
     return {
       appCode: app.code,
-      componentCode: componentApp.code,
-      componentName: componentApp.name,
-      version: updated.version
+      appName: app.name,
+      componentCode: updated.componentApp.code,
+      componentName: updated.componentApp.name,
+      version: updated.version,
+      component: updated.componentApp
     };
   }
 

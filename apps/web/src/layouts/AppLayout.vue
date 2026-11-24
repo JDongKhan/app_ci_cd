@@ -12,6 +12,7 @@ import {
   Monitor,
   Reading,
   SwitchButton,
+  Tickets,
   User
 } from "@element-plus/icons-vue";
 import { useAuthStore } from "@/stores/auth";
@@ -30,6 +31,7 @@ const iconMap: Record<string, Component> = {
   apps: Monitor,
   components: Files,
   artifacts: Box,
+  logs: Tickets,
   roles: Lock,
   staff: User,
   spec: Reading

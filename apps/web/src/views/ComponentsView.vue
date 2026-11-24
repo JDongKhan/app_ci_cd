@@ -67,6 +67,29 @@ const versionSample = computed(() =>
   )
 );
 
+const versionResponseSample = computed(() => {
+  const first = components.value[0]?.component;
+  return JSON.stringify(
+    {
+      appCode: selectedApp.value?.code ?? "{应用标识}",
+      appName: selectedApp.value?.name ?? "{应用名称}",
+      componentCode: first?.code ?? "{组件标识}",
+      componentName: first?.name ?? "{组件名称}",
+      version: components.value[0]?.version ?? "1.0.0",
+      component: {
+        id: first?.id ?? "{组件应用ID}",
+        name: first?.name ?? "{组件名称}",
+        code: first?.code ?? "{组件标识}",
+        repo: first?.repo ?? "{项目地址}",
+        platform: first?.platform ?? "{平台}",
+        isComponent: true
+      }
+    },
+    null,
+    2
+  );
+});
+
 function formatDateTime(value: string): string {
   if (!value) return "—";
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
@@ -294,6 +317,8 @@ onMounted(loadApps);
 Content-Type: application/json
 
 {{ versionSample }}</pre>
+      <p class="api-hint">返回更新后的版本与组件应用信息（含项目地址）：</p>
+      <pre class="api-code">{{ versionResponseSample }}</pre>
     </el-dialog>
   </div>
 </template>

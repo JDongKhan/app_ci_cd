@@ -577,6 +577,12 @@ User 1 ── N Task（开发负责人）
 </tr>
 <tr>
 <td>系统管理</td>
+<td><code>logs</code></td>
+<td>操作日志</td>
+<td>菜单</td>
+</tr>
+<tr>
+<td>系统管理</td>
 <td><code>roles</code></td>
 <td>角色权限</td>
 <td>菜单，仅管理员</td>
@@ -849,6 +855,30 @@ User 1 ── N Task（开发负责人）
 <tr><td><code>created_at</code></td><td>DATETIME</td><td>添加时间</td></tr>
 </tbody></table></div>
 <p>唯一约束：<code>(app_id, component_app_id)</code>；<code>component_app_id</code> 建索引。删除应用时级联删除。</p>
+<h3 id="sec-19b">7.1B audit_logs 表</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><code>id</code></td><td>TEXT</td><td>主键</td></tr>
+<tr><td><code>actor_id</code></td><td>TEXT</td><td>操作人用户 ID；公开接口为空</td></tr>
+<tr><td><code>actor_name</code></td><td>TEXT</td><td>操作人姓名快照</td></tr>
+<tr><td><code>actor_account</code></td><td>TEXT</td><td>操作人账号</td></tr>
+<tr><td><code>actor_role</code></td><td>TEXT</td><td>操作人角色</td></tr>
+<tr><td><code>action</code></td><td>TEXT</td><td><code>create</code> / <code>update</code> / <code>delete</code></td></tr>
+<tr><td><code>module</code></td><td>TEXT</td><td>业务模块，如应用配置、需求管理、CI 流水</td></tr>
+<tr><td><code>summary</code></td><td>TEXT</td><td>可读描述，如「更新应用「出行 App」」</td></tr>
+<tr><td><code>method</code> / <code>path</code></td><td>TEXT</td><td>HTTP 方法与接口路径</td></tr>
+<tr><td><code>status_code</code></td><td>INTEGER</td><td>响应状态码</td></tr>
+<tr><td><code>payload</code></td><td>TEXT</td><td>脱敏后的请求体快照（截断 2000 字符）</td></tr>
+<tr><td><code>created_at</code></td><td>DATETIME</td><td>操作时间</td></tr>
+</tbody></table></div>
+<p>日志只记录新增、更新、删除等关键操作，查询（GET）不记录；登录、登出等鉴权接口不记录。记录方式为全局拦截器：仅处理 <code>POST / PUT / PATCH / DELETE</code>，按路由白名单映射模块与动作，写入失败不影响主流程。</p>
 <h3 id="sec-19">7.2 平台配置</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -929,7 +959,7 @@ User 1 ── N Task（开发负责人）
 <tr>
 <td>POST</td>
 <td><code>/api/components/version</code></td>
-<td>公开，body <code>appCode / componentCode / version</code>，组件合并后更新版本</td>
+<td>公开，body <code>appCode / componentCode / version</code>，组件合并后更新版本；返回版本与组件应用信息（含 <code>repo</code> 项目地址）</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -2266,7 +2296,7 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <tr>
 <td>POST</td>
 <td><code>/api/components/version</code></td>
-<td>公开，body <code>appCode / componentCode / version</code>，组件合并后更新版本</td>
+<td>公开，body <code>appCode / componentCode / version</code>，组件合并后更新版本；返回版本与组件应用信息（含 <code>repo</code> 项目地址）</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -2348,6 +2378,16 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <td><code>/api/staff</code></td>
 <td>人员管理，仅管理员</td>
 </tr>
+<tr>
+<td>GET</td>
+<td><code>/api/logs</code></td>
+<td><code>logs</code>；分页查询操作日志，支持 <code>action / module / keyword</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/logs/modules</code></td>
+<td><code>logs</code>；日志中出现过的模块选项</td>
+</tr>
 </tbody></table></div>
 <h2 id="sec-64">14. 页面与路由</h2>
 <div class="table-wrap"><table>
@@ -2400,6 +2440,12 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <td>打包产物</td>
 <td><code>artifacts</code></td>
 <td>已入库 / 打包中 / 失败</td>
+</tr>
+<tr>
+<td><code>/logs</code></td>
+<td>操作日志</td>
+<td><code>logs</code></td>
+<td>关键操作的执行人、模块、内容与结果</td>
 </tr>
 <tr>
 <td><code>/roles</code></td>

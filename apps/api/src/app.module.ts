@@ -5,6 +5,7 @@ import { ArtifactsModule } from "./artifacts/artifacts.module";
 import { AuthModule } from "./auth/auth.module";
 import { BuildsModule } from "./builds/builds.module";
 import { HealthController } from "./health/health.controller";
+import { LogsModule } from "./logs/logs.module";
 import { PipelinesModule } from "./pipelines/pipelines.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RequirementsModule } from "./requirements/requirements.module";
@@ -27,7 +28,8 @@ import { UsersModule } from "./users/users.module";
     TasksModule,
     PipelinesModule,
     BuildsModule,
-    ArtifactsModule
+    ArtifactsModule,
+    LogsModule
   ],
   controllers: [HealthController]
 })

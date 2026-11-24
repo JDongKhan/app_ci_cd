@@ -8,6 +8,7 @@ import StaffView from "@/views/StaffView.vue";
 import AppsView from "@/views/AppsView.vue";
 import ComponentsView from "@/views/ComponentsView.vue";
 import ArtifactsView from "@/views/ArtifactsView.vue";
+import LogsView from "@/views/LogsView.vue";
 import BoardView from "@/views/BoardView.vue";
 import ReqsView from "@/views/ReqsView.vue";
 import ReqDetailView from "@/views/ReqDetailView.vue";
@@ -82,6 +83,16 @@ const router = createRouter({
           name: "artifacts",
           component: ArtifactsView,
           meta: { title: "打包产物", description: "已入库、打包中与失败的构建", permission: "artifacts" }
+        },
+        {
+          path: "logs",
+          name: "logs",
+          component: LogsView,
+          meta: {
+            title: "操作日志",
+            description: "关键操作的执行人、内容与结果",
+            permission: "logs"
+          }
         },
         {
           path: "roles",

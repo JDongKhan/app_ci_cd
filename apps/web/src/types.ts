@@ -129,6 +129,31 @@ export interface ComponentVersionResponse {
   }[];
 }
 
+export type AuditAction = "create" | "update" | "delete";
+
+export interface AuditLogRecord {
+  id: string;
+  actorId: string | null;
+  actorName: string;
+  actorAccount: string | null;
+  actorRole: Role | null;
+  action: AuditAction;
+  module: string;
+  summary: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  payload: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogPage {
+  items: AuditLogRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export type RequirementPriority = "P0" | "P1" | "P2";
 
 export interface Person {

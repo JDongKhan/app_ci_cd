@@ -244,7 +244,7 @@
 <ul>
 <li>级别：开发 / 测试 / 产品<strong>三个角色都分 L1 初级、L2 中级、L3 高级</strong>（测试与产品同样有 L3），共 9 个角色级别；级别只决定菜单可见范围，具体可执行动作仍由角色决定。管理员不设级别，固定拥有全部菜单。</li>
 <li>级别决定能力档位而非职责：例如测试 L2 可做合并 UAT / 验证 / 合回 master，测试 L3 额外可触发打包与下载产物；产品 L1 / L2 偏提需求与看进度，产品 L3 可下载产物做验收。</li>
-<li>权限配置由<strong>配置文件驱动</strong>（原型里是页面末尾的 <code>perm-config</code> JSON 块，当前 5 组 22 项）：每项含 <code>key / label / menu / hash</code>，<code>menu=true</code> 的 8 项同时控制左侧菜单，其余为操作类权限（新建流水、合并、打包、验证等）。新增权限只改配置或在「角色权限」页导入 JSON，授权矩阵自动多一行。</li>
+<li>权限配置由<strong>配置文件驱动</strong>（原型里是页面末尾的 <code>perm-config</code> JSON 块，当前 5 组 28 项）：每项含 <code>key / label / menu / hash</code>，<code>menu=true</code> 的项同时控制左侧菜单，其余为操作类权限（新建流水、合并、打包、验证等）。新增权限只改配置或在「角色权限」页导入 JSON，授权矩阵自动多一行。</li>
 <li>授权矩阵按「权限为行、角色 × 级别为列」，列头支持<strong>全选 / 清空</strong>；管理员列为只读全选。</li>
 <li>「角色权限」「人员管理」只有管理员可见；非管理员访问未授权地址显示无权限提示。</li>
 </ul>
@@ -256,7 +256,16 @@
 <li><strong>组件管理页</strong>：左侧菜单新增「组件管理」，受菜单权限控制。页面顶部下拉选择应用（只列出<strong>未勾选组件</strong>的应用），下方列表展示该应用依赖的组件：组件名称、应用标识、仓库地址、版本号、添加时间，行尾可移除。</li>
 <li><strong>新增组件</strong>：页头右侧「新增组件」按钮打开弹窗；先选择应用（未勾选组件的应用），再从组件列表中勾选一个或多个组件应用（已添加的置灰），保存后写入组件映射表。</li>
 <li><strong>版本来源</strong>：添加组件时读取组件应用仓库的版本文件（优先 <code>pubspec.yaml</code> 的 <code>version</code>，其次 <code>package.json</code> 的 <code>version</code>），读不到时记为 <code>—</code>；版本用于组件列表展示与版本接口返回。</li>
-<li><strong>版本接口说明</strong>：组件管理页右上角提供「获取版本接口」按钮，点击弹窗展示调用方式：构建脚本可用应用标识拉取组件与版本 <code>GET /api/components?appCode={应用标识}</code>，返回 <code>{ appCode, appName, components: [{ name, code, repo, version }] }</code>；组件合并代码并推送仓库后，可调用 <code>POST /api/components/version</code>（body <code>appCode / componentCode / version</code>）更新版本号。</li>
+<li><strong>版本接口说明</strong>：组件管理页右上角提供「获取版本接口」按钮，点击弹窗展示调用方式：构建脚本可用应用标识拉取组件与版本 <code>GET /api/components?appCode={应用标识}</code>，返回 <code>{ appCode, appName, components: [{ name, code, repo, version }] }</code>；组件合并代码并推送仓库后，可调用 <code>POST /api/components/version</code>（body <code>appCode / componentCode / version</code>）更新版本号，返回 <code>{ appCode, appName, componentCode, componentName, version, component: { id, name, code, repo, platform, isComponent } }</code>，包含组件的项目地址等应用信息。</li>
+</ul>
+
+<h2 id="sec-12b">6B. 操作日志</h2>
+<p>对服务端关键操作留痕，记录「谁在什么时间做了什么」，便于追溯配置变更与业务操作。</p>
+<ul>
+<li><strong>记录范围</strong>：新增、更新、删除类操作都记录；查询（GET）与登录 / 登出等鉴权接口不记录。覆盖应用配置、组件管理、需求、任务、CI 流水、构建打包、人员管理、角色权限。</li>
+<li><strong>记录内容</strong>：操作人（姓名、账号、角色快照）、动作（新增 / 更新 / 删除）、模块、可读描述（如「更新应用「出行 App」」）、请求方法与路径、响应状态码、脱敏后的请求参数、操作时间。请求体中的密码、token 等敏感字段写入前替换为 <code>***</code>。</li>
+<li><strong>实现方式</strong>：服务端全局拦截器统一采集，只处理 <code>POST / PUT / PATCH / DELETE</code>，按路由映射模块与动作；日志写入失败不影响主流程。公开接口（如组件版本上报）没有登录用户时，操作人记为「未登录调用」。</li>
+<li><strong>日志页</strong>：左侧菜单新增「操作日志」，受菜单权限 <code>logs</code> 控制（管理员默认可见，其他角色在「角色权限」中授权）。页面支持按动作、模块、关键字（操作人 / 内容）筛选，表格展示时间、操作人、动作、模块、操作内容与结果，行可展开查看请求参数，底部分页。</li>
 </ul>
 
 <h2 id="sec-13">7. 接口草案</h2>
@@ -273,7 +282,7 @@
 <tr><td>POST</td><td><code>/api/pipelines/:id/qa-verdict</code></td><td>自测通过 / 拒绝</td></tr>
 <tr><td>POST</td><td><code>/api/pipelines/:id/verify | accept</code></td><td>验证通过 / 合回 master</td></tr>
 <tr><td>GET</td><td><code>/api/components?appCode=xxx</code></td><td>按应用标识获取组件列表与版本（供构建脚本 / 外部集成读取）</td></tr>
-<tr><td>POST</td><td><code>/api/components/version</code></td><td>body <code>appCode / componentCode / version</code>，组件推送仓库后更新版本号</td></tr>
+<tr><td>POST</td><td><code>/api/components/version</code></td><td>body <code>appCode / componentCode / version</code>，组件推送仓库后更新版本号；返回版本与组件应用信息（含 <code>repo</code> 项目地址）</td></tr>
 <tr><td>GET</td><td><code>/api/apps/:id/components</code></td><td>组件管理列表（按应用筛选）</td></tr>
 <tr><td>POST</td><td><code>/api/apps/:id/components</code></td><td>body <code>componentAppIds[]</code>，为应用添加组件</td></tr>
 <tr><td>DELETE</td><td><code>/api/apps/:id/components/:componentAppId</code></td><td>移除应用下的组件</td></tr>
@@ -282,6 +291,8 @@
 <tr><td>GET</td><td><code>/api/builds/:id/log</code></td><td>打包日志，运行中可轮询增量</td></tr>
 <tr><td>GET/PUT</td><td><code>/api/roles/perms</code></td><td>读取 / 保存「角色 × 级别」菜单权限（仅管理员）</td></tr>
 <tr><td>GET/POST/PUT</td><td><code>/api/staff</code></td><td>人员列表 / 新增（账号 + 初始密码 + 角色 + 级别）/ 编辑（仅管理员）</td></tr>
+<tr><td>GET</td><td><code>/api/logs</code></td><td>操作日志分页查询，支持 <code>page / pageSize / action / module / keyword</code>；需 <code>logs</code> 权限</td></tr>
+<tr><td>GET</td><td><code>/api/logs/modules</code></td><td>日志中出现过的模块选项；需 <code>logs</code> 权限</td></tr>
 </tbody>
 </table></div>
 
