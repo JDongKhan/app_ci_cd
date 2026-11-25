@@ -1,17 +1,31 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { Refresh } from "@element-plus/icons-vue";
-import { artifactDownloadUrl, listArtifacts } from "@/api/artifacts";
+import QRCode from "qrcode";
+import { listApps } from "@/api/apps";
+import {
+  artifactDownloadUrl,
+  listArtifactTriggerers,
+  listArtifacts
+} from "@/api/artifacts";
 import { getErrorMessage } from "@/api/http";
 import BuildLogDialog from "@/components/builds/BuildLogDialog.vue";
-import type { BuildRecord } from "@/types";
+import type { AppRecord, BuildRecord } from "@/types";
 
 const builds = ref<BuildRecord[]>([]);
+const apps = ref<AppRecord[]>([]);
+const triggerers = ref<{ id: string; name: string }[]>([]);
 const loading = ref(false);
 const statusFilter = ref("");
+const filters = reactive({
+  appId: "",
+  triggeredBy: "",
+  range: [] as string[]
+});
 const logVisible = ref(false);
 const activeBuild = ref<BuildRecord | null>(null);
+const qrCodes = ref<Record<string, string>>({});
 let timer: ReturnType<typeof setInterval> | null = null;
 
 const stats = computed(() => {
@@ -21,10 +35,27 @@ const stats = computed(() => {
   return { success, running, failed };
 });
 
+async function loadOptions() {
+  try {
+    const [appList, people] = await Promise.all([listApps(), listArtifactTriggerers()]);
+    apps.value = appList.filter((app) => !app.isComponent);
+    triggerers.value = people;
+  } catch {
+    apps.value = [];
+    triggerers.value = [];
+  }
+}
+
 async function load() {
   loading.value = true;
   try {
-    builds.value = await listArtifacts(statusFilter.value || undefined);
+    builds.value = await listArtifacts({
+      status: statusFilter.value || undefined,
+      appId: filters.appId || undefined,
+      triggeredBy: filters.triggeredBy || undefined,
+      start: filters.range?.[0] || undefined,
+      end: filters.range?.[1] || undefined
+    });
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "加载打包产物失败"));
   } finally {
@@ -39,6 +70,14 @@ async function load() {
     clearInterval(timer);
     timer = null;
   }
+}
+
+function resetFilters() {
+  statusFilter.value = "";
+  filters.appId = "";
+  filters.triggeredBy = "";
+  filters.range = [];
+  load();
 }
 
 function formatDateTime(value: string | null): string {
@@ -67,7 +106,26 @@ function download(artifactId: string) {
   window.open(artifactDownloadUrl(artifactId), "_blank");
 }
 
-onMounted(load);
+async function ensureQrCode(artifactId: string) {
+  if (qrCodes.value[artifactId]) return;
+
+  try {
+    // 下载地址可能是相对路径（开发环境走代理），二维码需要完整链接才能被手机识别
+    const link = new URL(artifactDownloadUrl(artifactId), window.location.origin).href;
+    const dataUrl = await QRCode.toDataURL(link, {
+      width: 180,
+      margin: 1
+    });
+    qrCodes.value = { ...qrCodes.value, [artifactId]: dataUrl };
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "生成二维码失败"));
+  }
+}
+
+onMounted(() => {
+  loadOptions();
+  load();
+});
 
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
@@ -94,6 +152,41 @@ onBeforeUnmount(() => {
         <el-option label="打包中" value="running" />
         <el-option label="失败" value="failed" />
       </el-select>
+      <el-select
+        v-model="filters.appId"
+        class="filter-select"
+        placeholder="全部应用"
+        clearable
+        filterable
+        @change="load"
+      >
+        <el-option v-for="app in apps" :key="app.id" :label="app.name" :value="app.id" />
+      </el-select>
+      <el-select
+        v-model="filters.triggeredBy"
+        class="filter-select"
+        placeholder="全部触发人"
+        clearable
+        filterable
+        @change="load"
+      >
+        <el-option
+          v-for="person in triggerers"
+          :key="person.id"
+          :label="person.name"
+          :value="person.id"
+        />
+      </el-select>
+      <el-date-picker
+        v-model="filters.range"
+        class="filter-date"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        @change="load"
+      />
+      <el-button @click="resetFilters">重置</el-button>
       <span class="muted-text">
         已入库 {{ stats.success }} · 打包中 {{ stats.running }} · 失败 {{ stats.failed }}
       </span>
@@ -156,16 +249,33 @@ onBeforeUnmount(() => {
           <template #default="{ row }">{{ formatDateTime(row.startedAt || row.createdAt) }}</template>
         </el-table-column>
 
-        <el-table-column label="" width="150" align="right">
+        <el-table-column label="" width="220" align="right">
           <template #default="{ row }">
-            <el-button
-              v-if="row.artifacts.length"
-              size="small"
-              type="primary"
-              @click="download(row.artifacts[0].id)"
-            >
-              下载
-            </el-button>
+            <template v-if="row.artifacts.length">
+              <el-button size="small" type="primary" @click="download(row.artifacts[0].id)">
+                下载
+              </el-button>
+              <el-popover
+                placement="left"
+                :width="200"
+                trigger="click"
+                @show="ensureQrCode(row.artifacts[0].id)"
+              >
+                <template #reference>
+                  <el-button size="small">二维码</el-button>
+                </template>
+                <div class="qr-box">
+                  <img
+                    v-if="qrCodes[row.artifacts[0].id]"
+                    :src="qrCodes[row.artifacts[0].id]"
+                    class="qr-img"
+                    alt="产物下载二维码"
+                  />
+                  <span v-else class="muted-text">生成中…</span>
+                  <p class="qr-hint">扫码下载产物</p>
+                </div>
+              </el-popover>
+            </template>
             <el-button size="small" @click="openLog(row)">日志</el-button>
           </template>
         </el-table-column>
@@ -182,6 +292,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.filter-date {
+  width: 260px;
+}
+
 .art-name {
   font-weight: 500;
 }
@@ -243,6 +357,27 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   color: var(--muted);
   font-size: 10.5px;
+}
+
+.qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.qr-img {
+  width: 180px;
+  height: 180px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.qr-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
 }
 
 .empty-card {

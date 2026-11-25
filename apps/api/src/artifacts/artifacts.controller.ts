@@ -19,6 +19,17 @@ import { artifactsRoot } from "../common/storage";
 import { PrismaService } from "../prisma/prisma.service";
 import { BuildsService } from "../builds/builds.service";
 
+function parseDay(value: string | undefined, endOfDay = false): Date | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+
+  const date = raw.includes("T")
+    ? new Date(raw)
+    : new Date(`${raw}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`);
+
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
 @ApiTags("artifacts")
 @Controller("artifacts")
 export class ArtifactsController {
@@ -31,8 +42,28 @@ export class ArtifactsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions("artifacts")
-  list(@Query("status") status?: string) {
-    return this.buildsService.listAll(status || undefined);
+  list(
+    @Query("status") status?: string,
+    @Query("appId") appId?: string,
+    @Query("triggeredBy") triggeredBy?: string,
+    @Query("start") start?: string,
+    @Query("end") end?: string
+  ) {
+    return this.buildsService.listAll({
+      status: status || undefined,
+      appId: appId || undefined,
+      triggeredBy: triggeredBy || undefined,
+      start: parseDay(start),
+      end: parseDay(end, true)
+    });
+  }
+
+  @Get("triggerers")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions("artifacts")
+  triggerers() {
+    return this.buildsService.triggerers();
   }
 
   @Get(":id/download")

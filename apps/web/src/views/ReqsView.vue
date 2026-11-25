@@ -2,21 +2,29 @@
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
-import { listRequirements } from "@/api/requirements";
+import { getOwnerOptions, listRequirements } from "@/api/requirements";
 import { getErrorMessage } from "@/api/http";
 import { useAuthStore } from "@/stores/auth";
 import RequirementFormDialog from "@/components/requirements/RequirementFormDialog.vue";
 import RequirementDrawer from "@/components/requirements/RequirementDrawer.vue";
-import type { Person, Requirement, RequirementPriority } from "@/types";
+import type {
+  Person,
+  Requirement,
+  RequirementOwnerOptions,
+  RequirementPriority
+} from "@/types";
 
 const auth = useAuthStore();
 
 const filters = reactive({
   keyword: "",
-  priority: ""
+  priority: "",
+  ownerId: "",
+  range: [] as string[]
 });
 
 const requirements = ref<Requirement[]>([]);
+const ownerOptions = ref<RequirementOwnerOptions>({ dev: [], qa: [], pm: [] });
 const loading = ref(false);
 const dialogVisible = ref(false);
 const drawerVisible = ref(false);
@@ -41,7 +49,10 @@ async function load() {
   try {
     requirements.value = await listRequirements({
       keyword: filters.keyword.trim() || undefined,
-      priority: filters.priority || undefined
+      priority: filters.priority || undefined,
+      ownerId: filters.ownerId || undefined,
+      dueStart: filters.range?.[0] || undefined,
+      dueEnd: filters.range?.[1] || undefined
     });
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "加载需求列表失败"));
@@ -50,9 +61,19 @@ async function load() {
   }
 }
 
+async function loadOwnerOptions() {
+  try {
+    ownerOptions.value = await getOwnerOptions();
+  } catch {
+    ownerOptions.value = { dev: [], qa: [], pm: [] };
+  }
+}
+
 function resetFilters() {
   filters.keyword = "";
   filters.priority = "";
+  filters.ownerId = "";
+  filters.range = [];
   load();
 }
 
@@ -74,7 +95,10 @@ function onSaved() {
   load();
 }
 
-onMounted(load);
+onMounted(() => {
+  loadOwnerOptions();
+  load();
+});
 </script>
 
 <template>
@@ -115,6 +139,48 @@ onMounted(load);
         <el-option label="P1 · 高" value="P1" />
         <el-option label="P2 · 普通" value="P2" />
       </el-select>
+
+      <el-select
+        v-model="filters.ownerId"
+        class="filter-select"
+        placeholder="全部负责人"
+        clearable
+        filterable
+      >
+        <el-option-group label="开发负责人">
+          <el-option
+            v-for="person in ownerOptions.dev"
+            :key="person.id"
+            :label="person.name"
+            :value="person.id"
+          />
+        </el-option-group>
+        <el-option-group label="测试负责人">
+          <el-option
+            v-for="person in ownerOptions.qa"
+            :key="person.id"
+            :label="person.name"
+            :value="person.id"
+          />
+        </el-option-group>
+        <el-option-group label="产品负责人">
+          <el-option
+            v-for="person in ownerOptions.pm"
+            :key="person.id"
+            :label="person.name"
+            :value="person.id"
+          />
+        </el-option-group>
+      </el-select>
+
+      <el-date-picker
+        v-model="filters.range"
+        class="filter-date"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        start-placeholder="截止开始"
+        end-placeholder="截止结束"
+      />
 
       <el-button type="primary" :icon="Search" @click="load">查询</el-button>
       <el-button @click="resetFilters">重置</el-button>
@@ -179,6 +245,10 @@ onMounted(load);
 </template>
 
 <style scoped>
+.filter-date {
+  width: 260px;
+}
+
 .req-section {
   min-height: 160px;
 }

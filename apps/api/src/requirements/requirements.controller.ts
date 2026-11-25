@@ -12,6 +12,17 @@ import {
 } from "./dto/requirement.dto";
 import { RequirementsService } from "./requirements.service";
 
+function parseDay(value: string | undefined, endOfDay = false): Date | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+
+  const date = raw.includes("T")
+    ? new Date(raw)
+    : new Date(`${raw}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`);
+
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
 @ApiTags("requirements")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -25,9 +36,20 @@ export class RequirementsController {
     @Query("keyword") keyword?: string,
     @Query("priority") priority?: string,
     @Query("devOwnerId") devOwnerId?: string,
+    @Query("ownerId") ownerId?: string,
+    @Query("dueStart") dueStart?: string,
+    @Query("dueEnd") dueEnd?: string,
     @Query("status") status?: string
   ) {
-    return this.requirementsService.list({ keyword, priority, devOwnerId, status });
+    return this.requirementsService.list({
+      keyword,
+      priority,
+      devOwnerId,
+      ownerId,
+      dueStart: parseDay(dueStart),
+      dueEnd: parseDay(dueEnd, true),
+      status
+    });
   }
 
   @Get("owner-options")

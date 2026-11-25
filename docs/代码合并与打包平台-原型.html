@@ -731,6 +731,10 @@ table.grid tbody tr:hover{background:#fbfcfe}
 .comp-api code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:11.5px;color:#1d4ed8}
 .comp-api pre{margin:8px 0 0;padding:10px 12px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;
   font-family:var(--mono);font-size:11px;line-height:1.55;color:#334155;overflow:auto;max-height:220px}
+.qr-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:30;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:10px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,.16)}
+.qr-pop span{font-size:11px;color:var(--muted)}
+.qr-svg{display:block;border-radius:4px}
 
 </style>
 </head>
@@ -805,7 +809,7 @@ table.grid tbody tr:hover{background:#fbfcfe}
 
 var LS_KEY = 'shipflow_proto_v8a';
 var USER_KEY = 'shipflow_user_v7';
-var PROTO_V = 9;
+var PROTO_V = 10;
 
 /* ---------- 通用工具 ---------- */
 function byId(id){ return document.getElementById(id); }
@@ -994,8 +998,10 @@ var ui = {
   taskId: null, pipeId: null, buildId: null, logBuildId: null, reqId: null,
   tab: 'overview', modal: null,
   reqQ: '', boardFilter: 'all', artifactApp: 'all',
+  artifactTriggerer: 'all', artifactStart: '', artifactEnd: '',
+  reqOwner: 'all', reqDueStart: '', reqDueEnd: '',
   taskQ: '', permQ: '', permCollapsed: {}, homeTab: 'active',
-  logAction: 'all', logModule: 'all', logQ: ''
+  logAction: 'all', logModule: 'all', logQ: '', qrBuildId: null
 };
 /* 打包机运行时（不持久化）：单 clone，构建期间禁止切分支合并 */
 var runtime = { busy: null, queue: [] };
@@ -1164,25 +1170,25 @@ function seed(){
       merges:[{ stage:'qa', from:'feature/order-export-file', to:'qa', sha:'8e4b2f7', at:'2026-11-19 11:02', commits:1 }] }
   ];
   var builds = [
-    { id:'b1', pipelineId:'p1', stage:'release', mergeSha:'c93e0f5', status:'success',
+    { id:'b1', pipelineId:'p1', stage:'release', mergeSha:'c93e0f5', status:'success', triggeredBy:'陈默',
       startedAt:'2026-11-16 09:55', duration:'4m 12s', artifact:{ name:'travel_app_release_20261116_0940.apk', size:'28.4MB', type:'apk', url:'/artifacts/b1' },
       log:['$ git checkout release','Switched to branch release','$ ./build_app --flavor release','Building APK...','Gradle task assembleRelease','BUILD SUCCESSFUL in 3m 41s','artifact: build/app/outputs/flutter-apk/app-release.apk','upload -> /artifacts/b1'] },
-    { id:'b2', pipelineId:'p2', stage:'release', mergeSha:'d7be316', status:'success',
+    { id:'b2', pipelineId:'p2', stage:'release', mergeSha:'d7be316', status:'success', triggeredBy:'陈默',
       startedAt:'2026-11-16 10:20', duration:'5m 36s', artifact:{ name:'travel_app_release_20261116_1005.ipa', size:'31.2MB', type:'ipa', url:'/artifacts/b2' }, log:[] },
-    { id:'b3', pipelineId:'p3', stage:'qa', mergeSha:'2e9c7b3', status:'success',
+    { id:'b3', pipelineId:'p3', stage:'qa', mergeSha:'2e9c7b3', status:'success', triggeredBy:'林晓',
       startedAt:'2026-11-18 16:35', duration:'4m 05s', artifact:{ name:'travel_app_qa_20261118_1620.apk', size:'28.1MB', type:'apk', url:'/artifacts/b3' }, log:[] },
-    { id:'b4', pipelineId:'p7', stage:'uat', mergeSha:'5df0e93', status:'success',
+    { id:'b4', pipelineId:'p7', stage:'uat', mergeSha:'5df0e93', status:'success', triggeredBy:'林晓',
       startedAt:'2026-11-18 14:30', duration:'4m 22s', artifact:{ name:'order-center_uat_20261118_1420.jar', size:'19.8MB', type:'jar', url:'/artifacts/b4' }, log:[] },
-    { id:'b5', pipelineId:'p8', stage:'release', mergeSha:'f2d90b6', status:'success',
+    { id:'b5', pipelineId:'p8', stage:'release', mergeSha:'f2d90b6', status:'success', triggeredBy:'王强',
       startedAt:'2026-11-17 18:10', duration:'3m 48s', artifact:{ name:'merchant-web_release_20261117_1805.war', size:'19.9MB', type:'war', url:'/artifacts/b5' }, log:[] },
-    { id:'b6', pipelineId:'p11', stage:'qa', mergeSha:'8e4b2f7', status:'success',
+    { id:'b6', pipelineId:'p11', stage:'qa', mergeSha:'8e4b2f7', status:'success', triggeredBy:'陈默',
       startedAt:'2026-11-19 11:10', duration:'2m 51s', artifact:{ name:'order-center_qa_20261119_1102.jar', size:'30.9MB', type:'jar', url:'/artifacts/b6' }, log:[] },
-    { id:'b7', pipelineId:'p10', stage:'qa', mergeSha:'d3f7a12', status:'failed',
+    { id:'b7', pipelineId:'p10', stage:'qa', mergeSha:'d3f7a12', status:'failed', triggeredBy:'周然',
       startedAt:'2026-11-19 09:12', duration:'1m 08s', progress:34, artifact:null,
       failReason:'Gradle 编译失败：lib/features/dashboard/widgets/kpi_card.dart:88 未定义标识符 storeCount',
       log:['$ git fetch origin','$ git checkout qa-test','$ ./build_app --flavor qa','Building WAR …','> Task :app:compileKotlin',
         'e: kpi_card.dart:88 undefined name: storeCount','BUILD FAILED in 1m 08s','exit code 1'] },
-    { id:'b8', pipelineId:'p12', stage:'qa', mergeSha:'a7c1d92', status:'running',
+    { id:'b8', pipelineId:'p12', stage:'qa', mergeSha:'a7c1d92', status:'running', triggeredBy:'周然',
       startedAt:'2026-11-20 10:21', duration:'—', progress:62, artifact:null,
       log:['$ git fetch origin','$ git checkout qa','$ ./build_app --flavor qa','Building JAR …','> Task :app:compileKotlin'] }
   ];
@@ -1634,6 +1640,7 @@ function startBuild(p, stage, params){
   var mergeSha = ((p.merges||[]).filter(function(m){ return m.stage === stage; }).slice(-1)[0]||{}).sha || 'unknown';
   var b = {
     id: uid('b'), pipelineId:p.id, stage:stage, mergeSha:mergeSha, status:'running',
+    triggeredBy: me() ? me().name : '—',
     versionName:versionName, buildNumber:buildNumber, channel:channel,
     startedAt: fmtNow(), duration:'—', progress:0,
     artifact:null, log:[ '$ git checkout '+branchName(p,stage), '$ VERSION_NAME='+versionName+' BUILD_NUMBER='+buildNumber+' CHANNEL='+channel+' ./build_app --flavor '+stage ]
@@ -2362,15 +2369,30 @@ function reqStatus(r){
 function viewReqs(){
   var q = (ui.reqQ||'').trim().toLowerCase();
   var list = state.reqs.filter(function(r){
-    if(!q) return true;
-    return (r.code+' '+r.title+' '+reqPeopleText(r)).toLowerCase().indexOf(q) >= 0;
+    if(q && (r.code+' '+r.title+' '+reqPeopleText(r)).toLowerCase().indexOf(q) < 0) return false;
+    if(ui.reqOwner !== 'all'){
+      var people = [r.devOwner, r.qaOwner, r.pmOwner].concat(r.qaMembers || []);
+      if(people.indexOf(ui.reqOwner) < 0) return false;
+    }
+    if(ui.reqDueStart && String(r.due).slice(0,10) < ui.reqDueStart) return false;
+    if(ui.reqDueEnd && String(r.due).slice(0,10) > ui.reqDueEnd) return false;
+    return true;
   });
+  var owners = accounts().filter(function(a){ return a.role === 'dev' || a.role === 'qa' || a.role === 'pm'; });
   var cards = list.map(function(r){ return reqCardHTML(r, false); }).join('');
   return '<div class="page-head"><div><h1>需求管理</h1><p class="sub">需求不再绑定应用；应用在任务的 CI 流水里选择，同一任务可以打出多种产物</p></div>'+
       '<div class="head-actions"><button class="btn btn-primary" data-act="new-req">+ 新建需求</button></div></div>'+
     '<div class="req-toolbar"><span class="search">'+
       '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="#7d8a9b" stroke-width="1.4"/><path d="M8.6 8.6l2.6 2.6" stroke="#7d8a9b" stroke-width="1.4"/></svg>'+
       '<input type="text" data-role="req-q" placeholder="搜索需求编号 / 标题 / 负责人" value="'+esc(ui.reqQ)+'"></span>'+
+      '<select data-role="req-owner">'+
+        '<option value="all"'+(ui.reqOwner==='all'?' selected':'')+'>全部负责人</option>'+
+        owners.map(function(a){ return '<option value="'+a.id+'"'+(ui.reqOwner===a.id?' selected':'')+'>'+esc(a.name)+'</option>'; }).join('')+
+      '</select>'+
+      '<input type="date" data-role="req-due-start" value="'+esc(ui.reqDueStart)+'" title="截止开始">'+
+      '<span class="muted">至</span>'+
+      '<input type="date" data-role="req-due-end" value="'+esc(ui.reqDueEnd)+'" title="截止结束">'+
+      '<button type="button" class="btn btn-sm" data-act="req-reset">重置</button>'+
       '<span class="muted">'+list.length+' 条需求</span></div>'+
     (list.length ? '<div class="req-grid">'+cards+'</div>'
       : '<div class="card"><div class="empty"><div class="big">没有匹配的需求</div>换个筛选条件，或新建一条需求</div></div>');
@@ -2415,12 +2437,41 @@ function viewReqDetail(reqId){
 }
 
 /* ---------- 视图：产物 ---------- */
+function fakeQrSvg(seed){
+  var n = 21, cell = 6, size = n * cell, rects = '';
+  var h = 0;
+  for(var i = 0; i < String(seed).length; i++){ h = (h * 31 + String(seed).charCodeAt(i)) >>> 0; }
+  function rnd(){ h = (h * 1103515245 + 12345) >>> 0; return h / 4294967296; }
+  function finder(x, y){
+    return '<rect x="'+(x*cell)+'" y="'+(y*cell)+'" width="'+(7*cell)+'" height="'+(7*cell)+'" fill="#0f172a"/>'+
+      '<rect x="'+((x+1)*cell)+'" y="'+((y+1)*cell)+'" width="'+(5*cell)+'" height="'+(5*cell)+'" fill="#fff"/>'+
+      '<rect x="'+((x+2)*cell)+'" y="'+((y+2)*cell)+'" width="'+(3*cell)+'" height="'+(3*cell)+'" fill="#0f172a"/>';
+  }
+  for(var y = 0; y < n; y++){
+    for(var x = 0; x < n; x++){
+      var inFinder = (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
+      if(inFinder) continue;
+      if(rnd() > 0.5){
+        rects += '<rect x="'+(x*cell)+'" y="'+(y*cell)+'" width="'+cell+'" height="'+cell+'" fill="#0f172a"/>';
+      }
+    }
+  }
+  return '<svg class="qr-svg" width="132" height="132" viewBox="0 0 '+size+' '+size+'" shape-rendering="crispEdges">'+
+    '<rect width="'+size+'" height="'+size+'" fill="#fff"/>'+rects+finder(0,0)+finder(n-7,0)+finder(0,n-7)+'</svg>';
+}
 function viewArtifacts(){
   var list = state.builds.slice();
   if(ui.artifactApp !== 'all') list = list.filter(function(b){
     var p = pipeOf(b.pipelineId); return p && p.appId === ui.artifactApp;
   });
+  if(ui.artifactTriggerer !== 'all') list = list.filter(function(b){ return b.triggeredBy === ui.artifactTriggerer; });
+  if(ui.artifactStart) list = list.filter(function(b){ return String(b.startedAt).slice(0,10) >= ui.artifactStart; });
+  if(ui.artifactEnd) list = list.filter(function(b){ return String(b.startedAt).slice(0,10) <= ui.artifactEnd; });
   list.sort(function(a,b){ return String(a.startedAt) < String(b.startedAt) ? 1 : -1; });
+  var triggerers = [];
+  state.builds.forEach(function(b){
+    if(b.triggeredBy && triggerers.indexOf(b.triggeredBy) < 0) triggerers.push(b.triggeredBy);
+  });
   var ok = 0, run = 0, fail = 0;
   list.forEach(function(b){
     if(b.status === 'success') ok++; else if(b.status === 'running') run++; else fail++;
@@ -2445,12 +2496,14 @@ function viewArtifacts(){
       '<td><span class="stage-tag">'+esc(stageLabel(b.stage))+'</span><div class="t-sub mono">'+esc(b.mergeSha)+'</div></td>'+
       '<td><span class="pill pill-'+st.cls+'">'+esc(st.label)+'</span></td>'+
       '<td>'+esc(b.artifact?b.artifact.size:'—')+'</td>'+
-      '<td class="mono" style="font-size:11px;white-space:nowrap">'+esc(b.startedAt)+'</td>'+
-      '<td style="text-align:right;white-space:nowrap">'+
+      '<td class="mono" style="font-size:11px;white-space:nowrap">'+esc(b.startedAt)+'<div class="t-sub">'+esc(b.triggeredBy||'—')+'</div></td>'+
+      '<td style="text-align:right;white-space:nowrap;position:relative">'+
         '<button type="button" class="btn btn-sm" data-act="build-detail" data-id="'+b.id+'">详情</button>'+
         (b.status === 'running' ? ' <button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+b.id+'">日志</button>' : '')+
         (b.status === 'success' ? ' <button type="button" class="btn btn-sm btn-primary" data-act="download" data-id="'+b.id+'">下载</button>' : '')+
+        (b.status === 'success' ? ' <button type="button" class="btn btn-sm" data-act="qr" data-id="'+b.id+'">二维码</button>' : '')+
         (b.status === 'failed' ? ' <button type="button" class="btn btn-sm btn-ghost" data-act="open-log" data-id="'+b.id+'">日志</button>' : '')+
+        (ui.qrBuildId === b.id ? '<div class="qr-pop">'+fakeQrSvg(b.id)+'<span>扫码下载产物</span></div>' : '')+
       '</td></tr>';
   }).join('');
   return '<div class="page-head"><div><h1>打包产物</h1><p class="sub">已入库产物可下载（链接不鉴权）；正在打包与打包失败的构建也在列表里，点行看详情与打包日志</p></div></div>'+
@@ -2458,12 +2511,20 @@ function viewArtifacts(){
       '<option value="all"'+(ui.artifactApp==='all'?' selected':'')+'>全部应用</option>'+
       state.apps.map(function(a){ return '<option value="'+a.id+'"'+(ui.artifactApp===a.id?' selected':'')+'>'+esc(a.name)+'</option>'; }).join('')+
     '</select>'+
-    '<span class="muted" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">共 '+list.length+' 条 · '+
+    '<select data-role="artifact-triggerer">'+
+      '<option value="all"'+(ui.artifactTriggerer==='all'?' selected':'')+'>全部触发人</option>'+
+      triggerers.map(function(n){ return '<option value="'+esc(n)+'"'+(ui.artifactTriggerer===n?' selected':'')+'>'+esc(n)+'</option>'; }).join('')+
+    '</select>'+
+    '<input type="date" data-role="artifact-start" value="'+esc(ui.artifactStart)+'" title="开始日期">'+
+    '<span class="muted">至</span>'+
+    '<input type="date" data-role="artifact-end" value="'+esc(ui.artifactEnd)+'" title="结束日期">'+
+    '<button type="button" class="btn btn-sm" data-act="artifact-reset">重置</button>'+
+    '<span class="muted" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto">共 '+list.length+' 条 · '+
       '<span class="pill pill-done">已入库 '+ok+'</span>'+
       '<span class="pill pill-building">打包中 '+run+'</span>'+
       '<span class="pill pill-failed">失败 '+fail+'</span></span></div>'+
-    (list.length ? '<div class="card" style="padding:0;overflow:hidden"><table class="grid" style="table-layout:fixed">'+
-      '<thead><tr><th style="width:24%">产物</th><th style="width:11%">应用</th><th style="width:15%">任务</th><th style="width:10%">阶段</th><th style="width:8%">状态</th><th style="width:6%">大小</th><th style="width:14%">构建时间</th><th style="width:12%"></th></tr></thead>'+
+    (list.length ? '<div class="card" style="padding:0"><table class="grid" style="table-layout:fixed">'+
+      '<thead><tr><th style="width:24%">产物</th><th style="width:11%">应用</th><th style="width:15%">任务</th><th style="width:10%">阶段</th><th style="width:8%">状态</th><th style="width:6%">大小</th><th style="width:14%">构建时间 / 触发人</th><th style="width:12%"></th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table></div>'
       : '<div class="card"><div class="empty"><div class="big">还没有构建</div>流水点「打包」后可在这里看正在打包与失败的记录</div></div>');
 }
@@ -3394,6 +3455,8 @@ document.addEventListener('click', function(e){
   if(act === 'close-modal'){ ui.modal = null; renderModal(); return; }
   if(act === 'home-tab'){ ui.homeTab = id; render(); return; }
   if(act === 'log-action'){ ui.logAction = id; render(); return; }
+  if(act === 'artifact-reset'){ ui.artifactApp = 'all'; ui.artifactTriggerer = 'all'; ui.artifactStart = ''; ui.artifactEnd = ''; render(); return; }
+  if(act === 'req-reset'){ ui.reqQ = ''; ui.reqOwner = 'all'; ui.reqDueStart = ''; ui.reqDueEnd = ''; render(); return; }
   if(act === 'perm-col'){
     var rk = id, pr = rk.split('/'), role = pr[0], lv = pr[1];
     var cols = permColKeys(), have = permsFor(role, lv);
@@ -3503,7 +3566,8 @@ document.addEventListener('click', function(e){
     if(!plb){ toast('这条流水还没有构建记录，先点「打包」生成日志','warn'); return; }
     ui.logBuildId = plb.id; render(); return;
   }
-  if(act === 'build-detail'){ ui.buildId = id; ui.logBuildId = null; render(); return; }
+  if(act === 'build-detail'){ ui.buildId = id; ui.logBuildId = null; ui.qrBuildId = null; render(); return; }
+  if(act === 'qr'){ ui.qrBuildId = ui.qrBuildId === id ? null : id; render(); return; }
   if(act === 'close-build'){ ui.buildId = null; render(); return; }
   if(act === 'back-pipe'){ ui.logBuildId = null; ui.pipeId = id; render(); return; }
   if(act === 'new-pipe'){ ui.modal = { type:'pipe', taskId:id }; renderModal(); return; }
@@ -3587,6 +3651,12 @@ document.addEventListener('input', function(e){
 document.addEventListener('change', function(e){
   var role = e.target.dataset.role;
   if(role === 'artifact-app'){ ui.artifactApp = e.target.value; render(); }
+  if(role === 'artifact-triggerer'){ ui.artifactTriggerer = e.target.value; render(); }
+  if(role === 'artifact-start'){ ui.artifactStart = e.target.value; render(); }
+  if(role === 'artifact-end'){ ui.artifactEnd = e.target.value; render(); }
+  if(role === 'req-owner'){ ui.reqOwner = e.target.value; render(); }
+  if(role === 'req-due-start'){ ui.reqDueStart = e.target.value; render(); }
+  if(role === 'req-due-end'){ ui.reqDueEnd = e.target.value; render(); }
   if(role === 'log-module'){ ui.logModule = e.target.value; render(); }
   if(role === 'comp-app'){ ui.compApp = e.target.value; render(); }
   if(role === 'comp-modal-app'){

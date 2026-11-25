@@ -9,6 +9,9 @@ export interface RequirementQuery {
   keyword?: string;
   priority?: string;
   devOwnerId?: string;
+  ownerId?: string;
+  dueStart?: string;
+  dueEnd?: string;
   status?: string;
 }
 

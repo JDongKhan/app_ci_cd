@@ -274,7 +274,7 @@
 <tbody>
 <tr><td>GET</td><td><code>/api/me</code></td><td>当前账号与角色</td></tr>
 <tr><td>GET</td><td><code>/api/my-tasks</code></td><td>首页「我的任务」，按账号负责人过滤</td></tr>
-<tr><td>GET</td><td><code>/api/requirements</code></td><td>需求列表（不返回应用）</td></tr>
+<tr><td>GET</td><td><code>/api/requirements</code></td><td>需求列表（不返回应用）；支持 <code>keyword / priority / ownerId / dueStart / dueEnd / status</code></td></tr>
 <tr><td>POST</td><td><code>/api/tasks/:id/pipelines</code></td><td>body <code>appId / name / branch / artifactType</code>，创建 CI 流水</td></tr>
 <tr><td>POST</td><td><code>/api/tasks/:id/status</code></td><td>body <code>status</code>，推进任务状态（开始开发 / 提测 / 开始测试 / 进入待发布 / 完成发布），服务端校验门禁</td></tr>
 <tr><td>POST</td><td><code>/api/pipelines/:id/merge</code></td><td>body <code>stage</code>，建临时分支或直接合入目标分支</td></tr>
@@ -286,7 +286,8 @@
 <tr><td>GET</td><td><code>/api/apps/:id/components</code></td><td>组件管理列表（按应用筛选）</td></tr>
 <tr><td>POST</td><td><code>/api/apps/:id/components</code></td><td>body <code>componentAppIds[]</code>，为应用添加组件</td></tr>
 <tr><td>DELETE</td><td><code>/api/apps/:id/components/:componentAppId</code></td><td>移除应用下的组件</td></tr>
-<tr><td>GET</td><td><code>/api/artifacts</code></td><td>产物 / 构建列表（含打包中与失败），下载直链不鉴权</td></tr>
+<tr><td>GET</td><td><code>/api/artifacts</code></td><td>产物 / 构建列表（含打包中与失败），支持 <code>status / appId / triggeredBy / start / end</code>；下载直链不鉴权</td></tr>
+<tr><td>GET</td><td><code>/api/artifacts/triggerers</code></td><td>产物触发人选项（用于筛选下拉）</td></tr>
 <tr><td>GET</td><td><code>/api/builds/:id</code></td><td>单次构建详情（状态、进度、失败原因、产物）</td></tr>
 <tr><td>GET</td><td><code>/api/builds/:id/log</code></td><td>打包日志，运行中可轮询增量</td></tr>
 <tr><td>GET/PUT</td><td><code>/api/roles/perms</code></td><td>读取 / 保存「角色 × 级别」菜单权限（仅管理员）</td></tr>
@@ -308,6 +309,8 @@
 <li><strong>组件的两种形态</strong>：应用勾选「组件」后只作为依赖被引用，不参与打包；组件管理页只为未勾选组件的应用维护组件列表，组件版本随映射保存并提供查询接口。</li>
 <li><strong>一个任务的提交记录只有一份</strong>：多条流水共用同一仓库与 Feature 分支，不分应用；任务详情「提交记录」显示该分支最近 20 条提交。</li>
 <li><strong>产物类型与构建脚本在应用里配置</strong>：应用按 Android / iOS 分开，流水只是选择应用 + 填 Feature 分支。</li>
+<li><strong>打包产物支持筛选</strong>：可按应用、触发人、构建时间范围（起止日期）查询，筛选项与状态筛选可叠加，筛选结果由服务端返回。</li>
+<li><strong>需求支持筛选</strong>：可按截止时间范围与负责人查询；负责人匹配开发 / 测试 / 产品负责人以及需求登记的测试人员，可与关键字、优先级叠加。</li>
 </ol>
 
 <h2 id="sec-15">9. 原型操作路径</h2>
@@ -316,7 +319,7 @@
 <li>首页「我的任务」三个 tab（进行中 / 其他状态 / 我的需求）→ 行尾「任务详情」进入右侧抽屉。</li>
 <li>任务详情：状态推进按钮 + tabs（概览 / CI 流水 / 提交记录 / 构建记录）。</li>
 <li>CI 流水卡片：合并 QA → 打包 → 自测通过 →（任务提测）→ 合并 UAT → 打包 → 合并 Release → 打包 → 验证通过 → 合回 master。</li>
-<li>打包产物页：已入库 / 打包中 / 失败三态，点行看构建详情与打包日志。</li>
+<li>打包产物页：已入库 / 打包中 / 失败三态，点行看构建详情与打包日志；有产物时行尾提供「二维码」按钮，点击在按钮旁弹出下载直链二维码，移动端扫码即可下载产物。</li>
 <li>应用配置勾选「组件」后，产物类型 / 产物扫描目录 / 渠道自动隐藏；组件管理页选择应用 → 查看组件与版本 → 新增组件弹窗勾选组件应用。</li>
 </ol>
 <blockquote>

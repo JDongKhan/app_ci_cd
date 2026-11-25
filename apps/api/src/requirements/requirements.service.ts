@@ -44,6 +44,9 @@ type RequirementQuery = {
   keyword?: string;
   priority?: string;
   devOwnerId?: string;
+  ownerId?: string;
+  dueStart?: Date;
+  dueEnd?: Date;
   status?: string;
 };
 
@@ -53,14 +56,32 @@ export class RequirementsService {
 
   async list(query: RequirementQuery) {
     const where: Prisma.RequirementWhereInput = {};
+    const and: Prisma.RequirementWhereInput[] = [];
     const keyword = query.keyword?.trim();
 
     if (keyword) {
-      where.OR = [
-        { code: { contains: keyword } },
-        { title: { contains: keyword } },
-        { description: { contains: keyword } }
-      ];
+      and.push({
+        OR: [
+          { code: { contains: keyword } },
+          { title: { contains: keyword } },
+          { description: { contains: keyword } }
+        ]
+      });
+    }
+
+    if (query.ownerId) {
+      and.push({
+        OR: [
+          { devOwnerId: query.ownerId },
+          { qaOwnerId: query.ownerId },
+          { pmOwnerId: query.ownerId },
+          { qaMembers: { some: { userId: query.ownerId } } }
+        ]
+      });
+    }
+
+    if (and.length) {
+      where.AND = and;
     }
 
     if (query.priority) {
@@ -69,6 +90,13 @@ export class RequirementsService {
 
     if (query.devOwnerId) {
       where.devOwnerId = query.devOwnerId;
+    }
+
+    if (query.dueStart || query.dueEnd) {
+      where.dueAt = {
+        ...(query.dueStart ? { gte: query.dueStart } : {}),
+        ...(query.dueEnd ? { lte: query.dueEnd } : {})
+      };
     }
 
     const all = await this.prisma.requirement.findMany({

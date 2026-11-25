@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import fg from "fast-glob";
+import { Prisma } from "@prisma/client";
 import { AuthUser } from "../common/auth-user.interface";
 import { GitService } from "../common/git.service";
 import { pipelineBuildStage } from "../common/pipeline-status";
@@ -229,15 +230,64 @@ export class BuildsService implements OnModuleInit {
     return builds.map((build) => this.serialize(build, this.nameOf(names, build.triggeredBy)));
   }
 
-  async listAll(status?: string) {
+  async listAll(filter: {
+    status?: string;
+    appId?: string;
+    triggeredBy?: string;
+    start?: Date;
+    end?: Date;
+  }) {
+    const where: Prisma.BuildWhereInput = {};
+
+    if (filter.status) {
+      where.status = filter.status;
+    }
+
+    if (filter.appId) {
+      where.pipeline = { appId: filter.appId };
+    }
+
+    if (filter.triggeredBy) {
+      where.triggeredBy = filter.triggeredBy;
+    }
+
+    if (filter.start || filter.end) {
+      where.createdAt = {
+        ...(filter.start ? { gte: filter.start } : {}),
+        ...(filter.end ? { lte: filter.end } : {})
+      };
+    }
+
     const builds = await this.prisma.build.findMany({
-      where: status ? { status } : undefined,
+      where,
       include: this.buildInclude(),
       orderBy: { createdAt: "desc" }
     });
 
     const names = await this.triggerNames(builds);
     return builds.map((build) => this.serialize(build, this.nameOf(names, build.triggeredBy)));
+  }
+
+  async triggerers() {
+    const rows = await this.prisma.build.findMany({
+      where: { triggeredBy: { not: null } },
+      select: { triggeredBy: true },
+      distinct: ["triggeredBy"]
+    });
+
+    const ids = rows
+      .map((row) => row.triggeredBy)
+      .filter((id): id is string => Boolean(id));
+
+    if (!ids.length) return [];
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" }
+    });
+
+    return users;
   }
 
   async detail(id: string) {

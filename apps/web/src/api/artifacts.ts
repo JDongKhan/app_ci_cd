@@ -1,10 +1,21 @@
 import { http } from "./http";
-import type { BuildRecord } from "@/types";
+import type { BuildRecord, Person } from "@/types";
 
-export async function listArtifacts(status?: string): Promise<BuildRecord[]> {
-  const { data } = await http.get<BuildRecord[]>("/artifacts", {
-    params: status ? { status } : undefined
-  });
+export interface ArtifactQuery {
+  status?: string;
+  appId?: string;
+  triggeredBy?: string;
+  start?: string;
+  end?: string;
+}
+
+export async function listArtifacts(query: ArtifactQuery = {}): Promise<BuildRecord[]> {
+  const { data } = await http.get<BuildRecord[]>("/artifacts", { params: query });
+  return data;
+}
+
+export async function listArtifactTriggerers(): Promise<Pick<Person, "id" | "name">[]> {
+  const { data } = await http.get<Pick<Person, "id" | "name">[]>("/artifacts/triggerers");
   return data;
 }
 

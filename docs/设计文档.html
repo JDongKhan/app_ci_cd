@@ -1128,7 +1128,7 @@ User 1 ── N Task（开发负责人）
 <tbody><tr>
 <td>GET</td>
 <td><code>/api/requirements</code></td>
-<td><code>reqs</code></td>
+<td><code>reqs</code>；支持 <code>keyword / priority / ownerId / dueStart / dueEnd / status</code></td>
 </tr>
 <tr>
 <td>GET</td>
@@ -2190,6 +2190,7 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <li>文件不存在时标记 <code>missing</code>，返回 410</li>
 <li>流式返回，设置 <code>Content-Type</code>、<code>Content-Length</code>、<code>Content-Disposition</code></li>
 <li>异步更新下载次数</li>
+<li>前端打包产物页对下载直链生成二维码：点击行尾「二维码」按钮后在按钮旁弹出二维码，移动端扫码直接下载</li>
 </ul>
 <p>安全说明：正式环境建议改为限时签名链接；一期按需求保持不鉴权。</p>
 <h3 id="sec-62">12.7 清理</h3>
@@ -2236,7 +2237,7 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <tr>
 <td>GET</td>
 <td><code>/api/requirements</code></td>
-<td><code>reqs</code></td>
+<td><code>reqs</code>；支持 <code>keyword / priority / ownerId / dueStart / dueEnd / status</code></td>
 </tr>
 <tr>
 <td>GET</td>
@@ -2351,7 +2352,12 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <tr>
 <td>GET</td>
 <td><code>/api/artifacts</code></td>
-<td>构建 / 产物列表</td>
+<td>构建 / 产物列表；支持 <code>status / appId / triggeredBy / start / end</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/artifacts/triggerers</code></td>
+<td>触发人选项（来自构建记录），用于筛选下拉</td>
 </tr>
 <tr>
 <td>GET</td>
@@ -2421,7 +2427,7 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <td><code>/reqs</code></td>
 <td>需求列表</td>
 <td><code>reqs</code></td>
-<td>需求卡片</td>
+<td>需求卡片；可按关键字、优先级、负责人、截止时间筛选</td>
 </tr>
 <tr>
 <td><code>/reqs/:id</code></td>
@@ -2439,7 +2445,7 @@ storage/artifacts/&lt;appId&gt;/&lt;buildId&gt;/      # 正式产物
 <td><code>/artifacts</code></td>
 <td>打包产物</td>
 <td><code>artifacts</code></td>
-<td>已入库 / 打包中 / 失败</td>
+<td>已入库 / 打包中 / 失败；可按应用、触发人、时间筛选；可下载、查看日志、生成下载二维码</td>
 </tr>
 <tr>
 <td><code>/logs</code></td>
