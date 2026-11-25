@@ -204,7 +204,7 @@ onMounted(loadApps);
       </div>
       <div class="head-actions">
         <el-button :icon="Document" @click="apiVisible = true">获取版本接口</el-button>
-        <el-button v-if="canEdit" type="primary" :icon="Plus" @click="openAdd">
+        <el-button v-permission:disable="'component_edit'" type="primary" :icon="Plus" @click="openAdd">
           新增组件
         </el-button>
       </div>

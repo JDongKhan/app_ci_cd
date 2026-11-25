@@ -5,7 +5,6 @@ import { ElMessage } from "element-plus";
 import { ArrowLeft, Edit, Plus, UserFilled } from "@element-plus/icons-vue";
 import { getRequirement } from "@/api/requirements";
 import { getErrorMessage } from "@/api/http";
-import { useAuthStore } from "@/stores/auth";
 import { TASK_STATUS_META } from "@/config/tasks";
 import RequirementFormDialog from "@/components/requirements/RequirementFormDialog.vue";
 import QaMembersDialog from "@/components/requirements/QaMembersDialog.vue";
@@ -22,7 +21,6 @@ const emit = defineEmits<{
   "open-task": [taskId: string];
 }>();
 
-const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -120,14 +118,14 @@ onMounted(load);
 
         <div class="detail-actions">
           <el-button
-            v-if="auth.hasPermission('req_member')"
+            v-permission="'req_member'"
             :icon="UserFilled"
             @click="membersVisible = true"
           >
             维护测试人员
           </el-button>
           <el-button
-            v-if="auth.hasPermission('req_create')"
+            v-permission:disable="'req_create'"
             type="primary"
             :icon="Edit"
             @click="formVisible = true"
@@ -163,7 +161,7 @@ onMounted(load);
           <div class="task-head-actions">
             <span class="muted-text">{{ requirement.taskCount }} 个任务</span>
             <el-button
-              v-if="auth.hasPermission('task_create')"
+              v-permission:disable="'task_create'"
               type="primary"
               size="small"
               :icon="Plus"

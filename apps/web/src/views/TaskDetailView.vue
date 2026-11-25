@@ -618,7 +618,7 @@ onBeforeUnmount(() => {
             {{ nextAction.label }}
           </el-button>
           <el-button
-            v-if="auth.hasPermission('task_create')"
+            v-permission:disable="'task_create'"
             :icon="Edit"
             @click="editVisible = true"
           >
@@ -664,7 +664,7 @@ onBeforeUnmount(() => {
                 共 {{ task.pipelines.length }} 条流水 · 合并 / 打包 / 验证都在这里操作
               </span>
               <el-button
-                v-if="auth.hasPermission('pipe_create')"
+                v-permission:disable="'pipe_create'"
                 type="primary"
                 size="small"
                 :icon="Plus"

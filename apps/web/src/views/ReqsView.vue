@@ -4,7 +4,6 @@ import { ElMessage } from "element-plus";
 import { Plus, Refresh, Search } from "@element-plus/icons-vue";
 import { getOwnerOptions, listRequirements } from "@/api/requirements";
 import { getErrorMessage } from "@/api/http";
-import { useAuthStore } from "@/stores/auth";
 import RequirementFormDialog from "@/components/requirements/RequirementFormDialog.vue";
 import RequirementDrawer from "@/components/requirements/RequirementDrawer.vue";
 import type {
@@ -13,8 +12,6 @@ import type {
   RequirementOwnerOptions,
   RequirementPriority
 } from "@/types";
-
-const auth = useAuthStore();
 
 const filters = reactive({
   keyword: "",
@@ -113,7 +110,7 @@ onMounted(() => {
       <div class="head-actions">
         <el-button :icon="Refresh" @click="load">刷新</el-button>
         <el-button
-          v-if="auth.hasPermission('req_create')"
+          v-permission:disable="'req_create'"
           type="primary"
           :icon="Plus"
           @click="dialogVisible = true"
@@ -229,7 +226,7 @@ onMounted(() => {
         <div class="empty-title">暂无需求</div>
         <p>新建一条需求，再把它拆成可以交付的任务。</p>
         <el-button
-          v-if="auth.hasPermission('req_create')"
+          v-permission:disable="'req_create'"
           type="primary"
           :icon="Plus"
           @click="dialogVisible = true"
